@@ -1,28 +1,20 @@
 import { http } from '@/utils/request'
-import axios from 'axios'
+
 // 账号管理相关API
 export const accountApi = {
+  // 🔥 恢复使用http封装
   getValidAccounts(forceCheck = false) {
     const params = forceCheck ? '?force=true' : '';
     console.log('🔍 发起请求:', `/getValidAccounts${params}`);
-
-    // 🔥 临时绕过拦截器
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3409';
-    return axios.get(`${baseURL}/getValidAccounts${params}`)
-      .then(response => {
-        console.log('✅ 原生axios响应:', response.data);
-        return response.data;
-      });
+    return http.get(`/getValidAccounts${params}`);
   },
 
-
-  // 新增：获取带分组信息的账号列表
+  // 其他方法保持不变
   getAccountsWithGroups(forceCheck = false) {
     const params = forceCheck ? '?force=true' : '';
     return http.get(`/getAccountsWithGroups${params}`)
   },
 
-  // 新增：分组相关API
   getGroups() {
     return http.get('/getGroups')
   },
@@ -43,7 +35,6 @@ export const accountApi = {
     return http.post('/updateAccountGroup', data)
   },
 
-  // 原有API保持不变
   addAccount(data) {
     return http.post('/account', data)
   },
