@@ -1,0 +1,53 @@
+# 源代码
+src/
+public/
+*.config.js
+*.config.ts
+vite.config.*
+.env*
+README.md
+*.md
+
+# Node.js
+node_modules/
+package-lock.json
+yarn.lock
+
+# 构建文件
+dist-electron/
+build/
+.cache/
+.temp/
+
+# 开发工具
+.vscode/
+.idea/
+*.log
+logs/
+
+# 版本控制
+.git/
+
+# 测试文件
+test/
+tests/
+*.test.*
+*.spec.*
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# 用户数据
+uploads/
+downloads/
+user-data/
+
+# 大文件
+*.mp4
+*.avi
+*.mov
+*.zip
+*.tar.gz
