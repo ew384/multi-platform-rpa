@@ -5,7 +5,9 @@ export const accountApi = {
   // 原有API保持不变
   getValidAccounts(forceCheck = false) {
     const params = forceCheck ? '?force=true' : '';
-    return http.get(`/getValidAccounts${params}`)
+    const url = `/getValidAccounts${params}`;
+    console.log('🔍 发起请求:', url);
+    console.log('🔍 baseURL:', import.meta.env.VITE_API_BASE_URL);
   },
 
   // 新增：获取带分组信息的账号列表

@@ -631,22 +631,20 @@ const fetchAccounts = async (forceCheck = false) => {
   appStore.setAccountRefreshing(true);
 
   try {
-    // 先尝试使用新API，如果失败则回退到旧API
-    let res;
-    try {
-      res = await accountApi.getAccountsWithGroups(forceCheck);
-    } catch (error) {
-      console.warn("新API不可用，回退到旧API:", error);
-      res = await accountApi.getValidAccounts(forceCheck);
-    }
+    console.log("🔍 开始获取账号数据，forceCheck:", forceCheck);
 
-    if (res.code === 200 && res.data) {
+    // 🔥 修改：直接使用可用的API
+    const res = await accountApi.getValidAccounts(forceCheck);
+    console.log("✅ API响应:", res);
+
+    if (res && res.code === 200 && res.data) {
       accountStore.setAccounts(res.data);
 
       // 同时获取分组信息
       try {
         const groupsRes = await accountApi.getGroups();
-        if (groupsRes.code === 200 && groupsRes.data) {
+        console.log("✅ 分组API响应:", groupsRes);
+        if (groupsRes && groupsRes.code === 200 && groupsRes.data) {
           accountStore.setGroups(groupsRes.data);
         }
       } catch (error) {
@@ -662,11 +660,13 @@ const fetchAccounts = async (forceCheck = false) => {
         appStore.setAccountManagementVisited();
       }
     } else {
+      console.error("❌ API响应格式错误:", res);
       ElMessage.error("获取账号数据失败");
     }
   } catch (error) {
     console.error("获取账号数据失败:", error);
-    ElMessage.error("获取账号数据失败");
+    // 🔥 显示更详细的错误信息
+    ElMessage.error(`获取账号数据失败: ${error.message || "网络错误"}`);
   } finally {
     appStore.setAccountRefreshing(false);
   }

@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-
+// 在 src/utils/request.js 第一行添加
+console.log('🔍 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+console.log('🔍 实际baseURL:', import.meta.env.VITE_API_BASE_URL || 'http://localhost:3409');
 // 创建axios实例
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3409',
@@ -26,20 +28,35 @@ request.interceptors.request.use(
 )
 
 // 响应拦截器
+// 响应拦截器
 request.interceptors.response.use(
   (response) => {
     const { data } = response
+    console.log('✅ HTTP响应成功:', response.config.url);
+    console.log('✅ 响应数据:', data);
 
-    // 根据后端接口规范处理响应
-    if (data.code === 200 || data.success) {
-      return data
-    } else {
-      ElMessage.error(data.message || '请求失败')
-      return Promise.reject(new Error(data.message || '请求失败'))
+    // 🔥 修复：明确的条件判断
+    if (data && data.code === 200) {
+      console.log('✅ 业务处理成功，返回数据');
+      return data;  // 返回完整的响应数据 {code: 200, msg: "success", data: [...]}
     }
+
+    if (data && data.success === true) {
+      console.log('✅ success标识成功，返回数据');
+      return data;
+    }
+
+    // 业务错误
+    console.error('❌ 业务错误:', data);
+    const errorMsg = data?.msg || data?.message || '请求失败';
+    ElMessage.error(errorMsg);
+    return Promise.reject(new Error(errorMsg));
   },
   (error) => {
-    console.error('响应错误:', error)
+    console.error('❌ HTTP请求失败:', error);
+    console.error('❌ 请求URL:', error.config?.url);
+    console.error('❌ 响应状态:', error.response?.status);
+    console.error('❌ 响应数据:', error.response?.data);
 
     // 处理HTTP错误状态码
     if (error.response) {
@@ -47,7 +64,6 @@ request.interceptors.response.use(
       switch (status) {
         case 401:
           ElMessage.error('未授权，请重新登录')
-          // 可以在这里处理登录跳转
           break
         case 403:
           ElMessage.error('拒绝访问')
@@ -68,7 +84,6 @@ request.interceptors.response.use(
     return Promise.reject(error)
   }
 )
-
 // 封装常用的请求方法
 export const http = {
   get(url, params) {
