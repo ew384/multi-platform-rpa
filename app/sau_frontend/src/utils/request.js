@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3409',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -29,7 +29,7 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   (response) => {
     const { data } = response
-    
+
     // 根据后端接口规范处理响应
     if (data.code === 200 || data.success) {
       return data
@@ -40,7 +40,7 @@ request.interceptors.response.use(
   },
   (error) => {
     console.error('响应错误:', error)
-    
+
     // 处理HTTP错误状态码
     if (error.response) {
       const { status } = error.response
@@ -64,7 +64,7 @@ request.interceptors.response.use(
     } else {
       ElMessage.error('网络连接失败')
     }
-    
+
     return Promise.reject(error)
   }
 )
@@ -74,19 +74,19 @@ export const http = {
   get(url, params) {
     return request.get(url, { params })
   },
-  
+
   post(url, data, config = {}) {
     return request.post(url, data, config)
   },
-  
+
   put(url, data, config = {}) {
     return request.put(url, data, config)
   },
-  
+
   delete(url, params) {
     return request.delete(url, { params })
   },
-  
+
   upload(url, formData) {
     return request.post(url, formData, {
       headers: {

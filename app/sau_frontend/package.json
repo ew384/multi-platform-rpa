@@ -1,5 +1,5 @@
 {
-  "name": "sau-admin",
+  "name": "sau_frontend",
   "private": true,
   "version": "0.0.0",
   "author": {
@@ -41,7 +41,7 @@
   },
   "build": {
     "appId": "com.sau.media.automation",
-    "productName": "SAU自媒体自动化运营系统",
+    "productName": "自媒体自动化运营系统",
     "directories": {
       "output": "dist-electron"
     },
@@ -70,5 +70,5 @@
     "removePackageScripts": true,
     "electronVersion": "28.0.0"
   },
-  "description": "SAU自媒体自动化运营系统 - 专业的多平台内容发布工具"
+  "description": "自媒体自动化运营系统 - 专业的多平台内容发布工具"
 }

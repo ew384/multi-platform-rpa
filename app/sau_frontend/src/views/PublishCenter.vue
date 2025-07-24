@@ -699,7 +699,7 @@ const accountStore = useAccountStore();
 const appStore = useAppStore();
 
 // API配置
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5409";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
 const authHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 }));
