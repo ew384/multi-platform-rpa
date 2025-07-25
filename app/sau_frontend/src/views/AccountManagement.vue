@@ -175,7 +175,11 @@
                 <div class="account-info">
                   <div class="avatar-container">
                     <div class="account-avatar">
-                      <el-avatar :size="56" :src="account.avatar || ''" />
+                      <el-avatar 
+                        :size="56" 
+                        :src="getAvatarUrl(account)" 
+                        @error="handleAvatarError"
+                      />
                     </div>
                     <div class="platform-logo">
                       <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
@@ -184,7 +188,7 @@
                   </div>
 
                   <div class="account-details">
-                    <h3 class="account-name">{{ account.name }}</h3>
+                    <h3 class="account-name">{{ account.userName }}</h3>
                     <div class="account-meta">
                       <span class="platform-text">{{ account.platform }}</span>
                       <!-- 分组信息 -->
@@ -300,7 +304,7 @@
                 >
                   <el-avatar :size="32" :src="account.avatar" />
                   <div class="account-info">
-                    <span class="account-name">{{ account.name }}</span>
+                    <span class="account-name">{{ account.userName }}</span>
                     <span class="account-platform">{{ account.platform }}</span>
                   </div>
                 </div>
@@ -348,7 +352,7 @@
                 >
                   <el-avatar :size="32" :src="account.avatar" />
                   <div class="account-info">
-                    <span class="account-name">{{ account.name }}</span>
+                    <span class="account-name">{{ account.userName }}</span>
                     <span class="account-platform">{{ account.platform }}</span>
                   </div>
                   <el-button 
@@ -375,68 +379,104 @@
     <!-- 添加/编辑账号对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="dialogType === 'add' ? '添加账号' : '编辑账号'"
-      width="480px"
+      :title="dialogStep === 1 ? '选择平台' : '扫码登录'"
+      width="600px"
       class="account-dialog"
       :close-on-click-modal="false"
+      @close="handleDialogClose"
     >
       <div class="dialog-content">
-        <el-form :model="accountForm" label-width="80px" :rules="rules" ref="accountFormRef">
-          <el-form-item label="平台" prop="platform">
-            <el-select 
-              v-model="accountForm.platform" 
-              placeholder="请选择平台" 
-              style="width: 100%"
-              :disabled="dialogType === 'edit' || sseConnecting"
-              class="platform-select"
+        <!-- 第一步：平台选择 -->
+        <div v-if="dialogStep === 1" class="platform-selection">
+          <div class="platform-grid">
+            <div 
+              v-for="platform in supportedPlatforms"
+              :key="platform.name"
+              :class="['platform-item', platform.class]"
+              @click="handlePlatformSelect(platform.name)"
             >
-              <el-option 
-                v-for="platform in platforms"
-                :key="platform.name"
-                :label="platform.name"
-                :value="platform.name"
-              />
-
-            </el-select>
-          </el-form-item>
-
-          <el-form-item label="名称" prop="name">
-            <el-input 
-              v-model="accountForm.name" 
-              placeholder="请输入账号名称" 
-              :disabled="sseConnecting"
-            />
-          </el-form-item>
-
-          <!-- 二维码显示区域 -->
-          <div v-if="sseConnecting" class="qrcode-container">
-            <div v-if="qrCodeData && !loginStatus" class="qrcode-wrapper">
-              <div class="qrcode-header">
-                <el-icon><Iphone /></el-icon>
-                <span>扫码登录</span>
+              <div class="platform-logo">
+                <img :src="platform.logo" :alt="platform.name" />
               </div>
-              <p class="qrcode-tip">请使用{{ accountForm.platform }}APP扫描二维码登录</p>
-              <div class="qrcode-frame">
-                <img :src="qrCodeData" alt="登录二维码" class="qrcode-image" />
-              </div>
-            </div>
-            
-            <div v-else-if="!qrCodeData && !loginStatus" class="loading-wrapper">
-              <el-icon class="loading-icon"><Loading /></el-icon>
-              <span class="loading-text">正在生成二维码...</span>
-            </div>
-            
-            <div v-else-if="loginStatus === '200'" class="success-wrapper">
-              <el-icon class="success-icon"><CircleCheckFilled /></el-icon>
-              <span class="success-text">登录成功</span>
-            </div>
-            
-            <div v-else-if="loginStatus === '500'" class="error-wrapper">
-              <el-icon class="error-icon"><CircleCloseFilled /></el-icon>
-              <span class="error-text">登录失败，请重试</span>
+              <div class="platform-name">{{ platform.name }}</div>
             </div>
           </div>
-        </el-form>
+          <div class="platform-tip">
+            <p>选择要添加的平台账号</p>
+          </div>
+        </div>
+
+        <!-- 第二步：二维码扫描 -->
+        <div v-if="dialogStep === 2" class="qrcode-step">
+          <div class="step-header">
+            <el-button 
+              text 
+              @click="handleBackToPlatformSelect" 
+              class="back-btn"
+              :disabled="sseConnecting"
+            >
+              <el-icon><ArrowLeft /></el-icon>
+              返回选择平台
+            </el-button>
+          </div>
+          
+          <div class="selected-platform">
+            <img :src="getPlatformLogo(accountForm.platform)" :alt="accountForm.platform" />
+            <span>{{ accountForm.platform }}</span>
+          </div>
+
+          <!-- 🔥 修改二维码显示容器 -->
+          <div class="qrcode-container">
+            <div class="qrcode-header">
+              <el-icon><Iphone /></el-icon>
+              <span>扫码登录</span>
+            </div>
+            <p class="qrcode-tip">请使用{{ accountForm.platform }}APP扫描二维码登录</p>
+            
+            <!-- 🔥 二维码展示框 - 固定大小的容器 -->
+            <div class="qrcode-frame">
+              <!-- 加载中状态 -->
+              <div v-if="sseConnecting && !qrCodeData && !loginStatus" class="qrcode-loading">
+                <el-icon class="loading-spinner"><Loading /></el-icon>
+                <span class="loading-text">正在生成二维码...</span>
+              </div>
+              
+              <!-- 显示二维码 -->
+              <img 
+                v-else-if="qrCodeData && !loginStatus" 
+                :src="qrCodeData" 
+                alt="登录二维码" 
+                class="qrcode-image" 
+              />
+              
+              <!-- 登录成功 -->
+              <div v-else-if="loginStatus === '200'" class="qrcode-success">
+                <el-icon class="success-icon"><CircleCheckFilled /></el-icon>
+                <span class="success-text">登录成功</span>
+              </div>
+              
+              <!-- 登录失败 -->
+              <div v-else-if="loginStatus === '500'" class="qrcode-error">
+                <el-icon class="error-icon"><CircleCloseFilled /></el-icon>
+                <span class="error-text">登录失败，请重试</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="dialogType === 'edit'" class="edit-form">
+          <el-form :model="accountForm" label-width="80px" ref="accountFormRef">
+            <el-form-item label="账号名称">
+              <el-input v-model="accountForm.userName" />
+            </el-form-item>
+            
+            <el-form-item label="状态">
+              <el-select v-model="accountForm.status">
+                <el-option label="正常" value="正常" />
+                <el-option label="异常" value="异常" />
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </div>
       </div>
 
       <template #footer>
@@ -444,14 +484,22 @@
           <el-button @click="dialogVisible = false" :disabled="sseConnecting">
             取消
           </el-button>
+          <!-- 重新生成二维码按钮 -->
           <el-button 
+            v-if="dialogStep === 2 && (loginStatus === '500' || (!qrCodeData && !sseConnecting))"
             type="primary" 
-            @click="submitAccountForm" 
-            :loading="sseConnecting"
-            :disabled="sseConnecting"
+            @click="handleRetryLogin"
           >
-            {{ sseConnecting ? '连接中...' : '确认' }}
+            重新生成二维码
           </el-button>
+          <el-button @click="dialogVisible = false">取消</el-button>
+            <el-button 
+              v-if="dialogType === 'edit'"
+              type="primary" 
+              @click="submitEdit"
+            >
+              保存
+            </el-button>
         </div>
       </template>
     </el-dialog>
@@ -558,24 +606,26 @@ const platforms = [
 // 对话框相关
 const dialogVisible = ref(false);
 const dialogType = ref("add");
-const accountFormRef = ref(null);
+
 const sseConnecting = ref(false);
 const qrCodeData = ref("");
 const loginStatus = ref("");
+const dialogStep = ref(1); // 1: 平台选择, 2: 二维码扫描
+
+// 支持的平台配置（带logo）
+const supportedPlatforms = [
+  { name: "抖音", logo: "/logos/douyin.png", class: "douyin" },
+  { name: "快手", logo: "/logos/kuaishou.png", class: "kuaishou" },
+  { name: "视频号", logo: "/logos/wechat_shipinghao.png", class: "wechat" },
+  { name: "小红书", logo: "/logos/xiaohongshu.jpg", class: "xiaohongshu" },
+];
 
 // 表单数据
 const accountForm = reactive({
   id: null,
-  name: "",
   platform: "",
   status: "正常",
 });
-
-// 表单验证规则
-const rules = {
-  platform: [{ required: true, message: "请选择平台", trigger: "change" }],
-  name: [{ required: true, message: "请输入账号名称", trigger: "blur" }],
-};
 
 // 计算属性
 const activeTab = ref("accounts");
@@ -624,7 +674,23 @@ const platformCount = computed(() => {
   const platforms = new Set(accountStore.accounts.map((acc) => acc.platform));
   return platforms.size;
 });
+// 获取头像URL
+const getAvatarUrl = (account) => {
+  if (account.avatar && account.avatar !== "/default-avatar.png") {
+    // 如果是本地头像路径，添加 API 前缀
+    if (account.avatar.startsWith("assets/avatar/")) {
+      return `http://localhost:3409/${account.avatar}`;
+    }
+    return account.avatar;
+  }
+  return "/default-avatar.png";
+};
 
+// 头像加载失败处理
+const handleAvatarError = (e) => {
+  console.warn("头像加载失败:", e);
+  e.target.src = "/default-avatar.png";
+};
 const fetchAccounts = async (forceCheck = false) => {
   if (appStore.isAccountRefreshing) return;
 
@@ -673,10 +739,10 @@ const fetchAccounts = async (forceCheck = false) => {
 };
 const getPlatformLogo = (platform) => {
   const logoMap = {
-    抖音: "/src/assets/logos/douyin.png",
-    快手: "/src/assets/logos/kuaishou.png",
-    视频号: "/src/assets/logos/wechat_shipinghao.png",
-    小红书: "/src/assets/logos/xiaohongshu.jpg",
+    抖音: "/logos/douyin.png",
+    快手: "/logos/kuaishou.png",
+    视频号: "/logos/wechat_shipinghao.png",
+    小红书: "/logos/xiaohongshu.jpg",
   };
   return logoMap[platform] || "";
 };
@@ -686,9 +752,10 @@ const handleSearch = () => {
 
 const handleAddAccount = () => {
   dialogType.value = "add";
+  dialogStep.value = 1; // 重置到第一步
   Object.assign(accountForm, {
     id: null,
-    name: "",
+    name: "", // 保留但不再显示输入框
     platform: "",
     status: "正常",
   });
@@ -697,15 +764,46 @@ const handleAddAccount = () => {
   loginStatus.value = "";
   dialogVisible.value = true;
 };
+const handlePlatformSelect = async (platform) => {
+  accountForm.platform = platform;
+  dialogStep.value = 2; // 进入第二步
+
+  // 🔥 确保初始状态正确
+  sseConnecting.value = true; // 显示加载状态
+  qrCodeData.value = ""; // 清空二维码数据
+  loginStatus.value = ""; // 清空登录状态
+
+  // 立即开始登录流程
+  const tempUserName = `用户_${Date.now()}`;
+  await connectSSE(platform, tempUserName);
+};
+
+// 新增：处理对话框关闭
+const handleDialogClose = () => {
+  dialogStep.value = 1;
+  sseConnecting.value = false;
+  qrCodeData.value = "";
+  loginStatus.value = "";
+};
 
 const handleEdit = (account) => {
   dialogType.value = "edit";
-  Object.assign(accountForm, { ...account });
+
+  // 🔥 填充编辑表单数据
+  Object.assign(accountForm, {
+    id: account.id,
+    userName: account.userName,
+    platform: account.platform,
+    status: account.status,
+    // 可以添加更多可编辑字段
+  });
+
   dialogVisible.value = true;
+  dialogStep.value = 2; // 直接跳到编辑表单，不需要平台选择
 };
 
 const handleDelete = (account) => {
-  ElMessageBox.confirm(`确定要删除账号 ${account.name} 吗？`, "删除确认", {
+  ElMessageBox.confirm(`确定要删除账号 ${account.userName} 吗？`, "删除确认", {
     confirmButtonText: "确定删除",
     cancelButtonText: "取消",
     type: "warning",
@@ -736,16 +834,6 @@ const getPlatformClass = (platform) => {
     小红书: "xiaohongshu",
   };
   return classMap[platform] || "default";
-};
-
-const getPlatformIcon = (platform) => {
-  const iconMap = {
-    抖音: "VideoCamera",
-    快手: "PlayTwo",
-    视频号: "MessageBox",
-    小红书: "Notebook",
-  };
-  return iconMap[platform] || "Platform";
 };
 
 // SSE连接相关
@@ -780,23 +868,29 @@ const connectSSE = (platform, name) => {
 
   eventSource.onmessage = (event) => {
     const data = event.data;
-    console.log("SSE消息:", data);
+    console.log("🔍 SSE消息:", data);
+    console.log("🔍 消息长度:", data.length);
+    console.log("🔍 消息类型:", typeof data);
 
     if (!qrCodeData.value && data.length > 100) {
       try {
         if (data.startsWith("data:image")) {
           qrCodeData.value = data;
+          console.log("✅ 直接设置 data:image 格式二维码");
         } else if (data.startsWith("http")) {
           qrCodeData.value = data;
+          console.log("✅ 设置 HTTP URL 格式二维码");
         } else {
           qrCodeData.value = `data:image/png;base64,${data}`;
+          console.log("✅ 转换为 base64 格式二维码");
         }
+
         console.log(
-          "设置二维码数据:",
+          "🔍 最终二维码数据:",
           qrCodeData.value.substring(0, 50) + "..."
         );
       } catch (error) {
-        console.error("处理二维码数据出错:", error);
+        console.error("❌ 处理二维码数据出错:", error);
       }
     } else if (data === "200" || data === "500") {
       loginStatus.value = data;
@@ -834,42 +928,6 @@ const connectSSE = (platform, name) => {
   };
 };
 
-const submitAccountForm = () => {
-  accountFormRef.value.validate(async (valid) => {
-    if (valid) {
-      if (dialogType.value === "add") {
-        connectSSE(accountForm.platform, accountForm.name);
-      } else {
-        try {
-          const res = await accountApi.updateAccount({
-            id: accountForm.id,
-            type: Number(
-              accountForm.platform === "快手"
-                ? 1
-                : accountForm.platform === "抖音"
-                ? 2
-                : accountForm.platform === "视频号"
-                ? 3
-                : 4
-            ),
-            userName: accountForm.name,
-          });
-          if (res.code === 200) {
-            accountStore.updateAccount(accountForm.id, accountForm);
-            ElMessage.success("更新成功");
-            dialogVisible.value = false;
-            fetchAccounts();
-          } else {
-            ElMessage.error(res.msg || "更新账号失败");
-          }
-        } catch (error) {
-          console.error("更新账号失败:", error);
-          ElMessage.error("更新账号失败");
-        }
-      }
-    }
-  });
-};
 // 新增：分组管理相关方法和数据
 const groupDialogVisible = ref(false);
 const groupDialogType = ref("add");
@@ -982,7 +1040,7 @@ const handleDragOver = (event) => {
       console.log("找到的账号:", account);
       if (account) {
         draggedAccount.value = account;
-        console.log("✅ 恢复拖拽账号数据:", account.name);
+        console.log("✅ 恢复拖拽账号数据:", account.userName);
       }
     }
   }
@@ -1013,7 +1071,7 @@ const handleDrop = async (groupId, event) => {
       console.log("找到的账号:", account);
       if (account) {
         draggedAccount.value = account;
-        console.log("✅ 恢复成功:", account.name);
+        console.log("✅ 恢复成功:", account.userName);
       }
     }
   }
@@ -1218,6 +1276,25 @@ const submitGroupForm = () => {
     }
   });
 };
+const submitEdit = async () => {
+  try {
+    const res = await accountApi.updateUserinfo({
+      id: accountForm.id,
+      userName: accountForm.userName,
+      status: accountForm.status === "正常" ? 1 : 0,
+    });
+
+    if (res.code === 200) {
+      ElMessage.success("更新成功");
+      dialogVisible.value = false;
+      fetchAccounts(); // 刷新列表
+    } else {
+      ElMessage.error(res.msg || "更新失败");
+    }
+  } catch (error) {
+    ElMessage.error("更新失败");
+  }
+};
 // 生命周期
 onMounted(() => {
   if (appStore.isFirstTimeAccountManagement) {
@@ -1271,12 +1348,121 @@ $space-md: 16px;
 $space-lg: 24px;
 $space-xl: 32px;
 $space-2xl: 48px;
-
+:deep(.el-overlay) {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
 .account-management {
   max-width: 1200px;
   margin: 0 auto;
 }
+.qrcode-container {
+  text-align: center;
 
+  .qrcode-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-sm;
+    margin-bottom: $space-md;
+    font-weight: 600;
+    color: $text-primary;
+  }
+
+  .qrcode-tip {
+    color: $text-secondary;
+    margin-bottom: $space-lg;
+    font-size: 14px;
+  }
+
+  // 🔥 固定大小的二维码框
+  .qrcode-frame {
+    width: 240px;
+    height: 240px;
+    margin: 0 auto;
+    background: $bg-gray;
+    border-radius: $radius-lg;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed $border-light;
+    position: relative;
+    overflow: hidden;
+
+    // 二维码图片
+    .qrcode-image {
+      width: 200px;
+      height: 200px;
+      border-radius: $radius-md;
+      object-fit: contain;
+    }
+
+    // 🔥 加载状态
+    .qrcode-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: $space-md;
+      color: $text-secondary;
+
+      .loading-spinner {
+        font-size: 32px;
+        animation: rotate 1s linear infinite;
+      }
+
+      .loading-text {
+        font-size: 14px;
+      }
+    }
+
+    // 成功状态
+    .qrcode-success {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: $space-sm;
+
+      .success-icon {
+        font-size: 48px;
+        color: $success;
+      }
+
+      .success-text {
+        font-size: 16px;
+        font-weight: 500;
+        color: $success;
+      }
+    }
+
+    // 失败状态
+    .qrcode-error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: $space-sm;
+
+      .error-icon {
+        font-size: 48px;
+        color: $danger;
+      }
+
+      .error-text {
+        font-size: 16px;
+        font-weight: 500;
+        color: $danger;
+      }
+    }
+  }
+}
+
+// 旋转动画
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 // 页面头部
 .page-header {
   margin-bottom: $space-lg;
@@ -1827,6 +2013,95 @@ $space-2xl: 48px;
 
   .accounts-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+.platform-selection {
+  .platform-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .platform-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      border-color: #5b73de;
+    }
+
+    .platform-logo {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 12px;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+      }
+    }
+
+    .platform-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: $text-primary;
+    }
+  }
+
+  .platform-tip {
+    text-align: center;
+
+    p {
+      color: $text-secondary;
+      margin: 0;
+    }
+  }
+}
+
+.qrcode-step {
+  .step-header {
+    margin-bottom: 16px;
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: $text-secondary;
+    }
+  }
+
+  .selected-platform {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 12px;
+    background: $bg-light;
+    border-radius: 8px;
+
+    img {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+    }
+
+    span {
+      font-size: 16px;
+      font-weight: 600;
+      color: $text-primary;
+    }
   }
 }
 // 分组管理专用样式
