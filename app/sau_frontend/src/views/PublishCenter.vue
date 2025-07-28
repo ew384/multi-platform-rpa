@@ -1332,7 +1332,7 @@ const publishTask = async (task) => {
   task.status = "publishing";
 
   try {
-    // 数据验证（保持新版本的验证逻辑）
+    // 数据验证
     if (task.videos.length === 0) {
       throw new Error("请先上传视频文件");
     }
@@ -1343,55 +1343,130 @@ const publishTask = async (task) => {
       throw new Error("请选择发布账号");
     }
 
-    // 使用旧版本的数据格式构造（这是关键！）
-    const publishData = {
-      type: task.currentPlatform || 2, // 从任务中获取平台类型，默认视频号
-      title: task.title,
-      tags: task.topics || [], // 话题数组（不带#）
-      fileList: task.videos.map((video) => {
-        // 直接返回完整的文件路径，包含UUID
-        return video.path || video.name;
-      }),
-      accountList: task.selectedAccounts.map((accountId) => {
-        const account = availableAccounts.value.find(
-          (acc) => acc.id === accountId
-        );
-        return account ? account.filePath : accountId;
-      }),
-      enableTimer: task.scheduleEnabled ? 1 : 0,
-      videosPerDay: task.scheduleEnabled ? task.videosPerDay || 1 : 1,
-      dailyTimes: task.scheduleEnabled
-        ? task.dailyTimes || ["10:00"]
-        : ["10:00"],
-      startDays: task.scheduleEnabled ? task.startDays || 0 : 0,
-      category: 0,
-    };
+    task.publishProgress = 10;
+    task.publishProgressText = "正在分析账号平台...";
 
-    console.log("发布数据:", publishData); // 调试用
-
-    task.publishProgress = 30;
-    task.publishProgressText = "正在发布...";
-
-    // 使用旧版本的fetch调用方式（这很重要！）
-    const response = await fetch(`${apiBaseUrl}/postVideo`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders.value,
-      },
-      body: JSON.stringify(publishData),
+    // 🔥 新增：按平台分组账号
+    const accountsByPlatform = {};
+    task.selectedAccounts.forEach((accountId) => {
+      const account = availableAccounts.value.find(
+        (acc) => acc.id === accountId
+      );
+      if (account) {
+        if (!accountsByPlatform[account.type]) {
+          accountsByPlatform[account.type] = [];
+        }
+        accountsByPlatform[account.type].push(account);
+      }
     });
 
-    const data = await response.json();
+    console.log("按平台分组的账号:", accountsByPlatform);
 
-    if (data.code === 200) {
+    if (Object.keys(accountsByPlatform).length === 0) {
+      throw new Error("未找到有效的发布账号");
+    }
+
+    task.publishProgress = 20;
+    task.publishProgressText = `准备发布到 ${
+      Object.keys(accountsByPlatform).length
+    } 个平台...`;
+
+    let totalSuccess = 0;
+    let totalFailed = 0;
+    const platformCount = Object.keys(accountsByPlatform).length;
+    let processedPlatforms = 0;
+
+    // 🔥 新增：为每个平台发送独立请求
+    for (const [platformType, accounts] of Object.entries(accountsByPlatform)) {
+      try {
+        console.log(
+          `正在发布到平台 ${platformType}，账号数：${accounts.length}`
+        );
+
+        const publishData = {
+          type: parseInt(platformType),
+          title: task.title,
+          tags: task.topics || [],
+          fileList: task.videos.map((video) => video.path || video.name),
+          accountList: accounts.map((account) => ({
+            filePath: account.filePath,
+            accountName: account.userName,
+            accountId: account.accountId,
+            platform: account.platform,
+            type: account.type,
+            avatar: account.avatar,
+            bio: account.bio,
+            followersCount: account.followersCount,
+            videosCount: account.videosCount,
+          })),
+          enableTimer: task.scheduleEnabled ? 1 : 0,
+          videosPerDay: task.scheduleEnabled ? task.videosPerDay || 1 : 1,
+          dailyTimes: task.scheduleEnabled
+            ? task.dailyTimes || ["10:00"]
+            : ["10:00"],
+          startDays: task.scheduleEnabled ? task.startDays || 0 : 0,
+          category: 0,
+        };
+
+        console.log(`平台 ${platformType} 的发布数据:`, publishData);
+
+        task.publishProgressText = `正在发布到平台 ${getPlatformName(
+          parseInt(platformType)
+        )}...`;
+
+        const response = await fetch(`${apiBaseUrl}/postVideo`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders.value,
+          },
+          body: JSON.stringify(publishData),
+        });
+
+        const data = await response.json();
+
+        if (data.code === 200) {
+          console.log(`平台 ${platformType} 发布成功`);
+          totalSuccess += accounts.length;
+        } else {
+          console.error(`平台 ${platformType} 发布失败:`, data.msg);
+          totalFailed += accounts.length;
+        }
+
+        processedPlatforms++;
+
+        // 更新进度 (20% - 90% 用于发布过程)
+        const publishProgress = 20 + (processedPlatforms / platformCount) * 70;
+        task.publishProgress = Math.min(publishProgress, 90);
+        task.publishProgressText = `发布进度: ${processedPlatforms}/${platformCount} 个平台完成`;
+      } catch (error) {
+        console.error(`平台 ${platformType} 发布异常:`, error);
+        totalFailed += accounts.length;
+        processedPlatforms++;
+      }
+    }
+
+    // 🔥 新增：最终结果处理
+    if (totalFailed === 0) {
       task.publishProgress = 100;
-      task.publishProgressText = "发布成功";
+      task.publishProgressText = "全部平台发布成功";
       task.status = "published";
       task.publishing = false;
-      ElMessage.success("发布成功");
+      ElMessage.success(
+        `发布成功！共发布到 ${
+          Object.keys(accountsByPlatform).length
+        } 个平台的 ${totalSuccess} 个账号`
+      );
+    } else if (totalSuccess > 0) {
+      task.publishProgress = 100;
+      task.publishProgressText = `部分发布成功 (成功:${totalSuccess}, 失败:${totalFailed})`;
+      task.status = "published";
+      task.publishing = false;
+      ElMessage.warning(
+        `部分发布成功：${totalSuccess} 个账号成功，${totalFailed} 个账号失败`
+      );
     } else {
-      throw new Error(data.msg || "发布失败");
+      throw new Error(`全部发布失败 (${totalFailed} 个账号)`);
     }
   } catch (error) {
     console.error("发布错误:", error);
@@ -1400,6 +1475,16 @@ const publishTask = async (task) => {
     task.publishing = false;
     ElMessage.error("发布失败: " + error.message);
   }
+};
+
+const getPlatformName = (platformType) => {
+  const platformNames = {
+    1: "小红书",
+    2: "视频号",
+    3: "抖音",
+    4: "快手",
+  };
+  return platformNames[platformType] || `平台${platformType}`;
 };
 
 const duplicateTask = (task) => {
