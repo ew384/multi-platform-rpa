@@ -259,14 +259,24 @@
                   <el-icon><Collection /></el-icon>
                 </div>
                 <div class="stat-content">
-                  <div class="stat-number">{{ accountStore.groups.length }}</div>
-                  <div class="stat-label">总分组数</div>
+                  <div class="stat-number">{{ platformGroups.length }}</div>
+                  <div class="stat-label">平台分组</div>
                 </div>
               </div>
 
               <div class="stat-card">
                 <div class="stat-icon normal">
                   <el-icon><User /></el-icon>
+                </div>
+                <div class="stat-content">
+                  <div class="stat-number">{{ customGroups.length }}</div>
+                  <div class="stat-label">自定义分组</div>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon abnormal">
+                  <el-icon><UserFilled /></el-icon>
                 </div>
                 <div class="stat-content">
                   <div class="stat-number">{{ ungroupedAccounts.length }}</div>
@@ -276,9 +286,68 @@
             </div>
           </div>
 
-          <!-- 分组列表 -->
-          <div class="groups-list">
-            <!-- 未分组区域 -->
+          <!-- 平台分组展示 -->
+          <div class="platform-groups-section">
+            <div class="section-header">
+              <h4>平台分组</h4>
+              <p>按平台自动分组显示</p>
+            </div>
+            
+            <div class="groups-list">
+              <div 
+                v-for="platformGroup in platformGroups"
+                :key="platformGroup.id"
+                class="group-card platform-group"
+              >
+                <div class="group-header">
+                  <div class="group-info">
+                    <div class="group-icon platform-logo-container">
+                      <img :src="platformGroup.logo" :alt="platformGroup.name" />
+                    </div>
+                    <div class="group-details">
+                      <h3 class="group-name">{{ platformGroup.name }}</h3>
+                      <p class="group-description">{{ platformGroup.accounts.length }} 个账号</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="platform-accounts" v-if="platformGroup.accounts.length > 0">
+                  <div 
+                    v-for="account in platformGroup.accounts"
+                    :key="account.id"
+                    class="platform-account-item"
+                  >
+                    <div class="account-avatar-container">
+                      <el-avatar 
+                        :size="32" 
+                        :src="getAvatarUrl(account)" 
+                        @error="handleAvatarError"
+                      />
+                      <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                    </div>
+                    <div class="account-info">
+                      <span class="account-name">{{ account.userName }}</span>
+                      <span class="account-status" :class="account.status === '正常' ? 'status-normal' : 'status-error'">
+                        {{ account.status }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-else class="group-empty">
+                  <span>该平台暂无账号</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分隔线 -->
+          <div class="section-divider">
+            <span>自定义分组</span>
+          </div>
+
+          <!-- 自定义分组展示 -->
+          <div class="custom-groups-section">
+            <!-- 未分组账号 -->
             <div class="group-card ungrouped">
               <div class="group-header">
                 <div class="group-info">
@@ -301,10 +370,9 @@
                   @dragstart="handleDragStart(account, $event)"
                   @dragend="handleDragEnd"
                 >
-                  <!-- 使用与分组内账号相同的头像结构 -->
                   <div class="account-avatar-container">
                     <el-avatar 
-                      :size="40" 
+                      :size="32" 
                       :src="getAvatarUrl(account)" 
                       @error="handleAvatarError"
                     />
@@ -321,29 +389,18 @@
               </div>
             </div>
 
-            <!-- 分组区域 -->
-              <div 
-                v-for="group in accountStore.groups"
-                :key="group.id"
-                class="group-card"
-                @dragover="handleDragOver"
-                @dragleave="handleDragLeave"
-                @drop="handleDrop(group.id, $event)"
-              >
+            <!-- 自定义分组 -->
+            <div 
+              v-for="group in customGroups"
+              :key="group.id"
+              class="group-card custom-group"
+              @dragover="handleDragOver"
+              @dragleave="handleDragLeave"
+              @drop="handleDrop(group.id, $event)"
+            >
               <div class="group-header">
                 <div class="group-info">
-                  <!-- 修改这里：如果是平台分组显示平台logo，否则显示分组图标 -->
-                  <div 
-                    v-if="getPlatformLogo(group.name)" 
-                    class="group-icon platform-logo-container"
-                  >
-                    <img :src="getPlatformLogo(group.name)" :alt="group.name" />
-                  </div>
-                  <div 
-                    v-else 
-                    class="group-icon" 
-                    :style="{ backgroundColor: group.color }"
-                  >
+                  <div class="group-icon" :style="{ backgroundColor: group.color }">
                     <el-icon><component :is="getGroupIcon(group.icon)" /></el-icon>
                   </div>
                   <div class="group-details">
@@ -373,7 +430,7 @@
                 >
                   <div class="account-avatar-container">
                     <el-avatar 
-                      :size="40" 
+                      :size="32" 
                       :src="getAvatarUrl(account)" 
                       @error="handleAvatarError"
                     />
@@ -385,6 +442,7 @@
                   <div class="account-info">
                     <span class="account-name">{{ account.userName }}</span>
                     <span class="account-platform">{{ account.platform }}</span>
+                    <!-- 移除不存在的分组标签 -->
                   </div>
                   <el-button 
                     size="small" 
@@ -705,6 +763,53 @@ const platformCount = computed(() => {
   const platforms = new Set(accountStore.accounts.map((acc) => acc.platform));
   return platforms.size;
 });
+// 在现有计算属性后面添加
+const platformGroups = computed(() => {
+  const platforms = [
+    ...new Set(accountStore.accounts.map((acc) => acc.platform)),
+  ];
+
+  return platforms.map((platform) => ({
+    id: `platform_${platform}`,
+    name: platform,
+    type: "platform",
+    accounts: accountStore.accounts.filter((acc) => acc.platform === platform),
+    color: getPlatformColor(platform),
+    logo: getPlatformLogo(platform),
+  }));
+});
+
+const customGroups = computed(() => {
+  // 平台分组名称列表
+  const platformNames = ["微信视频号", "抖音", "快手", "小红书", "视频号"];
+
+  // 只保留非平台分组
+  const filtered = accountStore.groups.filter(
+    (group) => !platformNames.includes(group.name)
+  );
+
+  console.log("🔍 原始分组数据:", accountStore.groups);
+  console.log("✅ 过滤后的自定义分组:", filtered);
+
+  return filtered;
+});
+const getAccountsByGroup = (groupId) => {
+  return accountStore.accounts.filter((acc) => acc.group_id === groupId);
+};
+const ungroupedAccounts = computed(() =>
+  accountStore.accounts.filter((acc) => !acc.group_id)
+);
+
+// 添加平台颜色映射方法
+const getPlatformColor = (platform) => {
+  const colorMap = {
+    抖音: "#fe2c55",
+    快手: "#ff6600",
+    视频号: "#07c160",
+    小红书: "#ff2442",
+  };
+  return colorMap[platform] || "#6b7280";
+};
 // 获取头像URL
 const getAvatarUrl = (account) => {
   if (account.avatar && account.avatar !== "/default-avatar.png") {
@@ -730,9 +835,9 @@ const fetchAccounts = async (forceCheck = false) => {
   try {
     console.log("🔍 开始获取账号数据，forceCheck:", forceCheck);
 
-    // 🔥 修改：直接使用可用的API
-    const res = await accountApi.getValidAccounts(forceCheck);
-    console.log("✅ API响应:", res);
+    // 🔥 修改：使用带分组信息的API
+    const res = await accountApi.getAccountsWithGroups(forceCheck);
+    console.log("✅ 账号API响应:", res);
 
     if (res && res.code === 200 && res.data) {
       accountStore.setAccounts(res.data);
@@ -757,13 +862,46 @@ const fetchAccounts = async (forceCheck = false) => {
         appStore.setAccountManagementVisited();
       }
     } else {
-      console.error("❌ API响应格式错误:", res);
+      console.error("❌ 账号API响应格式错误:", res);
       ElMessage.error("获取账号数据失败");
     }
   } catch (error) {
     console.error("获取账号数据失败:", error);
-    // 🔥 显示更详细的错误信息
-    ElMessage.error(`获取账号数据失败: ${error.message || "网络错误"}`);
+    // 🔥 如果带分组信息的API失败，降级使用普通API
+    console.log("🔄 降级使用普通账号API");
+    try {
+      const fallbackRes = await accountApi.getValidAccounts(forceCheck);
+      console.log("✅ 降级API响应:", fallbackRes);
+
+      if (fallbackRes && fallbackRes.code === 200 && fallbackRes.data) {
+        accountStore.setAccounts(fallbackRes.data);
+
+        // 获取分组信息
+        try {
+          const groupsRes = await accountApi.getGroups();
+          console.log("✅ 分组API响应:", groupsRes);
+          console.log(
+            "🔍 分组详细数据:",
+            JSON.stringify(groupsRes.data, null, 2)
+          ); // 添加这行调试
+
+          if (groupsRes && groupsRes.code === 200 && groupsRes.data) {
+            accountStore.setGroups(groupsRes.data);
+          }
+        } catch (groupError) {
+          console.warn("获取分组信息失败:", groupError);
+        }
+
+        ElMessage.success("账号数据加载成功");
+      } else {
+        ElMessage.error("获取账号数据失败");
+      }
+    } catch (fallbackError) {
+      console.error("降级API也失败:", fallbackError);
+      ElMessage.error(
+        `获取账号数据失败: ${fallbackError.message || "网络错误"}`
+      );
+    }
   } finally {
     appStore.setAccountRefreshing(false);
   }
@@ -993,16 +1131,6 @@ const groupIcons = [
   "Fire",
   "Lightning",
 ];
-
-// 计算属性：未分组的账号
-const ungroupedAccounts = computed(() => {
-  return accountStore.accounts.filter((acc) => !acc.group_id);
-});
-
-// 根据分组ID获取账号
-const getAccountsByGroup = (groupId) => {
-  return accountStore.accounts.filter((acc) => acc.group_id === groupId);
-};
 
 // 获取分组图标组件
 const getGroupIcon = (iconName) => {
@@ -2136,6 +2264,7 @@ $space-2xl: 48px;
     }
   }
 }
+
 // 分组管理专用样式
 .groups-content {
   .groups-stats {
@@ -2184,10 +2313,6 @@ $space-2xl: 48px;
           }
 
           &.abnormal {
-            background: linear-gradient(135deg, $danger 0%, #f87171 100%);
-          }
-
-          &.platforms {
             background: linear-gradient(135deg, $info 0%, #9ca3af 100%);
           }
         }
@@ -2210,24 +2335,78 @@ $space-2xl: 48px;
     }
   }
 
+  // 平台分组区域
+  .platform-groups-section {
+    margin-bottom: $space-xl;
+
+    .section-header {
+      margin-bottom: $space-md;
+
+      h4 {
+        font-size: 16px;
+        font-weight: 600;
+        color: $text-primary;
+        margin: 0 0 $space-xs 0;
+      }
+
+      p {
+        font-size: 14px;
+        color: $text-secondary;
+        margin: 0;
+      }
+    }
+  }
+
+  // 分隔线
+  .section-divider {
+    text-align: center;
+    margin: $space-xl 0;
+    position: relative;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background-color: $border-light;
+    }
+
+    span {
+      background-color: $bg-light;
+      padding: 0 $space-md;
+      color: $text-primary;
+      font-size: 14px;
+      font-weight: 500;
+    }
+  }
+
+  // 🔥 重新设计分组列表布局
   .groups-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: $space-lg;
 
     .group-card {
       background: $bg-white;
       border-radius: $radius-xl;
-      padding: $space-lg;
       box-shadow: $shadow-sm;
       transition: all 0.3s ease;
       border: 2px solid transparent;
+      overflow: hidden;
 
       &:hover {
         transform: translateY(-2px);
         box-shadow: $shadow-md;
       }
 
+      // 平台分组样式
+      &.platform-group {
+        border-left: 4px solid $primary;
+      }
+
+      // 未分组样式
       &.ungrouped {
         border: 2px dashed $border-light;
         background: $bg-gray;
@@ -2237,46 +2416,49 @@ $space-2xl: 48px;
         }
       }
 
-      // 拖拽悬停效果
-      &.drag-over {
-        border-color: $primary;
-        background-color: rgba(91, 115, 222, 0.05);
+      // 自定义分组样式
+      &.custom-group {
+        &.drag-over {
+          border-color: $primary;
+          background-color: rgba(91, 115, 222, 0.05);
+        }
       }
 
       .group-header {
+        padding: $space-lg;
+        border-bottom: 1px solid $border-light;
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: $space-md;
+        align-items: center;
 
         .group-info {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           gap: $space-md;
           flex: 1;
 
           .group-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: $radius-lg;
+            width: 40px;
+            height: 40px;
+            border-radius: $radius-md;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
 
             .el-icon {
-              font-size: 24px;
+              font-size: 20px;
               color: white;
             }
 
-            // 平台logo容器样式
             &.platform-logo-container {
               background: transparent;
+              border: 1px solid $border-light;
 
               img {
-                width: 48px;
-                height: 48px;
-                border-radius: $radius-lg;
+                width: 36px;
+                height: 36px;
+                border-radius: $radius-md;
                 object-fit: cover;
               }
             }
@@ -2287,18 +2469,18 @@ $space-2xl: 48px;
             min-width: 0;
 
             .group-name {
-              font-size: 18px;
+              font-size: 16px;
               font-weight: 600;
               color: $text-primary;
-              margin: 0 0 $space-xs 0;
+              margin: 0 0 2px 0;
               line-height: 1.2;
             }
 
             .group-description {
-              font-size: 14px;
+              font-size: 13px;
               color: $text-secondary;
               margin: 0;
-              line-height: 1.4;
+              line-height: 1.2;
             }
           }
         }
@@ -2310,9 +2492,10 @@ $space-2xl: 48px;
           transition: opacity 0.3s ease;
 
           .el-button {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
+            padding: 0;
           }
         }
       }
@@ -2321,23 +2504,25 @@ $space-2xl: 48px;
         opacity: 1;
       }
 
-      .group-accounts {
-        .group-account-item {
+      // 🔥 修正账号展示区域
+      .group-accounts,
+      .platform-accounts {
+        padding: $space-md;
+        max-height: 250px;
+        overflow-y: auto;
+
+        .group-account-item,
+        .platform-account-item {
           display: flex;
           align-items: center;
           gap: $space-sm;
-          padding: $space-sm;
-          border-radius: $radius-md;
+          padding: $space-xs $space-sm;
+          border-radius: $radius-sm;
           transition: all 0.3s ease;
-          cursor: grab;
           margin-bottom: $space-xs;
 
           &:hover {
             background-color: $bg-light;
-          }
-
-          &:active {
-            cursor: grabbing;
           }
 
           &:last-child {
@@ -2349,27 +2534,27 @@ $space-2xl: 48px;
             flex-shrink: 0;
 
             :deep(.el-avatar) {
-              border: 2px solid #f1f5f9;
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+              border: 1px solid #e2e8f0;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             }
 
+            // 🔥 修正平台logo大小
             .platform-logo {
               position: absolute;
-              bottom: -2px;
-              right: -2px;
-              width: 16px;
-              height: 16px;
+              bottom: -1px;
+              right: -1px;
+              width: 12px;
+              height: 12px;
               border-radius: 50%;
               background: white;
               display: flex;
               align-items: center;
               justify-content: center;
-              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-              border: 1px solid white;
+              box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 
               img {
-                width: 14px;
-                height: 14px;
+                width: 10px;
+                height: 10px;
                 border-radius: 50%;
                 object-fit: cover;
               }
@@ -2377,12 +2562,12 @@ $space-2xl: 48px;
 
             .status-dot {
               position: absolute;
-              top: 2px;
-              right: 2px;
-              width: 10px;
-              height: 10px;
+              top: 1px;
+              right: 1px;
+              width: 8px;
+              height: 8px;
               border-radius: 50%;
-              border: 2px solid white;
+              border: 1px solid white;
 
               &.online {
                 background-color: $success;
@@ -2399,38 +2584,61 @@ $space-2xl: 48px;
             min-width: 0;
 
             .account-name {
-              font-size: 14px;
+              font-size: 13px;
               font-weight: 500;
               color: $text-primary;
-              margin-bottom: 2px;
+              margin-bottom: 1px;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
               display: block;
+              line-height: 1.2;
             }
 
             .account-platform {
-              font-size: 12px;
+              font-size: 11px;
               color: $text-secondary;
+              line-height: 1.2;
+            }
+
+            .account-status {
+              font-size: 11px;
+              line-height: 1.2;
+
+              &.status-normal {
+                color: $success;
+              }
+
+              &.status-error {
+                color: $danger;
+              }
             }
           }
 
           .remove-btn {
             opacity: 0;
             transition: opacity 0.3s ease;
-            width: 24px;
-            height: 24px;
-            min-height: 24px;
+            width: 20px;
+            height: 20px;
+            min-height: 20px;
             padding: 0;
             border-radius: 50%;
 
             .el-icon {
-              font-size: 12px;
+              font-size: 10px;
             }
           }
 
           &:hover .remove-btn {
             opacity: 1;
+          }
+        }
+
+        .group-account-item {
+          cursor: grab;
+
+          &:active {
+            cursor: grabbing;
           }
         }
       }
@@ -2439,17 +2647,18 @@ $space-2xl: 48px;
         padding: $space-lg;
         text-align: center;
         color: $text-muted;
-        font-size: 14px;
-        border: 2px dashed $border-light;
-        border-radius: $radius-md;
+        font-size: 13px;
+        border: 1px dashed $border-light;
+        border-radius: $radius-sm;
         background-color: $bg-light;
+        margin: $space-md;
       }
     }
   }
 }
 
 // 标签页样式优化
-// 更接近竞品的标签页样式
+
 .tabs-container {
   .simple-tabs {
     margin-bottom: $space-lg;
