@@ -293,7 +293,6 @@
               </div>
               
               <div class="group-accounts" v-if="ungroupedAccounts.length > 0">
-                <!-- 未分组账号 -->
                 <div 
                   v-for="account in ungroupedAccounts"
                   :key="account.id"
@@ -302,7 +301,18 @@
                   @dragstart="handleDragStart(account, $event)"
                   @dragend="handleDragEnd"
                 >
-                  <el-avatar :size="32" :src="account.avatar" />
+                  <!-- 使用与分组内账号相同的头像结构 -->
+                  <div class="account-avatar-container">
+                    <el-avatar 
+                      :size="40" 
+                      :src="getAvatarUrl(account)" 
+                      @error="handleAvatarError"
+                    />
+                    <div class="platform-logo">
+                      <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                    </div>
+                    <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                  </div>
                   <div class="account-info">
                     <span class="account-name">{{ account.userName }}</span>
                     <span class="account-platform">{{ account.platform }}</span>
@@ -322,7 +332,18 @@
               >
               <div class="group-header">
                 <div class="group-info">
-                  <div class="group-icon" :style="{ backgroundColor: group.color }">
+                  <!-- 修改这里：如果是平台分组显示平台logo，否则显示分组图标 -->
+                  <div 
+                    v-if="getPlatformLogo(group.name)" 
+                    class="group-icon platform-logo-container"
+                  >
+                    <img :src="getPlatformLogo(group.name)" :alt="group.name" />
+                  </div>
+                  <div 
+                    v-else 
+                    class="group-icon" 
+                    :style="{ backgroundColor: group.color }"
+                  >
                     <el-icon><component :is="getGroupIcon(group.icon)" /></el-icon>
                   </div>
                   <div class="group-details">
@@ -350,7 +371,17 @@
                   @dragstart="handleDragStart(account, $event)"
                   @dragend="handleDragEnd"
                 >
-                  <el-avatar :size="32" :src="account.avatar" />
+                  <div class="account-avatar-container">
+                    <el-avatar 
+                      :size="40" 
+                      :src="getAvatarUrl(account)" 
+                      @error="handleAvatarError"
+                    />
+                    <div class="platform-logo">
+                      <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                    </div>
+                    <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                  </div>
                   <div class="account-info">
                     <span class="account-name">{{ account.userName }}</span>
                     <span class="account-platform">{{ account.platform }}</span>
@@ -742,6 +773,7 @@ const getPlatformLogo = (platform) => {
     抖音: "/logos/douyin.png",
     快手: "/logos/kuaishou.png",
     视频号: "/logos/wechat_shipinghao.png",
+    微信视频号: "/logos/wechat_shipinghao.png",
     小红书: "/logos/xiaohongshu.jpg",
   };
   return logoMap[platform] || "";
@@ -2236,6 +2268,18 @@ $space-2xl: 48px;
               font-size: 24px;
               color: white;
             }
+
+            // 平台logo容器样式
+            &.platform-logo-container {
+              background: transparent;
+
+              img {
+                width: 48px;
+                height: 48px;
+                border-radius: $radius-lg;
+                object-fit: cover;
+              }
+            }
           }
 
           .group-details {
@@ -2300,6 +2344,56 @@ $space-2xl: 48px;
             margin-bottom: 0;
           }
 
+          .account-avatar-container {
+            position: relative;
+            flex-shrink: 0;
+
+            :deep(.el-avatar) {
+              border: 2px solid #f1f5f9;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .platform-logo {
+              position: absolute;
+              bottom: -2px;
+              right: -2px;
+              width: 16px;
+              height: 16px;
+              border-radius: 50%;
+              background: white;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+              border: 1px solid white;
+
+              img {
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                object-fit: cover;
+              }
+            }
+
+            .status-dot {
+              position: absolute;
+              top: 2px;
+              right: 2px;
+              width: 10px;
+              height: 10px;
+              border-radius: 50%;
+              border: 2px solid white;
+
+              &.online {
+                background-color: $success;
+              }
+
+              &.offline {
+                background-color: $danger;
+              }
+            }
+          }
+
           .account-info {
             flex: 1;
             min-width: 0;
@@ -2312,6 +2406,7 @@ $space-2xl: 48px;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
+              display: block;
             }
 
             .account-platform {

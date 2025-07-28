@@ -184,9 +184,21 @@
                     @click="toggleGroupSelection(task, group.id)"
                   >
                     <div class="group-info">
-                      <div class="group-icon" :style="{ backgroundColor: group.color }">
+                      <!-- 修改这里：根据条件选择显示平台logo还是分组图标 -->
+                      <div 
+                        v-if="getPlatformLogo(group.name)" 
+                        class="group-icon platform-logo-container"
+                      >
+                        <img :src="getPlatformLogo(group.name)" :alt="group.name" />
+                      </div>
+                      <div 
+                        v-else 
+                        class="group-icon" 
+                        :style="{ backgroundColor: group.color }"
+                      >
                         <el-icon><component :is="getGroupIcon(group.icon)" /></el-icon>
                       </div>
+                      
                       <div class="group-details">
                         <span class="group-name">{{ group.name }}</span>
                         <span class="group-count">{{ getValidAccountsInGroup(group.id).length }} 个账号</span>
@@ -228,6 +240,36 @@
                 <span>或单独选择账号</span>
               </div>
 
+              <!-- 新增：账号选择区域头部 -->
+              <div class="accounts-header">
+                <div class="header-left">
+                  <div 
+                    class="select-all-control"
+                    @click="handleSelectAllAccounts(!selectAllAccounts)"
+                  >
+                    <div :class="['custom-checkbox', { 
+                      'checked': selectAllAccounts,
+                      'indeterminate': isAccountSelectionIndeterminate 
+                    }]">
+                      <el-icon v-if="selectAllAccounts"><Check /></el-icon>
+                      <el-icon v-else-if="isAccountSelectionIndeterminate"><Minus /></el-icon>
+                    </div>
+                    <span class="select-all-text">全选</span>
+                  </div>
+                </div>
+                <div class="header-right">
+                  <span class="selected-count">
+                    已选择 {{ task.selectedAccounts.length }} 个账号
+                  </span>
+                  <el-button 
+                    v-if="task.selectedAccounts.length > 0"
+                    size="small" 
+                    @click="clearAllAccountSelection"
+                  >
+                    清空选择
+                  </el-button>
+                </div>
+              </div>
               <!-- 原有的账号选择网格 -->
               <div class="accounts-grid">
                 <div 
@@ -239,23 +281,35 @@
                   }]"
                   @click="toggleAccountSelection(task, account)"
                 >
-                  <div class="account-avatar">
-                    <el-avatar :size="40" :src="account.avatar" />
+                <div class="account-avatar">
+                  <div class="avatar-container">
+                    <el-avatar 
+                      :size="40" 
+                      :src="getAvatarUrl(account)" 
+                      @error="handleAvatarError"
+                    />
+                    <div class="platform-logo">
+                      <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                    </div>
                     <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
                     <div v-if="task.selectedAccounts.includes(account.id)" class="selected-mark">
                       <el-icon><Check /></el-icon>
                     </div>
                   </div>
-                  <div class="account-info">
-                    <div class="account-name">{{ account.name }}</div>
-                    <div class="account-platform">{{ account.platform }}</div>
-                    <!-- 显示分组信息 -->
-                    <div v-if="account.group_name" class="account-group">
-                      <el-tag :color="account.group_color" size="small" effect="light">
-                        {{ account.group_name }}
-                      </el-tag>
-                    </div>
+                  <div v-if="task.selectedAccounts.includes(account.id)" class="selected-mark">
+                    <el-icon><Check /></el-icon>
                   </div>
+                </div>
+                <div class="account-info">
+                  <div class="account-name">{{ account.userName }}</div>
+                  <!--<div class="account-platform">{{ account.platform }}</div>-->
+                  <!-- 显示分组信息 -->
+                  <div v-if="account.group_name" class="account-group">
+                    <el-tag :color="account.group_color" size="small" effect="light">
+                      {{ account.group_name }}
+                    </el-tag>
+                  </div>
+                </div>
                 </div>
               </div>
 
@@ -736,7 +790,63 @@ let taskIdCounter = 1;
 const topicDialogVisible = ref(false);
 const customTopic = ref("");
 const currentTask = ref(null);
+const selectAllAccounts = computed({
+  get() {
+    const validAccounts = availableAccounts.value.filter(
+      (acc) => acc.status === "正常"
+    );
+    return (
+      validAccounts.length > 0 &&
+      validAccounts.every((acc) =>
+        publishTasks.value[0]?.selectedAccounts.includes(acc.id)
+      )
+    );
+  },
+  set(value) {
+    // 在 handleSelectAllAccounts 中处理
+  },
+});
 
+// 部分选中状态
+const isAccountSelectionIndeterminate = computed(() => {
+  const validAccounts = availableAccounts.value.filter(
+    (acc) => acc.status === "正常"
+  );
+  const selectedCount = validAccounts.filter((acc) =>
+    publishTasks.value[0]?.selectedAccounts.includes(acc.id)
+  ).length;
+  return selectedCount > 0 && selectedCount < validAccounts.length;
+});
+
+// 全选/取消全选处理
+const handleSelectAllAccounts = (value) => {
+  const currentTask = publishTasks.value[0]; // 假设操作第一个任务
+  if (!currentTask) return;
+
+  const validAccounts = availableAccounts.value.filter(
+    (acc) => acc.status === "正常"
+  );
+
+  if (value) {
+    // 全选：添加所有有效账号
+    validAccounts.forEach((acc) => {
+      if (!currentTask.selectedAccounts.includes(acc.id)) {
+        currentTask.selectedAccounts.push(acc.id);
+      }
+    });
+  } else {
+    // 取消全选：清空所有选择
+    currentTask.selectedAccounts = [];
+  }
+};
+
+// 清空所有选择
+const clearAllAccountSelection = () => {
+  const currentTask = publishTasks.value[0];
+  if (currentTask) {
+    currentTask.selectedAccounts = [];
+  }
+};
 // 可用账号
 const availableAccounts = computed(() => accountStore.accounts);
 
@@ -1030,7 +1140,35 @@ const toggleAccountSelection = (task, account) => {
     task.currentPlatform = account.type;
   }
 };
+// 获取头像URL
+const getAvatarUrl = (account) => {
+  if (account.avatar && account.avatar !== "/default-avatar.png") {
+    // 如果是本地头像路径，添加 API 前缀
+    if (account.avatar.startsWith("assets/avatar/")) {
+      return `http://localhost:3409/${account.avatar}`;
+    }
+    return account.avatar;
+  }
+  return "/default-avatar.png";
+};
 
+// 头像加载失败处理
+const handleAvatarError = (e) => {
+  console.warn("头像加载失败:", e);
+  e.target.src = "/default-avatar.png";
+};
+
+// 获取平台logo
+const getPlatformLogo = (platform) => {
+  const logoMap = {
+    抖音: "/logos/douyin.png",
+    快手: "/logos/kuaishou.png",
+    视频号: "/logos/wechat_shipinghao.png",
+    微信视频号: "/logos/wechat_shipinghao.png",
+    小红书: "/logos/xiaohongshu.jpg",
+  };
+  return logoMap[platform] || "";
+};
 const clearAccountSelection = (task) => {
   task.selectedAccounts = [];
 };
@@ -1761,24 +1899,141 @@ $space-2xl: 48px;
       }
     }
   }
+  // 账号选择区域头部
+  .accounts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $space-md 0;
+    margin-bottom: $space-md;
+    border-bottom: 1px solid $border-light;
 
+    .header-left {
+      .select-all-control {
+        display: flex;
+        align-items: center;
+        gap: $space-sm;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          .select-all-text {
+            color: $primary;
+          }
+
+          .custom-checkbox {
+            border-color: $primary;
+          }
+        }
+
+        .custom-checkbox {
+          width: 20px;
+          height: 20px;
+          border: 2px solid $border-light;
+          border-radius: $radius-sm;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+          background: white;
+
+          &.checked {
+            background-color: $primary;
+            border-color: $primary;
+            color: white;
+
+            .el-icon {
+              font-size: 14px;
+            }
+          }
+
+          &.indeterminate {
+            background-color: $warning;
+            border-color: $warning;
+            color: white;
+
+            .el-icon {
+              font-size: 14px;
+            }
+          }
+        }
+
+        .select-all-text {
+          font-size: 14px;
+          font-weight: 500;
+          color: $text-primary;
+          user-select: none;
+          transition: color 0.3s ease;
+        }
+      }
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: $space-md;
+
+      .selected-count {
+        font-size: 14px;
+        color: $text-secondary;
+        font-weight: 500;
+      }
+
+      .el-button {
+        font-size: 12px;
+        padding: 4px 12px;
+      }
+    }
+  }
+
+  // 响应式设计
+  @media (max-width: 768px) {
+    .accounts-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: $space-sm;
+
+      .header-right {
+        justify-content: space-between;
+      }
+    }
+  }
+
+  // 响应式设计
+  @media (max-width: 768px) {
+    .accounts-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: $space-sm;
+
+      .header-right {
+        justify-content: space-between;
+      }
+    }
+  }
   // 账号选择
   .accounts-section {
     .accounts-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: $space-md;
+      display: flex; // 改为flex布局
+      flex-wrap: wrap; // 允许换行
+      gap: $space-sm;
       margin-bottom: $space-lg;
 
       .account-card {
         background: $bg-gray;
         border: 2px solid transparent;
         border-radius: $radius-lg;
-        padding: $space-md;
+        padding: $space-sm $space-md;
         cursor: pointer;
         transition: all 0.3s ease;
         position: relative;
-
+        display: flex;
+        align-items: center;
+        gap: $space-md;
+        height: 70px;
+        width: fit-content; // 宽度适应内容
+        min-width: 200px; // 最小宽度
+        max-width: 300px; // 最大宽度
         &:hover {
           transform: translateY(-2px);
           box-shadow: $shadow-md;
@@ -1795,26 +2050,55 @@ $space-2xl: 48px;
         }
 
         .account-avatar {
-          display: flex;
-          justify-content: center;
-          margin-bottom: $space-md;
+          flex-shrink: 0;
           position: relative;
 
-          .status-dot {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid white;
+          .avatar-container {
+            position: relative;
 
-            &.online {
-              background-color: $success;
+            :deep(.el-avatar) {
+              border: 2px solid #f1f5f9;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             }
 
-            &.offline {
-              background-color: $danger;
+            .platform-logo {
+              position: absolute;
+              bottom: -2px;
+              right: -2px;
+              width: 20px;
+              height: 20px;
+              border-radius: 50%;
+              background: white;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+              border: 1px solid white;
+
+              img {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                object-fit: cover;
+              }
+            }
+
+            .status-dot {
+              position: absolute;
+              top: 2px;
+              right: 2px;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 2px solid white;
+
+              &.online {
+                background-color: $success;
+              }
+
+              &.offline {
+                background-color: $danger;
+              }
             }
           }
 
@@ -1835,39 +2119,24 @@ $space-2xl: 48px;
         }
 
         .account-info {
-          text-align: center;
+          flex: 1;
+          min-width: 0;
+          text-align: left;
 
           .account-name {
             font-weight: 500;
             color: $text-primary;
-            margin-bottom: $space-xs;
+            font-size: 14px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            margin: 0;
           }
 
-          .account-platform {
-            font-size: 12px;
-            color: $text-secondary;
+          .account-group {
+            margin-top: 4px;
           }
         }
-      }
-    }
-
-    .selected-summary {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(91, 115, 222, 0.1);
-      padding: $space-md;
-      border-radius: $radius-lg;
-
-      .summary-info {
-        display: flex;
-        align-items: center;
-        gap: $space-sm;
-        color: $primary;
-        font-weight: 500;
       }
     }
   }
@@ -2472,20 +2741,24 @@ $space-2xl: 48px;
   }
 
   .groups-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: $space-md;
+    display: flex; // 改为flex布局
+    flex-wrap: wrap; // 允许换行
+    gap: $space-sm; // 减小间距
 
     .group-selector-item {
       background: $bg-gray;
       border: 2px solid transparent;
       border-radius: $radius-lg;
-      padding: $space-md;
+      padding: $space-sm $space-md; // 减小内边距
       cursor: pointer;
       transition: all 0.3s ease;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      align-items: center; // 垂直居中
+      gap: $space-sm; // 减小图标和文字间距
+      width: fit-content; // 宽度适应内容
+      min-width: 160px; // 设置最小宽度
+      max-width: 250px; // 设置最大宽度
+      height: 60px; // 固定高度，与账号卡片类似
 
       &:hover {
         transform: translateY(-1px);
@@ -2507,31 +2780,53 @@ $space-2xl: 48px;
         display: flex;
         align-items: center;
         gap: $space-sm;
+        flex: 1; // 占据剩余空间
+        min-width: 0; // 防止文字溢出
 
         .group-icon {
-          width: 36px;
-          height: 36px;
+          width: 32px;
+          height: 32px;
           border-radius: $radius-md;
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-shrink: 0;
 
           .el-icon {
-            font-size: 18px;
+            font-size: 16px;
             color: white;
           }
 
           &.ungrouped {
             background-color: $text-muted;
           }
+
+          // 为平台logo专门创建的容器样式
+          &.platform-logo-container {
+            background: transparent; // 去掉背景色
+
+            img {
+              width: 32px;
+              height: 32px;
+              border-radius: $radius-md;
+              object-fit: cover;
+            }
+          }
         }
 
         .group-details {
+          flex: 1;
+          min-width: 0;
+
           .group-name {
             display: block;
             font-weight: 500;
             color: $text-primary;
+            font-size: 14px; // 减小字体大小
             margin-bottom: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
 
           .group-count {
@@ -2542,8 +2837,10 @@ $space-2xl: 48px;
       }
 
       .group-selection-status {
+        flex-shrink: 0; // 防止选择状态图标被压缩
+
         .el-icon {
-          font-size: 20px;
+          font-size: 18px; // 减小选择图标大小
           color: $primary;
 
           &.partial-icon {
