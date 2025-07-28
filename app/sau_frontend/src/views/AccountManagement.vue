@@ -347,119 +347,121 @@
 
           <!-- 自定义分组展示 -->
           <div class="custom-groups-section">
-            <!-- 未分组账号 -->
-            <div class="group-card ungrouped">
-              <div class="group-header">
-                <div class="group-info">
-                  <div class="group-icon">
-                    <el-icon><User /></el-icon>
-                  </div>
-                  <div class="group-details">
-                    <h3 class="group-name">未分组账号</h3>
-                    <p class="group-description">{{ ungroupedAccounts.length }} 个账号</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="group-accounts" v-if="ungroupedAccounts.length > 0">
-                <div 
-                  v-for="account in ungroupedAccounts"
-                  :key="account.id"
-                  class="group-account-item"
-                  draggable="true"
-                  @dragstart="handleDragStart(account, $event)"
-                  @dragend="handleDragEnd"
-                >
-                  <div class="account-avatar-container">
-                    <el-avatar 
-                      :size="32" 
-                      :src="getAvatarUrl(account)" 
-                      @error="handleAvatarError"
-                    />
-                    <div class="platform-logo">
-                      <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+            <!-- 🔥 添加这个 groups-list 容器 -->
+            <div class="groups-list">
+              <!-- 未分组账号 -->
+              <div class="group-card ungrouped">
+                <div class="group-header">
+                  <div class="group-info">
+                    <div class="group-icon">
+                      <el-icon><User /></el-icon>
                     </div>
-                    <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
-                  </div>
-                  <div class="account-info">
-                    <span class="account-name">{{ account.userName }}</span>
-                    <span class="account-platform">{{ account.platform }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 自定义分组 -->
-            <div 
-              v-for="group in customGroups"
-              :key="group.id"
-              class="group-card custom-group"
-              @dragover="handleDragOver"
-              @dragleave="handleDragLeave"
-              @drop="handleDrop(group.id, $event)"
-            >
-              <div class="group-header">
-                <div class="group-info">
-                  <div class="group-icon" :style="{ backgroundColor: group.color }">
-                    <el-icon><component :is="getGroupIcon(group.icon)" /></el-icon>
-                  </div>
-                  <div class="group-details">
-                    <h3 class="group-name">{{ group.name }}</h3>
-                    <p class="group-description">{{ group.description || `${getAccountsByGroup(group.id).length} 个账号` }}</p>
+                    <div class="group-details">
+                      <h3 class="group-name">未分组账号</h3>
+                      <p class="group-description">{{ ungroupedAccounts.length }} 个账号</p>
+                    </div>
                   </div>
                 </div>
                 
-                <div class="group-actions">
-                  <el-button size="small" text @click="handleEditGroup(group)">
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                  <el-button size="small" text type="danger" @click="handleDeleteGroup(group)">
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </div>
-              </div>
-              
-              <div class="group-accounts" v-if="getAccountsByGroup(group.id).length > 0">
-                <div 
-                  v-for="account in getAccountsByGroup(group.id)"
-                  :key="account.id"
-                  class="group-account-item"
-                  draggable="true"
-                  @dragstart="handleDragStart(account, $event)"
-                  @dragend="handleDragEnd"
-                >
-                  <div class="account-avatar-container">
-                    <el-avatar 
-                      :size="32" 
-                      :src="getAvatarUrl(account)" 
-                      @error="handleAvatarError"
-                    />
-                    <div class="platform-logo">
-                      <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
-                    </div>
-                    <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
-                  </div>
-                  <div class="account-info">
-                    <span class="account-name">{{ account.userName }}</span>
-                    <span class="account-platform">{{ account.platform }}</span>
-                    <!-- 移除不存在的分组标签 -->
-                  </div>
-                  <el-button 
-                    size="small" 
-                    text 
-                    @click="moveAccountToGroup(account.id, null)"
-                    title="移出分组"
-                    class="remove-btn"
+                <div class="group-accounts" v-if="ungroupedAccounts.length > 0">
+                  <div 
+                    v-for="account in ungroupedAccounts"
+                    :key="account.id"
+                    class="group-account-item"
+                    draggable="true"
+                    @dragstart="handleDragStart(account, $event)"
+                    @dragend="handleDragEnd"
                   >
-                    <el-icon><Close /></el-icon>
-                  </el-button>
+                    <div class="account-avatar-container">
+                      <el-avatar 
+                        :size="32" 
+                        :src="getAvatarUrl(account)" 
+                        @error="handleAvatarError"
+                      />
+                      <div class="platform-logo">
+                        <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                      </div>
+                      <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                    </div>
+                    <div class="account-info">
+                      <span class="account-name">{{ account.userName }}</span>
+                      <span class="account-platform">{{ account.platform }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <div v-else class="group-empty">
-                <span>拖拽账号到此分组</span>
+
+              <!-- 自定义分组 -->
+              <div 
+                v-for="group in customGroups"
+                :key="group.id"
+                class="group-card custom-group"
+                @dragover="handleDragOver"
+                @dragleave="handleDragLeave"
+                @drop="handleDrop(group.id, $event)"
+              >
+                <div class="group-header">
+                  <div class="group-info">
+                    <div class="group-icon" :style="{ backgroundColor: group.color }">
+                      <el-icon><component :is="getGroupIcon(group.icon)" /></el-icon>
+                    </div>
+                    <div class="group-details">
+                      <h3 class="group-name">{{ group.name }}</h3>
+                      <p class="group-description">{{ group.description || `${getAccountsByGroup(group.id).length} 个账号` }}</p>
+                    </div>
+                  </div>
+                  
+                  <div class="group-actions">
+                    <el-button size="small" text @click="handleEditGroup(group)">
+                      <el-icon><Edit /></el-icon>
+                    </el-button>
+                    <el-button size="small" text type="danger" @click="handleDeleteGroup(group)">
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
+                  </div>
+                </div>
+                
+                <div class="group-accounts" v-if="getAccountsByGroup(group.id).length > 0">
+                  <div 
+                    v-for="account in getAccountsByGroup(group.id)"
+                    :key="account.id"
+                    class="group-account-item"
+                    draggable="true"
+                    @dragstart="handleDragStart(account, $event)"
+                    @dragend="handleDragEnd"
+                  >
+                    <div class="account-avatar-container">
+                      <el-avatar 
+                        :size="32" 
+                        :src="getAvatarUrl(account)" 
+                        @error="handleAvatarError"
+                      />
+                      <div class="platform-logo">
+                        <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                      </div>
+                      <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                    </div>
+                    <div class="account-info">
+                      <span class="account-name">{{ account.userName }}</span>
+                      <span class="account-platform">{{ account.platform }}</span>
+                    </div>
+                    <el-button 
+                      size="small" 
+                      text 
+                      @click="moveAccountToGroup(account.id, null)"
+                      title="移出分组"
+                      class="remove-btn"
+                    >
+                      <el-icon><Close /></el-icon>
+                    </el-button>
+                  </div>
+                </div>
+                
+                <div v-else class="group-empty">
+                  <span>拖拽账号到此分组</span>
+                </div>
               </div>
-            </div>
+            </div> <!-- 🔥 关闭 groups-list 容器 -->
           </div>
         </div>
       </div>
@@ -2382,19 +2384,22 @@ $space-2xl: 48px;
     }
   }
 
-  // 🔥 重新设计分组列表布局
+  // 🔥 修正分组列表布局
   .groups-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: $space-lg;
+    align-items: start; // 让卡片顶部对齐
 
     .group-card {
       background: $bg-white;
       border-radius: $radius-xl;
+      padding: $space-lg;
       box-shadow: $shadow-sm;
       transition: all 0.3s ease;
       border: 2px solid transparent;
-      overflow: hidden;
+      height: auto; // 让高度自适应内容
+      min-height: 200px; // 设置最小高度
 
       &:hover {
         transform: translateY(-2px);
@@ -2403,7 +2408,7 @@ $space-2xl: 48px;
 
       // 平台分组样式
       &.platform-group {
-        border-left: 4px solid $primary;
+        border-left: 3px solid $primary;
       }
 
       // 未分组样式
@@ -2425,11 +2430,10 @@ $space-2xl: 48px;
       }
 
       .group-header {
-        padding: $space-lg;
-        border-bottom: 1px solid $border-light;
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
+        margin-bottom: $space-md;
 
         .group-info {
           display: flex;
@@ -2438,27 +2442,26 @@ $space-2xl: 48px;
           flex: 1;
 
           .group-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: $radius-md;
+            width: 48px;
+            height: 48px;
+            border-radius: $radius-lg;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
 
             .el-icon {
-              font-size: 20px;
+              font-size: 24px;
               color: white;
             }
 
             &.platform-logo-container {
               background: transparent;
-              border: 1px solid $border-light;
 
               img {
-                width: 36px;
-                height: 36px;
-                border-radius: $radius-md;
+                width: 48px;
+                height: 48px;
+                border-radius: $radius-lg;
                 object-fit: cover;
               }
             }
@@ -2469,18 +2472,18 @@ $space-2xl: 48px;
             min-width: 0;
 
             .group-name {
-              font-size: 16px;
+              font-size: 18px;
               font-weight: 600;
               color: $text-primary;
-              margin: 0 0 2px 0;
+              margin: 0 0 $space-xs 0;
               line-height: 1.2;
             }
 
             .group-description {
-              font-size: 13px;
+              font-size: 14px;
               color: $text-secondary;
               margin: 0;
-              line-height: 1.2;
+              line-height: 1.4;
             }
           }
         }
@@ -2492,8 +2495,8 @@ $space-2xl: 48px;
           transition: opacity 0.3s ease;
 
           .el-button {
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             padding: 0;
           }
@@ -2507,8 +2510,7 @@ $space-2xl: 48px;
       // 🔥 修正账号展示区域
       .group-accounts,
       .platform-accounts {
-        padding: $space-md;
-        max-height: 250px;
+        max-height: 300px;
         overflow-y: auto;
 
         .group-account-item,
@@ -2516,8 +2518,8 @@ $space-2xl: 48px;
           display: flex;
           align-items: center;
           gap: $space-sm;
-          padding: $space-xs $space-sm;
-          border-radius: $radius-sm;
+          padding: $space-sm;
+          border-radius: $radius-md;
           transition: all 0.3s ease;
           margin-bottom: $space-xs;
 
@@ -2534,27 +2536,27 @@ $space-2xl: 48px;
             flex-shrink: 0;
 
             :deep(.el-avatar) {
-              border: 1px solid #e2e8f0;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              border: 2px solid #f1f5f9;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             }
 
-            // 🔥 修正平台logo大小
             .platform-logo {
               position: absolute;
-              bottom: -1px;
-              right: -1px;
-              width: 12px;
-              height: 12px;
+              bottom: -2px;
+              right: -2px;
+              width: 16px;
+              height: 16px;
               border-radius: 50%;
               background: white;
               display: flex;
               align-items: center;
               justify-content: center;
-              box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+              border: 1px solid white;
 
               img {
-                width: 10px;
-                height: 10px;
+                width: 14px;
+                height: 14px;
                 border-radius: 50%;
                 object-fit: cover;
               }
@@ -2562,12 +2564,12 @@ $space-2xl: 48px;
 
             .status-dot {
               position: absolute;
-              top: 1px;
-              right: 1px;
-              width: 8px;
-              height: 8px;
+              top: 2px;
+              right: 2px;
+              width: 10px;
+              height: 10px;
               border-radius: 50%;
-              border: 1px solid white;
+              border: 2px solid white;
 
               &.online {
                 background-color: $success;
@@ -2584,10 +2586,10 @@ $space-2xl: 48px;
             min-width: 0;
 
             .account-name {
-              font-size: 13px;
+              font-size: 14px;
               font-weight: 500;
               color: $text-primary;
-              margin-bottom: 1px;
+              margin-bottom: 2px;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
@@ -2596,13 +2598,13 @@ $space-2xl: 48px;
             }
 
             .account-platform {
-              font-size: 11px;
+              font-size: 12px;
               color: $text-secondary;
               line-height: 1.2;
             }
 
             .account-status {
-              font-size: 11px;
+              font-size: 12px;
               line-height: 1.2;
 
               &.status-normal {
@@ -2618,14 +2620,14 @@ $space-2xl: 48px;
           .remove-btn {
             opacity: 0;
             transition: opacity 0.3s ease;
-            width: 20px;
-            height: 20px;
-            min-height: 20px;
+            width: 24px;
+            height: 24px;
+            min-height: 24px;
             padding: 0;
             border-radius: 50%;
 
             .el-icon {
-              font-size: 10px;
+              font-size: 12px;
             }
           }
 
@@ -2647,11 +2649,10 @@ $space-2xl: 48px;
         padding: $space-lg;
         text-align: center;
         color: $text-muted;
-        font-size: 13px;
-        border: 1px dashed $border-light;
-        border-radius: $radius-sm;
+        font-size: 14px;
+        border: 2px dashed $border-light;
+        border-radius: $radius-md;
         background-color: $bg-light;
-        margin: $space-md;
       }
     }
   }
