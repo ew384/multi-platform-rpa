@@ -170,158 +170,146 @@
             </div>
 
             <div class="accounts-section">
-              <!-- 新增：分组选择器 -->
-              <div class="group-selector" v-if="accountStore.groups.length > 0">
-                <h5>按分组选择</h5>
-                <div class="groups-grid">
-                  <div 
-                    v-for="group in accountStore.groups"
-                    :key="group.id"
-                    :class="['group-selector-item', { 
-                      'selected': isGroupSelected(task, group.id),
-                      'partial': isGroupPartialSelected(task, group.id)
-                    }]"
-                    @click="toggleGroupSelection(task, group.id)"
-                  >
-                    <div class="group-info">
-                      <!-- 修改这里：根据条件选择显示平台logo还是分组图标 -->
-                      <div 
-                        v-if="getPlatformLogo(group.name)" 
-                        class="group-icon platform-logo-container"
-                      >
-                        <img :src="getPlatformLogo(group.name)" :alt="group.name" />
+              <div class="accounts-layout">
+                <!-- 左侧分组栏 -->
+                <div class="groups-sidebar">
+                  <div class="sidebar-header">
+                    <h5>选择分组</h5>
+                  </div>
+                  
+                  <!-- 平台分组 -->
+                  <div class="platform-groups">
+                    <div class="group-category-title">平台分组</div>
+                    <div 
+                      v-for="platformGroup in platformGroups"
+                      :key="platformGroup.id"
+                      :class="['sidebar-group-item', { 
+                        'active': selectedGroupType === 'platform' && selectedGroupId === platformGroup.id,
+                        'has-accounts': platformGroup.accounts.length > 0
+                      }]"
+                      @click="selectPlatformGroup(platformGroup)"
+                    >
+                      <div class="group-icon platform-logo-container">
+                        <img :src="platformGroup.logo" :alt="platformGroup.name" />
                       </div>
-                      <div 
-                        v-else 
-                        class="group-icon" 
-                        :style="{ backgroundColor: group.color }"
-                      >
+                      <div class="group-info">
+                        <span class="group-name">{{ platformGroup.name }}</span>
+                        <span class="group-count">{{ platformGroup.accounts.length }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 自定义分组 -->
+                  <div class="custom-groups" v-if="customGroups.length > 0">
+                    <div class="group-category-title">自定义分组</div>
+                    <div 
+                      v-for="group in customGroups"
+                      :key="group.id"
+                      :class="['sidebar-group-item', { 
+                        'active': selectedGroupType === 'custom' && selectedGroupId === group.id,
+                        'has-accounts': getAccountsInGroup(group.id).length > 0
+                      }]"
+                      @click="selectCustomGroup(group)"
+                    >
+                      <div class="group-icon" :style="{ backgroundColor: group.color }">
                         <el-icon><component :is="getGroupIcon(group.icon)" /></el-icon>
                       </div>
-                      
-                      <div class="group-details">
+                      <div class="group-info">
                         <span class="group-name">{{ group.name }}</span>
-                        <span class="group-count">{{ getValidAccountsInGroup(group.id).length }} 个账号</span>
+                        <span class="group-count">{{ getAccountsInGroup(group.id).length }}</span>
                       </div>
-                    </div>
-                    <div class="group-selection-status">
-                      <el-icon v-if="isGroupSelected(task, group.id)"><Check /></el-icon>
-                      <el-icon v-else-if="isGroupPartialSelected(task, group.id)" class="partial-icon"><Minus /></el-icon>
                     </div>
                   </div>
 
-                  <!-- 未分组账号 -->
-                  <div 
-                    :class="['group-selector-item', { 
-                      'selected': isUngroupedSelected(task),
-                      'partial': isUngroupedPartialSelected(task)
-                    }]"
-                    @click="toggleUngroupedSelection(task)"
-                  >
-                    <div class="group-info">
-                      <div class="group-icon ungrouped">
+                  <!-- 全部账号 -->
+                  <div class="all-accounts-group">
+                    <div 
+                      :class="['sidebar-group-item', { 
+                        'active': selectedGroupType === 'all'
+                      }]"
+                      @click="selectAllAccounts"
+                    >
+                      <div class="group-icon all-accounts">
                         <el-icon><User /></el-icon>
                       </div>
-                      <div class="group-details">
-                        <span class="group-name">未分组账号</span>
-                        <span class="group-count">{{ getUngroupedValidAccounts().length }} 个账号</span>
+                      <div class="group-info">
+                        <span class="group-name">全部账号</span>
+                        <span class="group-count">{{ availableAccounts.length }}</span>
                       </div>
                     </div>
-                    <div class="group-selection-status">
-                      <el-icon v-if="isUngroupedSelected(task)"><Check /></el-icon>
-                      <el-icon v-else-if="isUngroupedPartialSelected(task)" class="partial-icon"><Minus /></el-icon>
-                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- 分隔线 -->
-              <div class="divider" v-if="accountStore.groups.length > 0">
-                <span>或单独选择账号</span>
-              </div>
+                <!-- 右侧账号列表 -->
+                <div class="accounts-main">
+                  <!-- 账号选择区域头部 -->
+                  <div class="accounts-header">
+                    <div class="header-left">
+                      <h5>{{ getCurrentGroupTitle() }}</h5>
+                      <!-- 保留全选功能 -->
+                      <div class="select-all-control" @click="handleSelectAllInCurrentGroup()">
+                        <div :class="['custom-checkbox', { 
+                          'checked': isCurrentGroupAllSelected,
+                          'indeterminate': isCurrentGroupPartialSelected 
+                        }]">
+                          <el-icon v-if="isCurrentGroupAllSelected"><Check /></el-icon>
+                          <el-icon v-else-if="isCurrentGroupPartialSelected"><Minus /></el-icon>
+                        </div>
+                        <span class="select-all-text">全选当前分组</span>
+                      </div>
+                    </div>
+                    <div class="header-right">
+                      <span class="selected-count">
+                        已选择 {{ task.selectedAccounts.length }} 个账号
+                      </span>
+                      <el-button 
+                        v-if="task.selectedAccounts.length > 0"
+                        size="small" 
+                        @click="clearAccountSelection(task)"
+                      >
+                        清空选择
+                      </el-button>
+                    </div>
+                  </div>
 
-              <!-- 新增：账号选择区域头部 -->
-              <div class="accounts-header">
-                <div class="header-left">
-                  <div 
-                    class="select-all-control"
-                    @click="handleSelectAllAccounts(!selectAllAccounts)"
-                  >
-                    <div :class="['custom-checkbox', { 
-                      'checked': selectAllAccounts,
-                      'indeterminate': isAccountSelectionIndeterminate 
-                    }]">
-                      <el-icon v-if="selectAllAccounts"><Check /></el-icon>
-                      <el-icon v-else-if="isAccountSelectionIndeterminate"><Minus /></el-icon>
-                    </div>
-                    <span class="select-all-text">全选</span>
-                  </div>
-                </div>
-                <div class="header-right">
-                  <span class="selected-count">
-                    已选择 {{ task.selectedAccounts.length }} 个账号
-                  </span>
-                  <el-button 
-                    v-if="task.selectedAccounts.length > 0"
-                    size="small" 
-                    @click="clearAllAccountSelection"
-                  >
-                    清空选择
-                  </el-button>
-                </div>
-              </div>
-              <!-- 原有的账号选择网格 -->
-              <div class="accounts-grid">
-                <div 
-                  v-for="account in availableAccounts" 
-                  :key="account.id"
-                  :class="['account-card', { 
-                    'selected': task.selectedAccounts.includes(account.id),
-                    'disabled': account.status !== '正常'
-                  }]"
-                  @click="toggleAccountSelection(task, account)"
-                >
-                <div class="account-avatar">
-                  <div class="avatar-container">
-                    <el-avatar 
-                      :size="40" 
-                      :src="getAvatarUrl(account)" 
-                      @error="handleAvatarError"
-                    />
-                    <div class="platform-logo">
-                      <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
-                    </div>
-                    <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
-                    <div v-if="task.selectedAccounts.includes(account.id)" class="selected-mark">
-                      <el-icon><Check /></el-icon>
+                  <!-- 账号网格 -->
+                  <div class="accounts-grid">
+                    <div 
+                      v-for="account in currentGroupAccounts" 
+                      :key="account.id"
+                      :class="['account-card', { 
+                        'selected': task.selectedAccounts.includes(account.id),
+                        'disabled': account.status !== '正常'
+                      }]"
+                      @click="toggleAccountSelection(task, account)"
+                    >
+                      <div class="account-avatar">
+                        <div class="avatar-container">
+                          <el-avatar 
+                            :size="40" 
+                            :src="getAvatarUrl(account)" 
+                            @error="handleAvatarError"
+                          />
+                          <div class="platform-logo">
+                            <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                          </div>
+                          <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                          <div v-if="task.selectedAccounts.includes(account.id)" class="selected-mark">
+                            <el-icon><Check /></el-icon>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="account-info">
+                        <div class="account-name">{{ account.userName }}</div>
+                        <div v-if="account.group_name" class="account-group">
+                          <el-tag :color="account.group_color" size="small" effect="light">
+                            {{ account.group_name }}
+                          </el-tag>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div v-if="task.selectedAccounts.includes(account.id)" class="selected-mark">
-                    <el-icon><Check /></el-icon>
-                  </div>
                 </div>
-                <div class="account-info">
-                  <div class="account-name">{{ account.userName }}</div>
-                  <!--<div class="account-platform">{{ account.platform }}</div>-->
-                  <!-- 显示分组信息 -->
-                  <div v-if="account.group_name" class="account-group">
-                    <el-tag :color="account.group_color" size="small" effect="light">
-                      {{ account.group_name }}
-                    </el-tag>
-                  </div>
-                </div>
-                </div>
-              </div>
-
-              <!-- 选中账号统计 -->
-              <div v-if="task.selectedAccounts.length > 0" class="selected-summary">
-                <div class="summary-info">
-                  <el-icon><User /></el-icon>
-                  <span>已选择 {{ task.selectedAccounts.length }} 个账号</span>
-                </div>
-                <el-button size="small" @click="clearAccountSelection(task)">
-                  清空选择
-                </el-button>
               </div>
             </div>
           </div>
@@ -747,7 +735,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useAccountStore } from "@/stores/account";
 import { useAppStore } from "@/stores/app";
 import { materialApi } from "@/api/material";
-
+import { accountApi } from "@/api/account";
 // 状态管理
 const accountStore = useAccountStore();
 const appStore = useAppStore();
@@ -790,66 +778,149 @@ let taskIdCounter = 1;
 const topicDialogVisible = ref(false);
 const customTopic = ref("");
 const currentTask = ref(null);
-const selectAllAccounts = computed({
-  get() {
-    const validAccounts = availableAccounts.value.filter(
-      (acc) => acc.status === "正常"
-    );
-    return (
-      validAccounts.length > 0 &&
-      validAccounts.every((acc) =>
-        publishTasks.value[0]?.selectedAccounts.includes(acc.id)
-      )
-    );
-  },
-  set(value) {
-    // 在 handleSelectAllAccounts 中处理
-  },
+const selectedGroupType = ref("all"); // 'platform', 'custom', 'all'
+const selectedGroupId = ref(null);
+
+// 可用账号
+const availableAccounts = computed(() => accountStore.accounts);
+// 平台分组（参考 AccountManagement 的实现）
+const platformGroups = computed(() => {
+  const platforms = [
+    ...new Set(availableAccounts.value.map((acc) => acc.platform)),
+  ];
+
+  return platforms.map((platform) => ({
+    id: `platform_${platform}`,
+    name: platform,
+    type: "platform",
+    accounts: availableAccounts.value.filter(
+      (acc) => acc.platform === platform
+    ),
+    logo: getPlatformLogo(platform),
+  }));
 });
 
-// 部分选中状态
-const isAccountSelectionIndeterminate = computed(() => {
-  const validAccounts = availableAccounts.value.filter(
+// 自定义分组（参考 AccountManagement 的实现）
+const customGroups = computed(() => {
+  const platformNames = ["微信视频号", "抖音", "快手", "小红书", "视频号"];
+  return accountStore.groups.filter(
+    (group) => !platformNames.includes(group.name)
+  );
+});
+
+// 当前分组的账号
+const currentGroupAccounts = computed(() => {
+  if (selectedGroupType.value === "all") {
+    return availableAccounts.value;
+  } else if (selectedGroupType.value === "platform") {
+    const group = platformGroups.value.find(
+      (g) => g.id === selectedGroupId.value
+    );
+    return group ? group.accounts : [];
+  } else if (selectedGroupType.value === "custom") {
+    return getValidAccountsInGroup(selectedGroupId.value);
+  }
+  return [];
+});
+
+// 当前分组是否全选
+const isCurrentGroupAllSelected = computed(() => {
+  const currentAccounts = currentGroupAccounts.value.filter(
     (acc) => acc.status === "正常"
   );
-  const selectedCount = validAccounts.filter((acc) =>
-    publishTasks.value[0]?.selectedAccounts.includes(acc.id)
-  ).length;
-  return selectedCount > 0 && selectedCount < validAccounts.length;
+  if (currentAccounts.length === 0) return false;
+
+  const currentTask = publishTasks.value[0];
+  if (!currentTask) return false;
+
+  return currentAccounts.every((acc) =>
+    currentTask.selectedAccounts.includes(acc.id)
+  );
 });
 
-// 全选/取消全选处理
-const handleSelectAllAccounts = (value) => {
-  const currentTask = publishTasks.value[0]; // 假设操作第一个任务
+// 当前分组是否部分选中
+const isCurrentGroupPartialSelected = computed(() => {
+  const currentAccounts = currentGroupAccounts.value.filter(
+    (acc) => acc.status === "正常"
+  );
+  if (currentAccounts.length === 0) return false;
+
+  const currentTask = publishTasks.value[0];
+  if (!currentTask) return false;
+
+  const selectedCount = currentAccounts.filter((acc) =>
+    currentTask.selectedAccounts.includes(acc.id)
+  ).length;
+
+  return selectedCount > 0 && selectedCount < currentAccounts.length;
+});
+// 选择平台分组
+const selectPlatformGroup = (platformGroup) => {
+  selectedGroupType.value = "platform";
+  selectedGroupId.value = platformGroup.id;
+};
+
+// 选择自定义分组
+const selectCustomGroup = (group) => {
+  selectedGroupType.value = "custom";
+  selectedGroupId.value = group.id;
+};
+
+// 选择全部账号
+const selectAllAccounts = () => {
+  selectedGroupType.value = "all";
+  selectedGroupId.value = null;
+};
+
+// 获取当前分组标题
+const getCurrentGroupTitle = () => {
+  if (selectedGroupType.value === "all") {
+    return "全部账号";
+  } else if (selectedGroupType.value === "platform") {
+    const group = platformGroups.value.find(
+      (g) => g.id === selectedGroupId.value
+    );
+    return group ? `${group.name} 平台账号` : "平台账号";
+  } else if (selectedGroupType.value === "custom") {
+    const group = customGroups.value.find(
+      (g) => g.id === selectedGroupId.value
+    );
+    return group ? `${group.name} 分组` : "自定义分组";
+  }
+  return "账号列表";
+};
+
+// 处理当前分组全选/取消全选
+const handleSelectAllInCurrentGroup = () => {
+  const currentTask = publishTasks.value[0];
   if (!currentTask) return;
 
-  const validAccounts = availableAccounts.value.filter(
+  const currentAccounts = currentGroupAccounts.value.filter(
     (acc) => acc.status === "正常"
   );
+  const isAllSelected = isCurrentGroupAllSelected.value;
 
-  if (value) {
-    // 全选：添加所有有效账号
-    validAccounts.forEach((acc) => {
-      if (!currentTask.selectedAccounts.includes(acc.id)) {
-        currentTask.selectedAccounts.push(acc.id);
+  if (isAllSelected) {
+    // 取消选中当前分组的所有账号
+    currentAccounts.forEach((acc) => {
+      const index = currentTask.selectedAccounts.indexOf(acc.id);
+      if (index > -1) {
+        currentTask.selectedAccounts.splice(index, 1);
       }
     });
   } else {
-    // 取消全选：清空所有选择
-    currentTask.selectedAccounts = [];
+    // 选中当前分组的所有账号
+    currentAccounts.forEach((acc) => {
+      if (!currentTask.selectedAccounts.includes(acc.id)) {
+        currentTask.selectedAccounts.push(acc.id);
+        // 设置平台类型
+        if (currentTask.selectedAccounts.length === 1) {
+          currentTask.currentPlatform = acc.type;
+        }
+      }
+    });
   }
 };
-
-// 清空所有选择
-const clearAllAccountSelection = () => {
-  const currentTask = publishTasks.value[0];
-  if (currentTask) {
-    currentTask.selectedAccounts = [];
-  }
-};
-// 可用账号
-const availableAccounts = computed(() => accountStore.accounts);
-
 // 方法定义
 // 在每个task对象中添加平台选择字段
 const addNewPublishTask = () => {
@@ -1381,14 +1452,16 @@ onMounted(async () => {
     console.warn("获取分组信息失败:", error);
   }
 });
-// 新增：分组选择相关方法
+
 // 获取分组中的有效账号
 const getValidAccountsInGroup = (groupId) => {
   return availableAccounts.value.filter(
     (acc) => acc.group_id === groupId && acc.status === "正常"
   );
 };
-
+const getAccountsInGroup = (groupId) => {
+  return availableAccounts.value.filter((acc) => acc.group_id === groupId);
+};
 // 获取未分组的有效账号
 const getUngroupedValidAccounts = () => {
   return availableAccounts.value.filter(
@@ -1899,92 +1972,6 @@ $space-2xl: 48px;
       }
     }
   }
-  // 账号选择区域头部
-  .accounts-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $space-md 0;
-    margin-bottom: $space-md;
-    border-bottom: 1px solid $border-light;
-
-    .header-left {
-      .select-all-control {
-        display: flex;
-        align-items: center;
-        gap: $space-sm;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        &:hover {
-          .select-all-text {
-            color: $primary;
-          }
-
-          .custom-checkbox {
-            border-color: $primary;
-          }
-        }
-
-        .custom-checkbox {
-          width: 20px;
-          height: 20px;
-          border: 2px solid $border-light;
-          border-radius: $radius-sm;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.3s ease;
-          background: white;
-
-          &.checked {
-            background-color: $primary;
-            border-color: $primary;
-            color: white;
-
-            .el-icon {
-              font-size: 14px;
-            }
-          }
-
-          &.indeterminate {
-            background-color: $warning;
-            border-color: $warning;
-            color: white;
-
-            .el-icon {
-              font-size: 14px;
-            }
-          }
-        }
-
-        .select-all-text {
-          font-size: 14px;
-          font-weight: 500;
-          color: $text-primary;
-          user-select: none;
-          transition: color 0.3s ease;
-        }
-      }
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: $space-md;
-
-      .selected-count {
-        font-size: 14px;
-        color: $text-secondary;
-        font-weight: 500;
-      }
-
-      .el-button {
-        font-size: 12px;
-        padding: 4px 12px;
-      }
-    }
-  }
 
   // 响应式设计
   @media (max-width: 768px) {
@@ -2013,128 +2000,382 @@ $space-2xl: 48px;
   }
   // 账号选择
   .accounts-section {
-    .accounts-grid {
-      display: flex; // 改为flex布局
-      flex-wrap: wrap; // 允许换行
-      gap: $space-sm;
-      margin-bottom: $space-lg;
+    // 账号选择布局
+    .accounts-layout {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: $space-lg;
+      min-height: 400px;
 
-      .account-card {
+      // 左侧分组栏
+      .groups-sidebar {
         background: $bg-gray;
-        border: 2px solid transparent;
         border-radius: $radius-lg;
-        padding: $space-sm $space-md;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        position: relative;
-        display: flex;
-        align-items: center;
-        gap: $space-md;
-        height: 70px;
-        width: fit-content; // 宽度适应内容
-        min-width: 200px; // 最小宽度
-        max-width: 300px; // 最大宽度
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: $shadow-md;
+        padding: $space-md;
+        border: 1px solid $border-light;
+
+        .sidebar-header {
+          margin-bottom: $space-md;
+          padding-bottom: $space-sm;
+          border-bottom: 1px solid $border-light;
+
+          h5 {
+            font-size: 14px;
+            font-weight: 600;
+            color: $text-primary;
+            margin: 0;
+          }
         }
 
-        &.selected {
-          border-color: $primary;
-          background-color: rgba(91, 115, 222, 0.05);
+        .group-category-title {
+          font-size: 12px;
+          font-weight: 500;
+          color: $text-secondary;
+          margin: $space-md 0 $space-sm 0;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
-        &.disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
+        .sidebar-group-item {
+          display: flex;
+          align-items: center;
+          gap: $space-sm;
+          padding: $space-sm;
+          border-radius: $radius-md;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          margin-bottom: $space-xs;
 
-        .account-avatar {
-          flex-shrink: 0;
-          position: relative;
+          &:hover {
+            background-color: rgba(91, 115, 222, 0.1);
+          }
 
-          .avatar-container {
-            position: relative;
+          &.active {
+            background-color: rgba(91, 115, 222, 0.1);
+            border: 2px solid $primary;
+            color: $text-primary;
 
-            :deep(.el-avatar) {
-              border: 2px solid #f1f5f9;
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            .group-name,
+            .group-count {
+              color: $text-primary;
             }
 
-            .platform-logo {
-              position: absolute;
-              bottom: -2px;
-              right: -2px;
-              width: 20px;
-              height: 20px;
-              border-radius: 50%;
-              background: white;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-              border: 1px solid white;
+            .group-icon {
+              &.all-accounts {
+                background-color: $primary;
+              }
+            }
+          }
+
+          &.has-accounts {
+            opacity: 1;
+          }
+
+          // &:not(.has-accounts) {
+          //   opacity: 0.5;
+          //   cursor: not-allowed;
+          //
+          //   &:hover {
+          //     background-color: transparent;
+          //   }
+          // }
+
+          .group-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: $radius-md;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+
+            .el-icon {
+              font-size: 16px;
+              color: white;
+            }
+
+            &.platform-logo-container {
+              background: transparent;
 
               img {
-                width: 18px;
-                height: 18px;
-                border-radius: 50%;
+                width: 32px;
+                height: 32px;
+                border-radius: $radius-md;
                 object-fit: cover;
               }
             }
 
-            .status-dot {
-              position: absolute;
-              top: 2px;
-              right: 2px;
-              width: 12px;
-              height: 12px;
-              border-radius: 50%;
-              border: 2px solid white;
+            &.all-accounts {
+              background-color: $info;
+            }
+          }
 
-              &.online {
-                background-color: $success;
+          .group-info {
+            flex: 1;
+            min-width: 0;
+
+            .group-name {
+              display: block;
+              font-weight: 500;
+              color: $text-primary;
+              font-size: 13px;
+              margin-bottom: 2px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .group-count {
+              font-size: 11px;
+              color: $text-secondary;
+            }
+          }
+        }
+      }
+
+      // 右侧账号区域
+      .accounts-main {
+        .accounts-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: $space-md;
+          padding-bottom: $space-sm;
+          border-bottom: 1px solid $border-light;
+
+          .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: $space-sm;
+
+            h5 {
+              font-size: 16px;
+              font-weight: 600;
+              color: $text-primary;
+              margin: 0;
+            }
+
+            .select-all-control {
+              display: flex;
+              align-items: center;
+              gap: $space-sm;
+              cursor: pointer;
+              transition: all 0.3s ease;
+
+              &:hover {
+                .select-all-text {
+                  color: $primary;
+                }
+
+                .custom-checkbox {
+                  border-color: $primary;
+                }
               }
 
-              &.offline {
-                background-color: $danger;
+              .custom-checkbox {
+                width: 18px;
+                height: 18px;
+                border: 2px solid $border-light;
+                border-radius: $radius-sm;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.3s ease;
+                background: white;
+
+                &.checked {
+                  background-color: $primary;
+                  border-color: $primary;
+                  color: white;
+
+                  .el-icon {
+                    font-size: 12px;
+                  }
+                }
+
+                &.indeterminate {
+                  background-color: $warning;
+                  border-color: $warning;
+                  color: white;
+
+                  .el-icon {
+                    font-size: 12px;
+                  }
+                }
+              }
+
+              .select-all-text {
+                font-size: 13px;
+                font-weight: 500;
+                color: $text-secondary;
+                user-select: none;
+                transition: color 0.3s ease;
               }
             }
           }
 
-          .selected-mark {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            width: 20px;
-            height: 20px;
-            background-color: $primary;
-            border-radius: 50%;
+          .header-right {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
+            gap: $space-md;
+
+            .selected-count {
+              font-size: 14px;
+              color: $text-secondary;
+              font-weight: 500;
+            }
           }
         }
 
-        .account-info {
-          flex: 1;
-          min-width: 0;
-          text-align: left;
+        .accounts-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: $space-md;
+          max-height: 350px;
+          overflow-y: auto;
+          padding-right: $space-xs;
 
-          .account-name {
-            font-weight: 500;
-            color: $text-primary;
-            font-size: 14px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            margin: 0;
+          .account-card {
+            background: $bg-gray;
+            border: 2px solid transparent;
+            border-radius: $radius-lg;
+            padding: $space-sm $space-md;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: $space-md;
+            height: 70px;
+            width: 100%;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: $shadow-md;
+            }
+
+            &.selected {
+              border-color: $primary;
+              background-color: rgba(91, 115, 222, 0.05);
+            }
+
+            &.disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+
+            .account-avatar {
+              flex-shrink: 0;
+              position: relative;
+
+              .avatar-container {
+                position: relative;
+
+                :deep(.el-avatar) {
+                  border: 2px solid #f1f5f9;
+                  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                }
+
+                .platform-logo {
+                  position: absolute;
+                  bottom: -2px;
+                  right: -2px;
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 50%;
+                  background: white;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+                  border: 1px solid white;
+
+                  img {
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    object-fit: cover;
+                  }
+                }
+
+                .status-dot {
+                  position: absolute;
+                  top: 2px;
+                  right: 2px;
+                  width: 12px;
+                  height: 12px;
+                  border-radius: 50%;
+                  border: 2px solid white;
+
+                  &.online {
+                    background-color: $success;
+                  }
+
+                  &.offline {
+                    background-color: $danger;
+                  }
+                }
+
+                .selected-mark {
+                  position: absolute;
+                  top: -5px;
+                  right: -5px;
+                  width: 20px;
+                  height: 20px;
+                  background-color: $primary;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: white;
+                  font-size: 12px;
+                }
+              }
+            }
+
+            .account-info {
+              flex: 1;
+              min-width: 0;
+              text-align: left;
+
+              .account-name {
+                font-weight: 500;
+                color: $text-primary;
+                font-size: 14px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                margin: 0;
+              }
+
+              .account-group {
+                margin-top: 4px;
+              }
+            }
           }
+        }
+      }
 
-          .account-group {
-            margin-top: 4px;
+      // 响应式设计
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+
+        .groups-sidebar {
+          order: 2;
+          margin-top: $space-lg;
+        }
+
+        .accounts-main {
+          order: 1;
+
+          .accounts-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: $space-sm;
+
+            .header-right {
+              justify-content: space-between;
+            }
           }
         }
       }
@@ -2727,151 +2968,6 @@ $space-2xl: 48px;
       flex-direction: column;
       gap: $space-md;
     }
-  }
-}
-// 分组选择器样式
-.group-selector {
-  margin-bottom: $space-xl;
-
-  h5 {
-    font-size: 16px;
-    font-weight: 600;
-    color: $text-primary;
-    margin: 0 0 $space-md 0;
-  }
-
-  .groups-grid {
-    display: flex; // 改为flex布局
-    flex-wrap: wrap; // 允许换行
-    gap: $space-sm; // 减小间距
-
-    .group-selector-item {
-      background: $bg-gray;
-      border: 2px solid transparent;
-      border-radius: $radius-lg;
-      padding: $space-sm $space-md; // 减小内边距
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center; // 垂直居中
-      gap: $space-sm; // 减小图标和文字间距
-      width: fit-content; // 宽度适应内容
-      min-width: 160px; // 设置最小宽度
-      max-width: 250px; // 设置最大宽度
-      height: 60px; // 固定高度，与账号卡片类似
-
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: $shadow-md;
-        border-color: rgba(91, 115, 222, 0.3);
-      }
-
-      &.selected {
-        border-color: $primary;
-        background-color: rgba(91, 115, 222, 0.1);
-      }
-
-      &.partial {
-        border-color: $warning;
-        background-color: rgba(245, 158, 11, 0.1);
-      }
-
-      .group-info {
-        display: flex;
-        align-items: center;
-        gap: $space-sm;
-        flex: 1; // 占据剩余空间
-        min-width: 0; // 防止文字溢出
-
-        .group-icon {
-          width: 32px;
-          height: 32px;
-          border-radius: $radius-md;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-
-          .el-icon {
-            font-size: 16px;
-            color: white;
-          }
-
-          &.ungrouped {
-            background-color: $text-muted;
-          }
-
-          // 为平台logo专门创建的容器样式
-          &.platform-logo-container {
-            background: transparent; // 去掉背景色
-
-            img {
-              width: 32px;
-              height: 32px;
-              border-radius: $radius-md;
-              object-fit: cover;
-            }
-          }
-        }
-
-        .group-details {
-          flex: 1;
-          min-width: 0;
-
-          .group-name {
-            display: block;
-            font-weight: 500;
-            color: $text-primary;
-            font-size: 14px; // 减小字体大小
-            margin-bottom: 2px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-
-          .group-count {
-            font-size: 12px;
-            color: $text-secondary;
-          }
-        }
-      }
-
-      .group-selection-status {
-        flex-shrink: 0; // 防止选择状态图标被压缩
-
-        .el-icon {
-          font-size: 18px; // 减小选择图标大小
-          color: $primary;
-
-          &.partial-icon {
-            color: $warning;
-          }
-        }
-      }
-    }
-  }
-}
-
-.divider {
-  text-align: center;
-  margin: $space-xl 0;
-  position: relative;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background-color: $border-light;
-  }
-
-  span {
-    background-color: $bg-light;
-    padding: 0 $space-md;
-    color: $text-secondary;
-    font-size: 14px;
   }
 }
 
