@@ -139,6 +139,7 @@ conf.py
 cookies
 
 #
+*lock
 *lock.yaml
 # Frontend
 .vite/
