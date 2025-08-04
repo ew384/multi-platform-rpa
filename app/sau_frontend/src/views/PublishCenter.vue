@@ -18,18 +18,20 @@
 
     <!-- 发布任务列表 -->
     <div class="publish-tasks">
-      <div 
-        v-for="task in publishTasks" 
+      <div
+        v-for="task in publishTasks"
         :key="task.id"
         class="publish-task-card"
       >
         <!-- 任务头部 -->
         <div class="task-header">
           <div class="task-info">
-            <h3 class="task-title">{{ task.title || `发布任务 ${task.id}` }}</h3>
+            <h3 class="task-title">
+              {{ task.title || `发布任务 ${task.id}` }}
+            </h3>
             <div class="task-status">
-              <el-tag 
-                :type="getTaskStatusType(task.status)" 
+              <el-tag
+                :type="getTaskStatusType(task.status)"
                 size="small"
                 effect="light"
               >
@@ -38,28 +40,21 @@
             </div>
           </div>
           <div class="task-actions">
-            <el-button 
+            <el-button
               v-if="task.status === 'draft'"
-              type="primary" 
+              type="primary"
               size="small"
               @click="publishTask(task)"
               :loading="task.publishing"
             >
               <el-icon><Upload /></el-icon>
-              {{ task.publishing ? '发布中' : '立即发布' }}
+              {{ task.publishing ? "发布中" : "立即发布" }}
             </el-button>
-            <el-button 
-              size="small" 
-              @click="duplicateTask(task)"
-            >
+            <el-button size="small" @click="duplicateTask(task)">
               <el-icon><CopyDocument /></el-icon>
               复制
             </el-button>
-            <el-button 
-              size="small" 
-              type="danger"
-              @click="deleteTask(task)"
-            >
+            <el-button size="small" type="danger" @click="deleteTask(task)">
               <el-icon><Delete /></el-icon>
               删除
             </el-button>
@@ -68,19 +63,29 @@
 
         <!-- 进度指示器 -->
         <div class="progress-steps">
-          <div 
-            v-for="(step, index) in steps" 
+          <div
+            v-for="(step, index) in steps"
             :key="step.key"
-            :class="['step-item', {
-              'active': task.currentStep === step.key,
-              'completed': getStepIndex(task.currentStep) > index,
-              'error': task.status === 'error' && task.currentStep === step.key
-            }]"
+            :class="[
+              'step-item',
+              {
+                active: task.currentStep === step.key,
+                completed: getStepIndex(task.currentStep) > index,
+                error: task.status === 'error' && task.currentStep === step.key,
+              },
+            ]"
             @click="setCurrentStep(task, step.key)"
           >
             <div class="step-circle">
-              <el-icon v-if="getStepIndex(task.currentStep) > index"><Check /></el-icon>
-              <el-icon v-else-if="task.status === 'error' && task.currentStep === step.key"><Close /></el-icon>
+              <el-icon v-if="getStepIndex(task.currentStep) > index"
+                ><Check
+              /></el-icon>
+              <el-icon
+                v-else-if="
+                  task.status === 'error' && task.currentStep === step.key
+                "
+                ><Close
+              /></el-icon>
               <span v-else>{{ index + 1 }}</span>
             </div>
             <div class="step-label">{{ step.label }}</div>
@@ -95,7 +100,7 @@
               <h4>选择视频文件</h4>
               <p>支持上传本地视频或从素材库选择</p>
             </div>
-            
+
             <div class="upload-section">
               <div v-if="task.videos.length === 0" class="upload-area">
                 <el-upload
@@ -104,7 +109,10 @@
                   multiple
                   :auto-upload="true"
                   :action="`${apiBaseUrl}/upload`"
-                  :on-success="(response, file) => handleVideoUploadSuccess(response, file, task)"
+                  :on-success="
+                    (response, file) =>
+                      handleVideoUploadSuccess(response, file, task)
+                  "
                   :on-error="handleVideoUploadError"
                   accept="video/*"
                   :headers="authHeaders"
@@ -117,9 +125,12 @@
                     </div>
                   </div>
                 </el-upload>
-                
+
                 <div class="upload-options">
-                  <el-button @click="selectFromLibrary(task)" class="library-btn">
+                  <el-button
+                    @click="selectFromLibrary(task)"
+                    class="library-btn"
+                  >
                     <el-icon><Folder /></el-icon>
                     从素材库选择
                   </el-button>
@@ -136,8 +147,8 @@
                   </el-button>
                 </div>
                 <div class="videos-grid">
-                  <div 
-                    v-for="(video, index) in task.videos" 
+                  <div
+                    v-for="(video, index) in task.videos"
                     :key="index"
                     class="video-item"
                   >
@@ -147,14 +158,20 @@
                         <el-button size="small" @click="previewVideo(video)">
                           <el-icon><View /></el-icon>
                         </el-button>
-                        <el-button size="small" type="danger" @click="removeVideo(task, index)">
+                        <el-button
+                          size="small"
+                          type="danger"
+                          @click="removeVideo(task, index)"
+                        >
                           <el-icon><Delete /></el-icon>
                         </el-button>
                       </div>
                     </div>
                     <div class="video-info">
                       <div class="video-name">{{ video.name }}</div>
-                      <div class="video-size">{{ formatFileSize(video.size) }}</div>
+                      <div class="video-size">
+                        {{ formatFileSize(video.size) }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -176,25 +193,35 @@
                   <div class="sidebar-header">
                     <h5>选择分组</h5>
                   </div>
-                  
+
                   <!-- 平台分组 -->
                   <div class="platform-groups">
                     <div class="group-category-title">平台分组</div>
-                    <div 
+                    <div
                       v-for="platformGroup in platformGroups"
                       :key="platformGroup.id"
-                      :class="['sidebar-group-item', { 
-                        'active': selectedGroupType === 'platform' && selectedGroupId === platformGroup.id,
-                        'has-accounts': platformGroup.accounts.length > 0
-                      }]"
+                      :class="[
+                        'sidebar-group-item',
+                        {
+                          active:
+                            selectedGroupType === 'platform' &&
+                            selectedGroupId === platformGroup.id,
+                          'has-accounts': platformGroup.accounts.length > 0,
+                        },
+                      ]"
                       @click="selectPlatformGroup(platformGroup)"
                     >
                       <div class="group-icon platform-logo-container">
-                        <img :src="platformGroup.logo" :alt="platformGroup.name" />
+                        <img
+                          :src="platformGroup.logo"
+                          :alt="platformGroup.name"
+                        />
                       </div>
                       <div class="group-info">
                         <span class="group-name">{{ platformGroup.name }}</span>
-                        <span class="group-count">{{ platformGroup.accounts.length }}</span>
+                        <span class="group-count">{{
+                          platformGroup.accounts.length
+                        }}</span>
                       </div>
                     </div>
                   </div>
@@ -202,31 +229,47 @@
                   <!-- 自定义分组 -->
                   <div class="custom-groups" v-if="customGroups.length > 0">
                     <div class="group-category-title">自定义分组</div>
-                    <div 
+                    <div
                       v-for="group in customGroups"
                       :key="group.id"
-                      :class="['sidebar-group-item', { 
-                        'active': selectedGroupType === 'custom' && selectedGroupId === group.id,
-                        'has-accounts': getAccountsInGroup(group.id).length > 0
-                      }]"
+                      :class="[
+                        'sidebar-group-item',
+                        {
+                          active:
+                            selectedGroupType === 'custom' &&
+                            selectedGroupId === group.id,
+                          'has-accounts':
+                            getAccountsInGroup(group.id).length > 0,
+                        },
+                      ]"
                       @click="selectCustomGroup(group)"
                     >
-                      <div class="group-icon" :style="{ backgroundColor: group.color }">
-                        <el-icon><component :is="getGroupIcon(group.icon)" /></el-icon>
+                      <div
+                        class="group-icon"
+                        :style="{ backgroundColor: group.color }"
+                      >
+                        <el-icon
+                          ><component :is="getGroupIcon(group.icon)"
+                        /></el-icon>
                       </div>
                       <div class="group-info">
                         <span class="group-name">{{ group.name }}</span>
-                        <span class="group-count">{{ getAccountsInGroup(group.id).length }}</span>
+                        <span class="group-count">{{
+                          getAccountsInGroup(group.id).length
+                        }}</span>
                       </div>
                     </div>
                   </div>
 
                   <!-- 全部账号 -->
                   <div class="all-accounts-group">
-                    <div 
-                      :class="['sidebar-group-item', { 
-                        'active': selectedGroupType === 'all'
-                      }]"
+                    <div
+                      :class="[
+                        'sidebar-group-item',
+                        {
+                          active: selectedGroupType === 'all',
+                        },
+                      ]"
                       @click="selectAllAccounts"
                     >
                       <div class="group-icon all-accounts">
@@ -234,7 +277,9 @@
                       </div>
                       <div class="group-info">
                         <span class="group-name">全部账号</span>
-                        <span class="group-count">{{ availableAccounts.length }}</span>
+                        <span class="group-count">{{
+                          availableAccounts.length
+                        }}</span>
                       </div>
                     </div>
                   </div>
@@ -247,13 +292,25 @@
                     <div class="header-left">
                       <h5>{{ getCurrentGroupTitle() }}</h5>
                       <!-- 保留全选功能 -->
-                      <div class="select-all-control" @click="handleSelectAllInCurrentGroup()">
-                        <div :class="['custom-checkbox', { 
-                          'checked': isCurrentGroupAllSelected,
-                          'indeterminate': isCurrentGroupPartialSelected 
-                        }]">
-                          <el-icon v-if="isCurrentGroupAllSelected"><Check /></el-icon>
-                          <el-icon v-else-if="isCurrentGroupPartialSelected"><Minus /></el-icon>
+                      <div
+                        class="select-all-control"
+                        @click="handleSelectAllInCurrentGroup()"
+                      >
+                        <div
+                          :class="[
+                            'custom-checkbox',
+                            {
+                              checked: isCurrentGroupAllSelected,
+                              indeterminate: isCurrentGroupPartialSelected,
+                            },
+                          ]"
+                        >
+                          <el-icon v-if="isCurrentGroupAllSelected"
+                            ><Check
+                          /></el-icon>
+                          <el-icon v-else-if="isCurrentGroupPartialSelected"
+                            ><Minus
+                          /></el-icon>
                         </div>
                         <span class="select-all-text">全选当前分组</span>
                       </div>
@@ -262,9 +319,9 @@
                       <span class="selected-count">
                         已选择 {{ task.selectedAccounts.length }} 个账号
                       </span>
-                      <el-button 
+                      <el-button
                         v-if="task.selectedAccounts.length > 0"
-                        size="small" 
+                        size="small"
                         @click="clearAccountSelection(task)"
                       >
                         清空选择
@@ -274,27 +331,41 @@
 
                   <!-- 账号网格 -->
                   <div class="accounts-grid">
-                    <div 
-                      v-for="account in currentGroupAccounts" 
+                    <div
+                      v-for="account in currentGroupAccounts"
                       :key="account.id"
-                      :class="['account-card', { 
-                        'selected': task.selectedAccounts.includes(account.id),
-                        'disabled': account.status !== '正常'
-                      }]"
+                      :class="[
+                        'account-card',
+                        {
+                          selected: task.selectedAccounts.includes(account.id),
+                          disabled: account.status !== '正常',
+                        },
+                      ]"
                       @click="toggleAccountSelection(task, account)"
                     >
                       <div class="account-avatar">
                         <div class="avatar-container">
-                          <el-avatar 
-                            :size="40" 
-                            :src="getAvatarUrl(account)" 
+                          <el-avatar
+                            :size="40"
+                            :src="getAvatarUrl(account)"
                             @error="handleAvatarError"
                           />
                           <div class="platform-logo">
-                            <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                            <img
+                              :src="getPlatformLogo(account.platform)"
+                              :alt="account.platform"
+                            />
                           </div>
-                          <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
-                          <div v-if="task.selectedAccounts.includes(account.id)" class="selected-mark">
+                          <div
+                            :class="[
+                              'status-dot',
+                              account.status === '正常' ? 'online' : 'offline',
+                            ]"
+                          ></div>
+                          <div
+                            v-if="task.selectedAccounts.includes(account.id)"
+                            class="selected-mark"
+                          >
                             <el-icon><Check /></el-icon>
                           </div>
                         </div>
@@ -302,7 +373,11 @@
                       <div class="account-info">
                         <div class="account-name">{{ account.userName }}</div>
                         <div v-if="account.group_name" class="account-group">
-                          <el-tag :color="account.group_color" size="small" effect="light">
+                          <el-tag
+                            :color="account.group_color"
+                            size="small"
+                            effect="dark"
+                          >
                             {{ account.group_name }}
                           </el-tag>
                         </div>
@@ -365,7 +440,7 @@
                       active-text="定时发布"
                       inactive-text="立即发布"
                     />
-                    
+
                     <div v-if="task.scheduleEnabled" class="schedule-options">
                       <div class="schedule-row">
                         <span class="label">发布时间:</span>
@@ -397,8 +472,8 @@
                 <div class="preview-section">
                   <h5>视频内容</h5>
                   <div class="videos-preview">
-                    <div 
-                      v-for="(video, index) in task.videos" 
+                    <div
+                      v-for="(video, index) in task.videos"
                       :key="index"
                       class="video-preview-item"
                     >
@@ -426,15 +501,19 @@
                   <div class="content-preview">
                     <div class="preview-item">
                       <span class="label">标题:</span>
-                      <span class="value">{{ task.title || '未设置' }}</span>
+                      <span class="value">{{ task.title || "未设置" }}</span>
                     </div>
                     <div class="preview-item" v-if="task.topics.length > 0">
                       <span class="label">话题:</span>
-                      <span class="value">{{ task.topics.map(t => '#' + t).join(' ') }}</span>
+                      <span class="value">{{
+                        task.topics.map((t) => "#" + t).join(" ")
+                      }}</span>
                     </div>
                     <div class="preview-item">
                       <span class="label">发布方式:</span>
-                      <span class="value">{{ task.scheduleEnabled ? '定时发布' : '立即发布' }}</span>
+                      <span class="value">{{
+                        task.scheduleEnabled ? "定时发布" : "立即发布"
+                      }}</span>
                     </div>
                   </div>
                 </div>
@@ -442,12 +521,12 @@
 
               <!-- 发布进度 -->
               <div v-if="task.publishing" class="publish-progress">
-                <el-progress 
+                <el-progress
                   :percentage="task.publishProgress"
                   :status="task.publishProgress === 100 ? 'success' : ''"
                 />
                 <div class="progress-text">
-                  {{ task.publishProgressText || '准备发布...' }}
+                  {{ task.publishProgressText || "准备发布..." }}
                 </div>
               </div>
             </div>
@@ -457,7 +536,7 @@
         <!-- 步骤导航 -->
         <div class="step-navigation">
           <div class="nav-left">
-            <el-button 
+            <el-button
               v-if="task.currentStep !== 'video'"
               @click="previousStep(task)"
               :disabled="task.publishing"
@@ -467,7 +546,7 @@
             </el-button>
           </div>
           <div class="nav-right">
-            <el-button 
+            <el-button
               v-if="task.currentStep !== 'confirm'"
               type="primary"
               @click="nextStep(task)"
@@ -476,7 +555,7 @@
               下一步
               <el-icon><ArrowRight /></el-icon>
             </el-button>
-            <el-button 
+            <el-button
               v-else
               type="primary"
               @click="publishTask(task)"
@@ -484,7 +563,7 @@
               :disabled="!canPublish(task)"
             >
               <el-icon><Upload /></el-icon>
-              {{ task.publishing ? '发布中' : '确认发布' }}
+              {{ task.publishing ? "发布中" : "确认发布" }}
             </el-button>
           </div>
         </div>
@@ -520,7 +599,9 @@
               :key="topic"
               size="small"
               @click="toggleRecommendedTopic(topic)"
-              :type="currentTask?.topics?.includes(topic) ? 'primary' : 'default'"
+              :type="
+                currentTask?.topics?.includes(topic) ? 'primary' : 'default'
+              "
             >
               #{{ topic }}
             </el-button>
@@ -562,9 +643,9 @@
                       <span v-if="selectedVideoIds.length > 0">
                         已选择 {{ selectedVideoIds.length }} 个视频
                       </span>
-                      <el-button 
+                      <el-button
                         v-if="selectedVideoIds.length > 0"
-                        size="small" 
+                        size="small"
                         @click="selectedVideoIds = []"
                       >
                         清空选择
@@ -573,12 +654,15 @@
                   </div>
 
                   <div class="videos-grid">
-                    <div 
-                      v-for="video in recentVideos" 
+                    <div
+                      v-for="video in recentVideos"
                       :key="video.id"
-                      :class="['video-item', { 
-                        'selected': selectedVideoIds.includes(video.id) 
-                      }]"
+                      :class="[
+                        'video-item',
+                        {
+                          selected: selectedVideoIds.includes(video.id),
+                        },
+                      ]"
                       @click="toggleRecentVideoSelection(video.id)"
                     >
                       <!-- 视频预览 -->
@@ -586,14 +670,20 @@
                         <el-icon class="video-icon"><VideoPlay /></el-icon>
                         <div class="video-overlay">
                           <div class="overlay-content">
-                            <el-button size="small" @click.stop="previewRecentVideo(video)">
+                            <el-button
+                              size="small"
+                              @click.stop="previewRecentVideo(video)"
+                            >
                               <el-icon><View /></el-icon>
                               预览
                             </el-button>
                           </div>
                         </div>
                         <!-- 选中标记 -->
-                        <div v-if="selectedVideoIds.includes(video.id)" class="selected-mark">
+                        <div
+                          v-if="selectedVideoIds.includes(video.id)"
+                          class="selected-mark"
+                        >
                           <el-icon><Check /></el-icon>
                         </div>
                         <!-- 来源标记 -->
@@ -606,8 +696,12 @@
                           {{ video.filename }}
                         </div>
                         <div class="video-meta">
-                          <span class="video-size">{{ video.filesize }} MB</span>
-                          <span class="video-date">{{ formatDate(video.upload_time) }}</span>
+                          <span class="video-size"
+                            >{{ video.filesize }} MB</span
+                          >
+                          <span class="video-date">{{
+                            formatDate(video.upload_time)
+                          }}</span>
                         </div>
                       </div>
                     </div>
@@ -629,9 +723,9 @@
                       <span v-if="selectedMaterialIds.length > 0">
                         已选择 {{ selectedMaterialIds.length }} 个素材
                       </span>
-                      <el-button 
+                      <el-button
                         v-if="selectedMaterialIds.length > 0"
-                        size="small" 
+                        size="small"
                         @click="selectedMaterialIds = []"
                       >
                         清空选择
@@ -640,12 +734,15 @@
                   </div>
 
                   <div class="videos-grid">
-                    <div 
-                      v-for="material in libraryMaterials" 
+                    <div
+                      v-for="material in libraryMaterials"
                       :key="material.id"
-                      :class="['video-item', { 
-                        'selected': selectedMaterialIds.includes(material.id) 
-                      }]"
+                      :class="[
+                        'video-item',
+                        {
+                          selected: selectedMaterialIds.includes(material.id),
+                        },
+                      ]"
                       @click="toggleMaterialSelection(material.id)"
                     >
                       <!-- 视频预览 -->
@@ -653,14 +750,20 @@
                         <el-icon class="video-icon"><VideoPlay /></el-icon>
                         <div class="video-overlay">
                           <div class="overlay-content">
-                            <el-button size="small" @click.stop="previewMaterial(material)">
+                            <el-button
+                              size="small"
+                              @click.stop="previewMaterial(material)"
+                            >
                               <el-icon><View /></el-icon>
                               预览
                             </el-button>
                           </div>
                         </div>
                         <!-- 选中标记 -->
-                        <div v-if="selectedMaterialIds.includes(material.id)" class="selected-mark">
+                        <div
+                          v-if="selectedMaterialIds.includes(material.id)"
+                          class="selected-mark"
+                        >
                           <el-icon><Check /></el-icon>
                         </div>
                         <!-- 来源标记 -->
@@ -673,8 +776,12 @@
                           {{ material.filename }}
                         </div>
                         <div class="video-meta">
-                          <span class="video-size">{{ material.filesize }} MB</span>
-                          <span class="video-date">{{ formatDate(material.upload_time) }}</span>
+                          <span class="video-size"
+                            >{{ material.filesize }} MB</span
+                          >
+                          <span class="video-date">{{
+                            formatDate(material.upload_time)
+                          }}</span>
                         </div>
                       </div>
                     </div>
@@ -682,7 +789,10 @@
                 </div>
                 <div v-else class="empty-videos">
                   <el-empty description="暂无素材库视频">
-                    <el-button type="primary" @click="navigateToMaterialManagement">
+                    <el-button
+                      type="primary"
+                      @click="navigateToMaterialManagement"
+                    >
                       <el-icon><Upload /></el-icon>
                       去添加素材
                     </el-button>
@@ -697,12 +807,16 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="cancelSelection">取消</el-button>
-          <el-button 
-            type="primary" 
+          <el-button
+            type="primary"
             @click="confirmSelection"
-            :disabled="selectedVideoIds.length === 0 && selectedMaterialIds.length === 0"
+            :disabled="
+              selectedVideoIds.length === 0 && selectedMaterialIds.length === 0
+            "
           >
-            确认选择 ({{ selectedVideoIds.length + selectedMaterialIds.length }})
+            确认选择 ({{
+              selectedVideoIds.length + selectedMaterialIds.length
+            }})
           </el-button>
         </div>
       </template>
@@ -3059,6 +3173,9 @@ $space-2xl: 48px;
 // 账号卡片中的分组标签
 .account-card {
   .account-group {
+    :deep(.el-tag) {
+      border: none !important;
+    }
     margin-top: 4px;
   }
 }
