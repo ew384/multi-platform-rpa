@@ -8,19 +8,19 @@
           <p class="page-subtitle">管理所有平台的账号信息</p>
         </div>
         <div class="header-actions">
-          <el-button 
+          <el-button
             v-if="activeTab === 'accounts'"
-            type="primary" 
-            @click="handleAddAccount" 
+            type="primary"
+            @click="handleAddAccount"
             class="add-btn"
           >
             <el-icon><Plus /></el-icon>
             添加账号
           </el-button>
-          <el-button 
+          <el-button
             v-if="activeTab === 'groups'"
-            type="primary" 
-            @click="handleAddGroup" 
+            type="primary"
+            @click="handleAddGroup"
             class="add-btn"
           >
             <el-icon><Plus /></el-icon>
@@ -35,13 +35,13 @@
       <!-- 自定义标签页按钮 -->
       <div class="simple-tabs">
         <div class="tabs-header">
-          <div 
+          <div
             :class="['tab-item', { active: activeTab === 'accounts' }]"
             @click="activeTab = 'accounts'"
           >
             账号管理
           </div>
-          <div 
+          <div
             :class="['tab-item', { active: activeTab === 'groups' }]"
             @click="activeTab = 'groups'"
           >
@@ -58,13 +58,23 @@
           <div class="filter-toolbar">
             <div class="filter-left">
               <div class="filter-group">
-                <el-select v-model="filterStatus" placeholder="账号状态" clearable class="filter-select">
+                <el-select
+                  v-model="filterStatus"
+                  placeholder="账号状态"
+                  clearable
+                  class="filter-select"
+                >
                   <el-option label="全部状态" value="" />
                   <el-option label="正常" value="正常" />
                   <el-option label="异常" value="异常" />
                 </el-select>
 
-                <el-select v-model="filterPlatform" placeholder="选择平台" clearable class="filter-select">
+                <el-select
+                  v-model="filterPlatform"
+                  placeholder="选择平台"
+                  clearable
+                  class="filter-select"
+                >
                   <el-option label="全部平台" value="" />
                   <el-option label="抖音" value="抖音" />
                   <el-option label="快手" value="快手" />
@@ -73,10 +83,15 @@
                 </el-select>
 
                 <!-- 分组筛选 -->
-                <el-select v-model="filterGroup" placeholder="选择分组" clearable class="filter-select">
+                <el-select
+                  v-model="filterGroup"
+                  placeholder="选择分组"
+                  clearable
+                  class="filter-select"
+                >
                   <el-option label="全部分组" value="" />
                   <el-option label="未分组" value="ungrouped" />
-                  <el-option 
+                  <el-option
                     v-for="group in accountStore.groups"
                     :key="group.id"
                     :label="group.name"
@@ -101,8 +116,14 @@
             </div>
 
             <div class="filter-right">
-              <el-button @click="fetchAccounts" :loading="appStore.isAccountRefreshing" class="refresh-btn">
-                <el-icon :class="{ 'rotating': appStore.isAccountRefreshing }"><Refresh /></el-icon>
+              <el-button
+                @click="fetchAccounts"
+                :loading="appStore.isAccountRefreshing"
+                class="refresh-btn"
+              >
+                <el-icon :class="{ rotating: appStore.isAccountRefreshing }"
+                  ><Refresh
+                /></el-icon>
               </el-button>
               <el-dropdown>
                 <el-button class="more-btn">
@@ -166,8 +187,8 @@
           <!-- 账号列表 -->
           <div class="accounts-section">
             <div v-if="filteredAccounts.length > 0" class="accounts-grid">
-              <div 
-                v-for="account in filteredAccounts" 
+              <div
+                v-for="account in filteredAccounts"
                 :key="account.id"
                 class="account-card"
               >
@@ -175,16 +196,24 @@
                 <div class="account-info">
                   <div class="avatar-container">
                     <div class="account-avatar">
-                      <el-avatar 
-                        :size="56" 
-                        :src="getAvatarUrl(account)" 
+                      <el-avatar
+                        :size="56"
+                        :src="getAvatarUrl(account)"
                         @error="handleAvatarError"
                       />
                     </div>
                     <div class="platform-logo">
-                      <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                      <img
+                        :src="getPlatformLogo(account.platform)"
+                        :alt="account.platform"
+                      />
                     </div>
-                    <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                    <div
+                      :class="[
+                        'status-dot',
+                        account.status === '正常' ? 'online' : 'offline',
+                      ]"
+                    ></div>
                   </div>
 
                   <div class="account-details">
@@ -192,7 +221,7 @@
                     <div class="account-meta">
                       <span class="platform-text">{{ account.platform }}</span>
                       <!-- 分组信息 -->
-                      <el-tag 
+                      <el-tag
                         v-if="account.group_name"
                         :color="account.group_color"
                         size="small"
@@ -201,8 +230,8 @@
                       >
                         {{ account.group_name }}
                       </el-tag>
-                      <el-tag 
-                        :type="account.status === '正常' ? 'success' : 'danger'" 
+                      <el-tag
+                        :type="account.status === '正常' ? 'success' : 'danger'"
                         size="small"
                         effect="light"
                       >
@@ -214,12 +243,17 @@
 
                 <!-- 操作按钮 -->
                 <div class="account-actions">
-                  <el-button size="small" @click="handleEdit(account)" class="action-btn" title="编辑">
+                  <el-button
+                    size="small"
+                    @click="handleEdit(account)"
+                    class="action-btn"
+                    title="编辑"
+                  >
                     <el-icon><Edit /></el-icon>
                   </el-button>
-                  <el-button 
-                    size="small" 
-                    type="danger" 
+                  <el-button
+                    size="small"
+                    type="danger"
                     @click="handleDelete(account)"
                     class="action-btn danger"
                     title="删除"
@@ -238,9 +272,17 @@
                 </div>
                 <h3 class="empty-title">暂无账号数据</h3>
                 <p class="empty-description">
-                  {{ searchKeyword || filterStatus || filterPlatform ? '没有找到符合条件的账号' : '还没有添加任何账号，点击上方按钮开始添加' }}
+                  {{
+                    searchKeyword || filterStatus || filterPlatform
+                      ? "没有找到符合条件的账号"
+                      : "还没有添加任何账号，点击上方按钮开始添加"
+                  }}
                 </p>
-                <el-button v-if="!searchKeyword && !filterStatus && !filterPlatform" type="primary" @click="handleAddAccount">
+                <el-button
+                  v-if="!searchKeyword && !filterStatus && !filterPlatform"
+                  type="primary"
+                  @click="handleAddAccount"
+                >
                   <el-icon><Plus /></el-icon>
                   添加第一个账号
                 </el-button>
@@ -292,9 +334,9 @@
               <h4>平台分组</h4>
               <p>按平台自动分组显示</p>
             </div>
-            
+
             <div class="groups-list">
-              <div 
+              <div
                 v-for="platformGroup in platformGroups"
                 :key="platformGroup.id"
                 class="group-card platform-group"
@@ -302,37 +344,57 @@
                 <div class="group-header">
                   <div class="group-info">
                     <div class="group-icon platform-logo-container">
-                      <img :src="platformGroup.logo" :alt="platformGroup.name" />
+                      <img
+                        :src="platformGroup.logo"
+                        :alt="platformGroup.name"
+                      />
                     </div>
                     <div class="group-details">
                       <h3 class="group-name">{{ platformGroup.name }}</h3>
-                      <p class="group-description">{{ platformGroup.accounts.length }} 个账号</p>
+                      <p class="group-description">
+                        {{ platformGroup.accounts.length }} 个账号
+                      </p>
                     </div>
                   </div>
                 </div>
-                <div class="platform-accounts" v-if="platformGroup.accounts.length > 0">
-                  <div 
+                <div
+                  class="platform-accounts"
+                  v-if="platformGroup.accounts.length > 0"
+                >
+                  <div
                     v-for="account in platformGroup.accounts"
                     :key="account.id"
                     class="platform-account-item"
                   >
                     <div class="account-avatar-container">
-                      <el-avatar 
-                        :size="32" 
-                        :src="getAvatarUrl(account)" 
+                      <el-avatar
+                        :size="32"
+                        :src="getAvatarUrl(account)"
                         @error="handleAvatarError"
                       />
-                      <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                      <div
+                        :class="[
+                          'status-dot',
+                          account.status === '正常' ? 'online' : 'offline',
+                        ]"
+                      ></div>
                     </div>
                     <div class="account-info">
                       <span class="account-name">{{ account.userName }}</span>
-                      <span class="account-status" :class="account.status === '正常' ? 'status-normal' : 'status-error'">
+                      <span
+                        class="account-status"
+                        :class="
+                          account.status === '正常'
+                            ? 'status-normal'
+                            : 'status-error'
+                        "
+                      >
                         {{ account.status }}
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div v-else class="group-empty">
                   <span>该平台暂无账号</span>
                 </div>
@@ -358,13 +420,15 @@
                     </div>
                     <div class="group-details">
                       <h3 class="group-name">未分组账号</h3>
-                      <p class="group-description">{{ ungroupedAccounts.length }} 个账号</p>
+                      <p class="group-description">
+                        {{ ungroupedAccounts.length }} 个账号
+                      </p>
                     </div>
                   </div>
                 </div>
-                
+
                 <div class="group-accounts" v-if="ungroupedAccounts.length > 0">
-                  <div 
+                  <div
                     v-for="account in ungroupedAccounts"
                     :key="account.id"
                     class="group-account-item"
@@ -373,26 +437,36 @@
                     @dragend="handleDragEnd"
                   >
                     <div class="account-avatar-container">
-                      <el-avatar 
-                        :size="32" 
-                        :src="getAvatarUrl(account)" 
+                      <el-avatar
+                        :size="32"
+                        :src="getAvatarUrl(account)"
                         @error="handleAvatarError"
                       />
                       <div class="platform-logo">
-                        <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                        <img
+                          :src="getPlatformLogo(account.platform)"
+                          :alt="account.platform"
+                        />
                       </div>
-                      <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                      <div
+                        :class="[
+                          'status-dot',
+                          account.status === '正常' ? 'online' : 'offline',
+                        ]"
+                      ></div>
                     </div>
                     <div class="account-info">
                       <span class="account-name">{{ account.userName }}</span>
-                      <span class="account-platform">{{ account.platform }}</span>
+                      <span class="account-platform">{{
+                        account.platform
+                      }}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               <!-- 自定义分组 -->
-              <div 
+              <div
                 v-for="group in customGroups"
                 :key="group.id"
                 class="group-card custom-group"
@@ -402,27 +476,49 @@
               >
                 <div class="group-header">
                   <div class="group-info">
-                    <div class="group-icon" :style="{ backgroundColor: group.color }">
-                      <el-icon><component :is="getGroupIcon(group.icon)" /></el-icon>
+                    <div
+                      class="group-icon"
+                      :style="{ backgroundColor: group.color }"
+                    >
+                      <el-icon
+                        ><component :is="getGroupIcon(group.icon)"
+                      /></el-icon>
                     </div>
                     <div class="group-details">
                       <h3 class="group-name">{{ group.name }}</h3>
-                      <p class="group-description">{{ group.description || `${getAccountsByGroup(group.id).length} 个账号` }}</p>
+                      <p class="group-description">
+                        {{
+                          group.description ||
+                          `${getAccountsByGroup(group.id).length} 个账号`
+                        }}
+                      </p>
                     </div>
                   </div>
-                  
+
                   <div class="group-actions">
-                    <el-button size="small" text @click="handleEditGroup(group)">
+                    <el-button
+                      size="small"
+                      text
+                      @click="handleEditGroup(group)"
+                    >
                       <el-icon><Edit /></el-icon>
                     </el-button>
-                    <el-button size="small" text type="danger" @click="handleDeleteGroup(group)">
+                    <el-button
+                      size="small"
+                      text
+                      type="danger"
+                      @click="handleDeleteGroup(group)"
+                    >
                       <el-icon><Delete /></el-icon>
                     </el-button>
                   </div>
                 </div>
-                
-                <div class="group-accounts" v-if="getAccountsByGroup(group.id).length > 0">
-                  <div 
+
+                <div
+                  class="group-accounts"
+                  v-if="getAccountsByGroup(group.id).length > 0"
+                >
+                  <div
                     v-for="account in getAccountsByGroup(group.id)"
                     :key="account.id"
                     class="group-account-item"
@@ -431,23 +527,33 @@
                     @dragend="handleDragEnd"
                   >
                     <div class="account-avatar-container">
-                      <el-avatar 
-                        :size="32" 
-                        :src="getAvatarUrl(account)" 
+                      <el-avatar
+                        :size="32"
+                        :src="getAvatarUrl(account)"
                         @error="handleAvatarError"
                       />
                       <div class="platform-logo">
-                        <img :src="getPlatformLogo(account.platform)" :alt="account.platform" />
+                        <img
+                          :src="getPlatformLogo(account.platform)"
+                          :alt="account.platform"
+                        />
                       </div>
-                      <div :class="['status-dot', account.status === '正常' ? 'online' : 'offline']"></div>
+                      <div
+                        :class="[
+                          'status-dot',
+                          account.status === '正常' ? 'online' : 'offline',
+                        ]"
+                      ></div>
                     </div>
                     <div class="account-info">
                       <span class="account-name">{{ account.userName }}</span>
-                      <span class="account-platform">{{ account.platform }}</span>
+                      <span class="account-platform">{{
+                        account.platform
+                      }}</span>
                     </div>
-                    <el-button 
-                      size="small" 
-                      text 
+                    <el-button
+                      size="small"
+                      text
                       @click="moveAccountToGroup(account.id, null)"
                       title="移出分组"
                       class="remove-btn"
@@ -456,12 +562,13 @@
                     </el-button>
                   </div>
                 </div>
-                
+
                 <div v-else class="group-empty">
                   <span>拖拽账号到此分组</span>
                 </div>
               </div>
-            </div> <!-- 🔥 关闭 groups-list 容器 -->
+            </div>
+            <!-- 🔥 关闭 groups-list 容器 -->
           </div>
         </div>
       </div>
@@ -480,7 +587,7 @@
         <!-- 第一步：平台选择 -->
         <div v-if="dialogStep === 1" class="platform-selection">
           <div class="platform-grid">
-            <div 
+            <div
               v-for="platform in supportedPlatforms"
               :key="platform.name"
               :class="['platform-item', platform.class]"
@@ -500,9 +607,9 @@
         <!-- 第二步：二维码扫描 -->
         <div v-if="dialogStep === 2" class="qrcode-step">
           <div class="step-header">
-            <el-button 
-              text 
-              @click="handleBackToPlatformSelect" 
+            <el-button
+              text
+              @click="handleBackToPlatformSelect"
               class="back-btn"
               :disabled="sseConnecting"
             >
@@ -510,9 +617,12 @@
               返回选择平台
             </el-button>
           </div>
-          
+
           <div class="selected-platform">
-            <img :src="getPlatformLogo(accountForm.platform)" :alt="accountForm.platform" />
+            <img
+              :src="getPlatformLogo(accountForm.platform)"
+              :alt="accountForm.platform"
+            />
             <span>{{ accountForm.platform }}</span>
           </div>
 
@@ -522,34 +632,48 @@
               <el-icon><Iphone /></el-icon>
               <span>扫码登录</span>
             </div>
-            <p class="qrcode-tip">请使用{{ accountForm.platform }}APP扫描二维码登录</p>
-            
+            <p class="qrcode-tip">
+              请使用{{ accountForm.platform }}APP扫描二维码登录
+            </p>
+
             <!-- 🔥 二维码展示框 - 固定大小的容器 -->
             <div class="qrcode-frame">
               <!-- 加载中状态 -->
-              <div v-if="sseConnecting && !qrCodeData && !loginStatus" class="qrcode-loading">
-                <el-icon class="loading-spinner"><Loading /></el-icon>
-                <span class="loading-text">正在生成二维码...</span>
-              </div>
-              
-              <!-- 显示二维码 -->
-              <img 
-                v-else-if="qrCodeData && !loginStatus" 
-                :src="qrCodeData" 
-                alt="登录二维码" 
-                class="qrcode-image" 
-              />
-              
-              <!-- 登录成功 -->
-              <div v-else-if="loginStatus === '200'" class="qrcode-success">
-                <el-icon class="success-icon"><CircleCheckFilled /></el-icon>
-                <span class="success-text">登录成功</span>
-              </div>
-              
-              <!-- 登录失败 -->
-              <div v-else-if="loginStatus === '500'" class="qrcode-error">
-                <el-icon class="error-icon"><CircleCloseFilled /></el-icon>
-                <span class="error-text">登录失败，请重试</span>
+              <!-- 🔥 根据是否有二维码动态添加 has-qrcode 类 -->
+              <div
+                :class="[
+                  'qrcode-frame',
+                  { 'has-qrcode': qrCodeData && !loginStatus },
+                ]"
+              >
+                <!-- 加载中状态 -->
+                <div
+                  v-if="sseConnecting && !qrCodeData && !loginStatus"
+                  class="qrcode-loading"
+                >
+                  <el-icon class="loading-spinner"><Loading /></el-icon>
+                  <span class="loading-text">正在生成二维码...</span>
+                </div>
+
+                <!-- 显示二维码 -->
+                <img
+                  v-else-if="qrCodeData && !loginStatus"
+                  :src="qrCodeData"
+                  alt="登录二维码"
+                  class="qrcode-image"
+                />
+
+                <!-- 登录成功 -->
+                <div v-else-if="loginStatus === '200'" class="qrcode-success">
+                  <el-icon class="success-icon"><CircleCheckFilled /></el-icon>
+                  <span class="success-text">登录成功</span>
+                </div>
+
+                <!-- 登录失败 -->
+                <div v-else-if="loginStatus === '500'" class="qrcode-error">
+                  <el-icon class="error-icon"><CircleCloseFilled /></el-icon>
+                  <span class="error-text">登录失败，请重试</span>
+                </div>
               </div>
             </div>
           </div>
@@ -559,7 +683,7 @@
             <el-form-item label="账号名称">
               <el-input v-model="accountForm.userName" />
             </el-form-item>
-            
+
             <el-form-item label="状态">
               <el-select v-model="accountForm.status">
                 <el-option label="正常" value="正常" />
@@ -576,21 +700,24 @@
             取消
           </el-button>
           <!-- 重新生成二维码按钮 -->
-          <el-button 
-            v-if="dialogStep === 2 && (loginStatus === '500' || (!qrCodeData && !sseConnecting))"
-            type="primary" 
+          <el-button
+            v-if="
+              dialogStep === 2 &&
+              (loginStatus === '500' || (!qrCodeData && !sseConnecting))
+            "
+            type="primary"
             @click="handleRetryLogin"
           >
             重新生成二维码
           </el-button>
           <el-button @click="dialogVisible = false">取消</el-button>
-            <el-button 
-              v-if="dialogType === 'edit'"
-              type="primary" 
-              @click="submitEdit"
-            >
-              保存
-            </el-button>
+          <el-button
+            v-if="dialogType === 'edit'"
+            type="primary"
+            @click="submitEdit"
+          >
+            保存
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -602,33 +729,38 @@
       width="480px"
       class="group-dialog"
     >
-      <el-form :model="groupForm" label-width="80px" :rules="groupRules" ref="groupFormRef">
+      <el-form
+        :model="groupForm"
+        label-width="80px"
+        :rules="groupRules"
+        ref="groupFormRef"
+      >
         <el-form-item label="分组名称" prop="name">
           <el-input v-model="groupForm.name" placeholder="请输入分组名称" />
         </el-form-item>
-        
+
         <el-form-item label="描述">
-          <el-input 
-            v-model="groupForm.description" 
-            type="textarea" 
+          <el-input
+            v-model="groupForm.description"
+            type="textarea"
             :rows="2"
-            placeholder="请输入分组描述（可选）" 
+            placeholder="请输入分组描述（可选）"
           />
         </el-form-item>
-        
+
         <el-form-item label="颜色">
           <el-color-picker v-model="groupForm.color" />
         </el-form-item>
-        
+
         <el-form-item label="图标">
           <el-select v-model="groupForm.icon" placeholder="选择图标">
-            <el-option 
+            <el-option
               v-for="icon in groupIcons"
               :key="icon"
               :label="icon"
               :value="icon"
             >
-              <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px">
                 <el-icon><component :is="getGroupIcon(icon)" /></el-icon>
                 <span>{{ icon }}</span>
               </div>
@@ -636,16 +768,16 @@
           </el-select>
         </el-form-item>
       </el-form>
-      
+
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="groupDialogVisible = false">取消</el-button>
           <el-button type="primary" @click="submitGroupForm">
-            {{ groupDialogType === 'add' ? '创建' : '更新' }}
+            {{ groupDialogType === "add" ? "创建" : "更新" }}
           </el-button>
         </div>
       </template>
-    </el-dialog>    
+    </el-dialog>
   </div>
 </template>
 
@@ -1040,7 +1172,7 @@ const connectSSE = (platform, name) => {
 
   eventSource.onmessage = (event) => {
     const data = event.data;
-    console.log("🔍 SSE消息:", data);
+    //console.log("🔍 SSE消息:", data);
     console.log("🔍 消息长度:", data.length);
     console.log("🔍 消息类型:", typeof data);
 
@@ -1057,10 +1189,7 @@ const connectSSE = (platform, name) => {
           console.log("✅ 转换为 base64 格式二维码");
         }
 
-        console.log(
-          "🔍 最终二维码数据:",
-          qrCodeData.value.substring(0, 50) + "..."
-        );
+        //console.log("🔍 最终二维码数据:",qrCodeData.value.substring(0, 50) + "...");
       } catch (error) {
         console.error("❌ 处理二维码数据出错:", error);
       }
@@ -1517,6 +1646,7 @@ $space-2xl: 48px;
   max-width: 1200px;
   margin: 0 auto;
 }
+
 .qrcode-container {
   text-align: center;
 
@@ -1541,21 +1671,40 @@ $space-2xl: 48px;
     width: 240px;
     height: 240px;
     margin: 0 auto;
-    background: $bg-gray;
     border-radius: $radius-lg;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px dashed $border-light;
     position: relative;
     overflow: hidden;
+    transition: all 0.3s ease;
 
-    // 二维码图片
+    // 🔥 默认状态：浅色背景，用于显示加载文字
+    background: $bg-gray;
+    border: 2px dashed $border-light;
+
+    // 🔥 当有二维码时：深灰色渐变背景
+    &.has-qrcode {
+      background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 20px rgba(45, 55, 72, 0.4);
+    }
+
     .qrcode-image {
       width: 200px;
       height: 200px;
       border-radius: $radius-md;
       object-fit: contain;
+
+      // 🔥 在深灰背景上微调对比度
+      filter: contrast(1.1);
+    }
+
+    // 加载、成功、失败状态保持浅色背景和深色文字
+    .qrcode-loading,
+    .qrcode-success,
+    .qrcode-error {
+      color: $text-primary;
     }
 
     // 🔥 加载状态
