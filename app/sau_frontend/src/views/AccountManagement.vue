@@ -710,7 +710,7 @@
           >
             重新生成二维码
           </el-button>
-          <el-button @click="dialogVisible = false">取消</el-button>
+
           <el-button
             v-if="dialogType === 'edit'"
             type="primary"
