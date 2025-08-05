@@ -30,6 +30,11 @@ request.interceptors.response.use(
     console.log('✅ HTTP响应成功:', response.config.url);
     console.log('✅ 响应数据:', response.data);
 
+    // 🔥 如果是blob类型，直接返回完整response（用于文件下载）
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+
     // 🔥 直接返回数据，不做任何判断
     return response.data;
   },
@@ -62,10 +67,49 @@ request.interceptors.response.use(
   }
 )
 
+// 🔥 文件下载辅助函数
+export const downloadFile = (response, defaultFilename = 'download.csv') => {
+  try {
+    // 从响应头获取文件名
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = defaultFilename;
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '');
+      }
+    }
+
+    // 创建下载链接
+    const blob = new Blob([response.data], {
+      type: response.headers['content-type'] || 'application/octet-stream'
+    });
+    
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    
+    // 清理
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+    
+    return { success: true, filename };
+  } catch (error) {
+    console.error('下载文件失败:', error);
+    ElMessage.error('文件下载失败');
+    return { success: false, error: error.message };
+  }
+};
+
 // 封装常用的请求方法
 export const http = {
-  get(url, params) {
-    return request.get(url, { params })
+  get(url, options = {}) {
+    const { params, ...config } = options;
+    return request.get(url, { params, ...config });
   },
 
   post(url, data, config = {}) {
@@ -86,6 +130,24 @@ export const http = {
         'Content-Type': 'multipart/form-data'
       }
     })
+  },
+
+  // 🔥 新增：文件下载方法
+  download(url, params = {}, filename = 'download.csv') {
+    return request.get(url, { 
+      params, 
+      responseType: 'blob' 
+    }).then(response => {
+      return downloadFile(response, filename);
+    });
+  },
+
+  // 🔥 新增：直接获取blob数据（不自动下载）
+  getBlob(url, params = {}) {
+    return request.get(url, { 
+      params, 
+      responseType: 'blob' 
+    });
   }
 }
 
