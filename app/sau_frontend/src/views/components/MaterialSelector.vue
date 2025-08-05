@@ -192,6 +192,8 @@
 </template>
 
 <script setup>
+// 在 MaterialSelector.vue 的 <script setup> 部分替换现有代码
+
 import { ref, computed, watch } from 'vue';
 import {
   Loading,
@@ -213,12 +215,14 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['update:visible', 'selected']);
 
+// 🔍 调试：组件初始化日志
+console.log('🔍 MaterialSelector 组件初始化');
+
 // API配置
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
 const authHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 }));
-
 
 const loading = ref(false);
 const activeTab = ref('recent');
@@ -227,12 +231,62 @@ const libraryMaterials = ref([]);
 const selectedRecentIds = ref([]);
 const selectedLibraryIds = ref([]);
 
+// 🔍 调试：监控 props.visible 的变化
+watch(() => props.visible, (newValue, oldValue) => {
+  console.log('📊 MaterialSelector props.visible 变化:', {
+    old: oldValue,
+    new: newValue,
+    timestamp: new Date().toISOString(),
+    stack: new Error().stack.split('\n').slice(0, 5) // 只显示前5行调用栈
+  });
+}, { immediate: true });
+
+// 🔍 调试：使用标志位防止循环的 dialogVisible
+let isUpdatingDialogVisible = false;
+
+const dialogVisible = computed({
+  get: () => {
+    console.log('📥 MaterialSelector dialogVisible get:', props.visible);
+    return props.visible;
+  },
+  set: (value) => {
+    console.log('📤 MaterialSelector dialogVisible set:', {
+      current: props.visible,
+      new: value,
+      isUpdating: isUpdatingDialogVisible,
+      timestamp: new Date().toISOString(),
+      stack: new Error().stack.split('\n').slice(0, 3) // 只显示前3行调用栈
+    });
+    
+    // 防止循环更新
+    if (isUpdatingDialogVisible) {
+      console.log('⚠️ MaterialSelector 跳过设置，正在更新中');
+      return;
+    }
+    
+    if (value !== props.visible) {
+      console.log('✅ MaterialSelector 准备发射 update:visible:', value);
+      isUpdatingDialogVisible = true;
+      emit('update:visible', value);
+      
+      // 在下一个 tick 重置标志位
+      nextTick(() => {
+        isUpdatingDialogVisible = false;
+        console.log('🔄 MaterialSelector 重置更新标志位');
+      });
+    } else {
+      console.log('⚠️ MaterialSelector 跳过发射，值相同');
+    }
+  }
+});
+
 // 计算属性
 const getTotalSelectedCount = () => {
   return selectedRecentIds.value.length + selectedLibraryIds.value.length;
 };
 
 const loadAllVideoSources = async () => {
+  console.log('🚀 MaterialSelector 开始加载视频源');
   loading.value = true;
   try {
     const [recentResponse, libraryResponse] = await Promise.all([
@@ -244,15 +298,14 @@ const loadAllVideoSources = async () => {
       }).then(res => res.json())
     ]);
 
-    // 🔥 使用 nextTick 确保 DOM 更新完成
+    // 使用 nextTick 确保 DOM 更新完成
     await nextTick();
 
     if (recentResponse.code === 200) {
-      // 🔥 创建新数组避免响应式冲突
       recentVideos.value = [...(recentResponse.data || [])];
-      console.log('最近上传的视频:', recentVideos.value);
+      console.log('✅ MaterialSelector 最近上传的视频:', recentVideos.value.length);
     } else {
-      console.error('获取最近上传视频失败:', recentResponse.msg);
+      console.error('❌ MaterialSelector 获取最近上传视频失败:', recentResponse.msg);
       recentVideos.value = [];
     }
 
@@ -260,43 +313,41 @@ const loadAllVideoSources = async () => {
       const filteredMaterials = (libraryResponse.data || []).filter(material =>
         isVideoFile(material.filename)
       );
-      // 🔥 创建新数组避免响应式冲突
       libraryMaterials.value = [...filteredMaterials];
-      console.log('素材库视频:', libraryMaterials.value);
+      console.log('✅ MaterialSelector 素材库视频:', libraryMaterials.value.length);
     } else {
-      console.error('获取素材库视频失败:', libraryResponse.msg);
+      console.error('❌ MaterialSelector 获取素材库视频失败:', libraryResponse.msg);
       libraryMaterials.value = [];
     }
 
   } catch (error) {
-    console.error('获取视频列表出错:', error);
+    console.error('❌ MaterialSelector 获取视频列表出错:', error);
     ElMessage.error('获取视频列表失败');
     recentVideos.value = [];
     libraryMaterials.value = [];
   } finally {
     loading.value = false;
+    console.log('🏁 MaterialSelector 视频源加载完成');
   }
 };
 
-// 修改 watch 监听器
-watch(() => props.visible, async (newVisible) => {
+// 🔍 调试：监控 visible 变化的 watch
+watch(() => props.visible, async (newVisible, oldVisible) => {
+  console.log('🎬 MaterialSelector visible watch 触发:', {
+    old: oldVisible,
+    new: newVisible,
+    timestamp: new Date().toISOString()
+  });
+  
   if (newVisible) {
+    console.log('👁️ MaterialSelector 对话框显示，开始初始化');
     clearAllSelections();
-    // 🔥 使用 nextTick 避免立即触发响应式更新
     await nextTick();
     await loadAllVideoSources();
+  } else {
+    console.log('👁️‍🗨️ MaterialSelector 对话框隐藏');
   }
-}, { immediate: false }); // 🔥 不要立即执行
-
-// 确保 dialogVisible 计算属性正确
-const dialogVisible = computed({
-  get: () => props.visible,
-  set: (value) => {
-    if (value !== props.visible) {
-      emit('update:visible', value);
-    }
-  }
-});
+}, { immediate: false });
 
 const isVideoFile = (filename) => {
   const videoExtensions = [
@@ -332,6 +383,7 @@ const clearLibrarySelection = () => {
 };
 
 const clearAllSelections = () => {
+  console.log('🧹 MaterialSelector 清空所有选择');
   selectedRecentIds.value = [];
   selectedLibraryIds.value = [];
 };
@@ -358,11 +410,14 @@ const formatDate = (dateString) => {
 };
 
 const handleCancel = () => {
-  emit('update:visible', false);
+  console.log('❌ MaterialSelector 用户点击取消按钮');
   clearAllSelections();
+  // 🔍 直接设置为 false，不触发计算属性
+  emit('update:visible', false);
 };
 
 const handleConfirm = () => {
+  console.log('✅ MaterialSelector 用户点击确认按钮');
   const selectedVideos = [];
 
   // 处理最近上传的视频
@@ -375,7 +430,7 @@ const handleConfirm = () => {
       name: video.filename,
       path: video.file_path,
       url: `${apiBaseUrl}/getFile?filename=${video.file_path}`,
-      size: (video.filesize || 0) * 1024 * 1024, // 转换为字节
+      size: (video.filesize || 0) * 1024 * 1024,
       type: 'video/mp4',
       id: `recent_${video.id}`,
       source: 'recent'
@@ -393,7 +448,7 @@ const handleConfirm = () => {
       name: material.filename,
       path: material.file_path || material.filename,
       url: `${apiBaseUrl}/getFile?filename=${filename}`,
-      size: (material.filesize || 0) * 1024 * 1024, // 转换为字节
+      size: (material.filesize || 0) * 1024 * 1024,
       type: 'video/mp4',
       id: `library_${material.id}`,
       source: 'library'
@@ -405,12 +460,11 @@ const handleConfirm = () => {
     return;
   }
 
+  console.log('📤 MaterialSelector 发射选中的视频:', selectedVideos.length);
   emit('selected', selectedVideos);
   emit('update:visible', false);
   clearAllSelections();
 };
-
-
 </script>
 
 <style lang="scss" scoped>

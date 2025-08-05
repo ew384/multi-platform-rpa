@@ -111,8 +111,8 @@
       <!-- 步骤2: 选择账号 -->
       <div v-show="currentStep === 'accounts'" class="step-panel">
         <div class="step-header">
-          <h4>选择发布账号</h4>
-          <p>选择要发布内容的账号</p>
+         <!-- <h4>选择发布账号</h4>-->
+          <!-- <p>选择要发布内容的账号</p> -->
         </div>
 
         <!-- 复用现有的账号选择组件 -->
@@ -256,50 +256,54 @@
 
     <!-- 对话框底部按钮 -->
     <template #footer>
-      <div class="dialog-footer">
-        <div class="footer-left">
-          <el-button v-if="currentStep !== 'video'" @click="previousStep">
-            <el-icon><ArrowLeft /></el-icon>
-            上一步
-          </el-button>
-        </div>
+    <div class="dialog-footer-optimized">
+        <!-- 🔥 修改：左右布局，去掉取消按钮 -->
+        <el-button 
+        v-if="currentStep !== 'video'" 
+        @click="previousStep"
+        class="prev-btn"
+        >
+        <el-icon><ArrowLeft /></el-icon>
+        上一步
+        </el-button>
         
-        <div class="footer-right">
-          <el-button @click="handleDialogClose">取消</el-button>
-          
-          <el-button
+        <!-- 右侧按钮 -->
+        <div class="right-buttons">
+        <el-button
             v-if="currentStep !== 'content'"
             type="primary"
             @click="nextStep"
             :disabled="!canProceedToNextStep"
-          >
+            class="next-btn"
+        >
             下一步
             <el-icon><ArrowRight /></el-icon>
-          </el-button>
+        </el-button>
 
-          <!-- 一键发布按钮 -->
-          <el-dropdown
+        <!-- 一键发布按钮 -->
+        <el-dropdown
             v-else
             split-button
             type="primary"
             @click="publishContent('browser')"
             :disabled="!canPublish"
             :loading="publishing"
-          >
+            class="publish-btn"
+        >
             {{ publishing ? '发布中...' : '一键发布' }}
             <template #dropdown>
-              <el-dropdown-menu>
+            <el-dropdown-menu>
                 <el-dropdown-item @click="publishContent('background')">
-                  后台发布
+                后台发布
                 </el-dropdown-item>
                 <el-dropdown-item @click="publishContent('browser')">
-                  浏览器发布
+                浏览器发布
                 </el-dropdown-item>
-              </el-dropdown-menu>
+            </el-dropdown-menu>
             </template>
-          </el-dropdown>
+        </el-dropdown>
         </div>
-      </div>
+    </div>
     </template>
 
     <!-- 素材选择对话框 -->
@@ -628,10 +632,18 @@ const extractTags = (description) => {
   return tags;
 };
 
+const dialogVisible = computed({
+  get: () => props.visible,
+  set: (value) => emit('update:visible', value)  // 移除不必要的判断
+});
+
+// 2. 修复 resetForm 方法
 const resetForm = () => {
   currentStep.value = 'video';
-  selectedVideos.value = [];
-  selectedAccounts.value = [];
+  selectedVideos.value.length = 0;  // 清空数组而不是重新赋值
+  selectedAccounts.value.length = 0;
+  
+  // 重置表单
   publishForm.title = '';
   publishForm.description = '';
   publishForm.scheduleEnabled = false;
@@ -640,31 +652,24 @@ const resetForm = () => {
   publishForm.douyin.location = '';
   publishForm.wechat.original = false;
   publishForm.wechat.location = '';
+  
   publishing.value = false;
 };
 
+// 3. 修复 handleDialogClose 方法
 const handleDialogClose = () => {
   if (publishing.value) {
     ElMessage.warning('发布中，请稍候...');
     return;
   }
   
-  emit('update:visible', false);
-  // 延迟重置表单，避免关闭动画时看到内容重置
-  setTimeout(() => {
-    resetForm();
-  }, 300);
+  // 先重置表单，再关闭对话框
+  resetForm();
+  nextTick(() => {
+    emit('update:visible', false);
+  });
 };
 
-// 监听器
-const dialogVisible = computed({
-  get: () => props.visible,
-  set: (value) => {
-    if (value !== props.visible) {
-      emit('update:visible', value);
-    }
-  }
-});
 </script>
 
 <style lang="scss" scoped>

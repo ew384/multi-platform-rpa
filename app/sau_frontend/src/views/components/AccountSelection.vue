@@ -219,7 +219,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+// 替换 AccountSelection.vue 中 <script setup> 部分的代码
+
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { User, Check, Minus } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 
@@ -238,28 +240,68 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['update:selected-accounts']);
 
+// 🔥 修复：使用标志位防止循环更新
+let isInternalUpdate = false;
+
+console.log('🔍 AccountSelection 组件初始化');
+
 // 响应式数据
-const selectedGroupType = ref('all'); // 'platform', 'custom', 'all'
+const selectedGroupType = ref('all');
 const selectedGroupId = ref(null);
-const groups = ref([]); // 存储分组信息
+const groups = ref([]);
 
 // 本地选中状态
 const localSelectedAccounts = ref([...props.selectedAccounts]);
 
-// 监听 props 变化
+// 🔥 修复：使用防抖的方式处理 props 更新
 watch(() => props.selectedAccounts, (newValue) => {
-  localSelectedAccounts.value = [...newValue];
+  if (isInternalUpdate) {
+    console.log('⚠️ AccountSelection 跳过 props 更新，内部更新中');
+    return;
+  }
+  
+  console.log('📊 AccountSelection props.selectedAccounts 变化:', {
+    new: newValue?.length || 0,
+    current: localSelectedAccounts.value?.length || 0
+  });
+  
+  // 只有在真正不同时才更新
+  const newValueStr = JSON.stringify([...newValue].sort());
+  const currentStr = JSON.stringify([...localSelectedAccounts.value].sort());
+  
+  if (newValueStr !== currentStr) {
+    localSelectedAccounts.value = [...newValue];
+  }
 });
 
-// 监听本地选中状态变化，同步到父组件
+// 🔥 修复：使用防抖的方式发射更新
+const emitUpdate = (newValue) => {
+  if (isInternalUpdate) return;
+  
+  const newValueStr = JSON.stringify([...newValue].sort());
+  const propsStr = JSON.stringify([...props.selectedAccounts].sort());
+  
+  if (newValueStr !== propsStr) {
+    console.log('📤 AccountSelection 发射选择更新:', newValue.length);
+    isInternalUpdate = true;
+    
+    emit('update:selected-accounts', [...newValue]);
+    
+    // 在下个tick重置标志位
+    nextTick(() => {
+      isInternalUpdate = false;
+    });
+  }
+};
+
+// 🔥 修复：监听本地状态变化，使用防抖发射
 watch(localSelectedAccounts, (newValue) => {
-  emit('update:selected-accounts', [...newValue]);
+  emitUpdate(newValue);
 }, { deep: true });
 
-// 计算属性
+// 计算属性保持不变
 const availableAccounts = computed(() => props.availableAccounts || []);
 
-// 平台分组
 const platformGroups = computed(() => {
   const platforms = [
     ...new Set(availableAccounts.value.map((acc) => acc.platform)),
@@ -276,7 +318,6 @@ const platformGroups = computed(() => {
   }));
 });
 
-// 自定义分组
 const customGroups = computed(() => {
   const platformNames = ["微信视频号", "抖音", "快手", "小红书", "视频号"];
   return groups.value.filter(
@@ -284,7 +325,6 @@ const customGroups = computed(() => {
   );
 });
 
-// 当前分组的账号
 const currentGroupAccounts = computed(() => {
   if (selectedGroupType.value === "all") {
     return availableAccounts.value;
@@ -299,19 +339,19 @@ const currentGroupAccounts = computed(() => {
   return [];
 });
 
-// 当前分组是否全选
 const isCurrentGroupAllSelected = computed(() => {
   const currentAccounts = currentGroupAccounts.value.filter(
     (acc) => acc.status === "正常"
   );
-  if (currentAccounts.length === 0) return false;
+  if (currentAccounts.length === 0 || localSelectedAccounts.value.length === 0) {
+    return false;
+  }
 
   return currentAccounts.every((acc) =>
     localSelectedAccounts.value.includes(acc.id)
   );
 });
 
-// 当前分组是否部分选中
 const isCurrentGroupPartialSelected = computed(() => {
   const currentAccounts = currentGroupAccounts.value.filter(
     (acc) => acc.status === "正常"
@@ -325,7 +365,7 @@ const isCurrentGroupPartialSelected = computed(() => {
   return selectedCount > 0 && selectedCount < currentAccounts.length;
 });
 
-// 方法定义
+// 🔥 修复：优化方法，减少响应式更新
 const selectPlatformGroup = (platformGroup) => {
   selectedGroupType.value = "platform";
   selectedGroupId.value = platformGroup.id;
@@ -366,41 +406,37 @@ const handleSelectAllInCurrentGroup = () => {
 
   if (isAllSelected) {
     // 取消选中当前分组的所有账号
-    const newSelected = localSelectedAccounts.value.filter(
-      accountId => !currentAccounts.some(acc => acc.id === accountId)
+    const accountIdsToRemove = currentAccounts.map(acc => acc.id);
+    localSelectedAccounts.value = localSelectedAccounts.value.filter(
+      accountId => !accountIdsToRemove.includes(accountId)
     );
-    localSelectedAccounts.value = newSelected;
   } else {
     // 选中当前分组的所有账号
-    const newSelected = [...localSelectedAccounts.value];
-    currentAccounts.forEach((acc) => {
-      if (!newSelected.includes(acc.id)) {
-        newSelected.push(acc.id);
-      }
-    });
-    localSelectedAccounts.value = newSelected;
+    const accountIdsToAdd = currentAccounts
+      .map(acc => acc.id)
+      .filter(id => !localSelectedAccounts.value.includes(id));
+    
+    localSelectedAccounts.value.push(...accountIdsToAdd);
   }
 };
 
 const toggleAccountSelection = (account) => {
   if (account.status !== "正常") return;
 
-  const newSelected = [...localSelectedAccounts.value];
-  const index = newSelected.indexOf(account.id);
+  const index = localSelectedAccounts.value.indexOf(account.id);
   
   if (index > -1) {
-    newSelected.splice(index, 1);
+    localSelectedAccounts.value.splice(index, 1);
   } else {
-    newSelected.push(account.id);
+    localSelectedAccounts.value.push(account.id);
   }
-  
-  localSelectedAccounts.value = newSelected;
 };
 
 const clearAccountSelection = () => {
-  localSelectedAccounts.value = [];
+  localSelectedAccounts.value.length = 0;
 };
 
+// 其余辅助方法保持不变
 const getAvatarUrl = (account) => {
   if (account.avatar && account.avatar !== "/default-avatar.png") {
     if (account.avatar.startsWith("assets/avatar/")) {
@@ -408,12 +444,11 @@ const getAvatarUrl = (account) => {
     }
     return account.avatar;
   }
-  return null; // 让 el-avatar 显示默认内容
+  return null;
 };
 
 const handleAvatarError = (e) => {
   console.warn("头像加载失败:", e);
-  // el-avatar 会自动显示 fallback 内容
 };
 
 const handleLogoError = (e) => {
@@ -442,7 +477,6 @@ const getAccountsInGroup = (groupId) => {
 };
 
 const getGroupIcon = (iconName) => {
-  // 简化图标映射，使用 Element Plus 内置图标
   const iconMap = {
     Users: "User",
     User: "User", 
@@ -460,7 +494,6 @@ const getGroupIcon = (iconName) => {
   return iconMap[iconName] || "User";
 };
 
-// API 调用
 const loadGroups = async () => {
   try {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
@@ -486,7 +519,6 @@ const loadGroups = async () => {
   }
 };
 
-// 生命周期
 onMounted(() => {
   loadGroups();
 });
@@ -524,9 +556,9 @@ $space-lg: 24px;
 .account-selection {
   .accounts-layout {
     display: grid;
-    grid-template-columns: 250px 1fr;
-    gap: $space-lg;
-    min-height: 400px;
+    grid-template-columns: 200px 1fr;  // 🔥 从 250px 减少到 200px
+    gap: 16px;  // 🔥 从 24px 减少到 16px
+    height: 320px; 
 
     // 左侧分组栏
     .groups-sidebar {
@@ -534,10 +566,11 @@ $space-lg: 24px;
       border-radius: $radius-lg;
       padding: $space-md;
       border: 1px solid $border-light;
-
+      padding: 12px;  // 🔥 从 16px 减少到 12px
+      overflow-y: auto;  // 内容超出时滚动
       .sidebar-header {
-        margin-bottom: $space-md;
-        padding-bottom: $space-sm;
+        margin-bottom: 8px;  // 🔥 从 16px 减少到 8px
+        padding-bottom: 6px; 
         border-bottom: 1px solid $border-light;
 
         h5 {
@@ -552,7 +585,7 @@ $space-lg: 24px;
         font-size: 12px;
         font-weight: 500;
         color: $text-secondary;
-        margin: $space-md 0 $space-sm 0;
+        margin: 8px 0 6px 0;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
@@ -561,11 +594,11 @@ $space-lg: 24px;
         display: flex;
         align-items: center;
         gap: $space-sm;
-        padding: $space-sm;
+        padding: 6px 8px;  // 🔥 从 8px 减少到 6px 8px
         border-radius: $radius-md;
         cursor: pointer;
         transition: all 0.3s ease;
-        margin-bottom: $space-xs;
+        margin-bottom: 3px;
 
         &:hover {
           background-color: rgba(91, 115, 222, 0.1);
@@ -654,14 +687,14 @@ $space-lg: 24px;
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: $space-md;
-        padding-bottom: $space-sm;
+        margin-bottom: 8px;  // 🔥 从 16px 减少到 8px
+        padding-bottom: 6px;
         border-bottom: 1px solid $border-light;
 
         .header-left {
           display: flex;
           flex-direction: column;
-          gap: $space-sm;
+          gap: 6px;
 
           h5 {
             font-size: 16px;
@@ -745,8 +778,8 @@ $space-lg: 24px;
       .accounts-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: $space-md;
-        max-height: 350px;
+        max-height: 240px;  // 🔥 从 350px 减少到 240px
+        gap: 8px;
         overflow-y: auto;
         padding-right: $space-xs;
 
@@ -754,14 +787,14 @@ $space-lg: 24px;
           background: $bg-gray;
           border: 2px solid transparent;
           border-radius: $radius-lg;
-          padding: $space-sm $space-md;
+          height: 60px;  // 🔥 从 70px 减少到 60px
+          padding: 6px 12px;
           cursor: pointer;
           transition: all 0.3s ease;
           position: relative;
           display: flex;
           align-items: center;
           gap: $space-md;
-          height: 70px;
           width: 100%;
 
           &:hover {
@@ -881,33 +914,30 @@ $space-lg: 24px;
       }
 
       .empty-accounts {
-        padding: $space-lg;
+        padding: 16px;
         text-align: center;
       }
     }
 
     // 响应式设计
     @media (max-width: 768px) {
-      grid-template-columns: 1fr;
-
-      .groups-sidebar {
-        order: 2;
-        margin-top: $space-lg;
-      }
-
-      .accounts-main {
-        order: 1;
-
-        .accounts-header {
-          flex-direction: column;
-          align-items: stretch;
-          gap: $space-sm;
-
-          .header-right {
-            justify-content: space-between;
-          }
+    .account-selection {
+        .accounts-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        max-height: 400px;
+        
+        .groups-sidebar {
+            order: 2;
+            margin-top: 12px;
+            max-height: 120px;
         }
-      }
+        
+        .accounts-main {
+            order: 1;
+        }
+        }
+    }
     }
   }
 }
