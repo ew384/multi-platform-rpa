@@ -23,35 +23,58 @@
     </div>
 
     <!-- 封面选择菜单 -->
-    <el-dropdown
-      ref="coverDropdown"
-      :visible="menuVisible"
-      placement="bottom-start"
-      :hide-on-click="false"
-      @visible-change="handleMenuVisibleChange"
+    <el-dialog 
+    v-model="menuVisible" 
+    title="选择封面方式" 
+    width="480px"
+    :close-on-click-modal="true"
     >
-      <div></div>
-      <template #dropdown>
-        <el-dropdown-menu class="cover-menu">
-          <el-dropdown-item @click="handleVideoCapture">
+    <div class="cover-menu-grid">
+        <div class="menu-option" @click="handleVideoCapture">
+        <div class="option-icon">
             <el-icon><VideoCamera /></el-icon>
-            <span>视频截取</span>
-          </el-dropdown-item>
-          <el-dropdown-item @click="handleCropCover" :disabled="!currentCover">
-            <el-icon><Crop /></el-icon>
-            <span>剪裁封面</span>
-          </el-dropdown-item>
-          <el-dropdown-item @click="handleLocalUpload">
+        </div>
+        <div class="option-content">
+            <div class="option-title">视频截取</div>
+            <div class="option-desc">从当前视频中截取一帧作为封面</div>
+        </div>
+        </div>
+        
+        <div class="menu-option" @click="handleLocalUpload">
+        <div class="option-icon">
             <el-icon><Upload /></el-icon>
-            <span>本地选择</span>
-          </el-dropdown-item>
-          <el-dropdown-item @click="handleMaterialSelect">
+        </div>
+        <div class="option-content">
+            <div class="option-title">本地选择</div>
+            <div class="option-desc">从本地选择图片文件作为封面</div>
+        </div>
+        </div>
+        
+        <div class="menu-option" @click="handleMaterialSelect">
+        <div class="option-icon">
             <el-icon><Folder /></el-icon>
-            <span>素材库选择</span>
-          </el-dropdown-item>
-        </el-dropdown-menu>
-      </template>
-    </el-dropdown>
+        </div>
+        <div class="option-content">
+            <div class="option-title">素材库选择</div>
+            <div class="option-desc">从素材库中选择已上传的图片</div>
+        </div>
+        </div>
+        
+        <div 
+        class="menu-option" 
+        :class="{ disabled: !currentCover }"
+        @click="handleCropCover"
+        >
+        <div class="option-icon">
+            <el-icon><Crop /></el-icon>
+        </div>
+        <div class="option-content">
+            <div class="option-title">剪裁封面</div>
+            <div class="option-desc">对已选择的封面进行裁剪</div>
+        </div>
+        </div>
+    </div>
+    </el-dialog>
 
     <!-- 隐藏的文件输入框 -->
     <input
@@ -137,12 +160,8 @@ const openCoverMenu = () => {
   menuVisible.value = true;
 };
 
-const handleMenuVisibleChange = (visible) => {
-  menuVisible.value = visible;
-};
-
 const handleVideoCapture = () => {
-  console.log('🎬 点击视频截取，videoUrl:', props.videoUrl); // 调试信息
+  console.log('🎬 点击视频截取，videoUrl:', props.videoUrl);
   
   if (!props.videoUrl) {
     ElMessage.warning('请先选择视频文件');
@@ -150,10 +169,20 @@ const handleVideoCapture = () => {
   }
   
   console.log('✅ 准备打开视频截取对话框');
-  menuVisible.value = false;
+  menuVisible.value = false; // 关闭菜单
   videoCaptureVisible.value = true;
   
   console.log('📊 videoCaptureVisible状态:', videoCaptureVisible.value);
+};
+
+const handleLocalUpload = () => {
+  menuVisible.value = false; // 关闭菜单
+  fileInput.value?.click();
+};
+
+const handleMaterialSelect = () => {
+  menuVisible.value = false; // 关闭菜单
+  materialSelectorVisible.value = true;
 };
 
 const handleCropCover = () => {
@@ -161,19 +190,10 @@ const handleCropCover = () => {
     ElMessage.warning('请先选择封面图片');
     return;
   }
-  menuVisible.value = false;
+  menuVisible.value = false; // 关闭菜单
   cropperVisible.value = true;
 };
 
-const handleLocalUpload = () => {
-  menuVisible.value = false;
-  fileInput.value?.click();
-};
-
-const handleMaterialSelect = () => {
-  menuVisible.value = false;
-  materialSelectorVisible.value = true;
-};
 
 const handleFileSelect = (event) => {
   const file = event.target.files[0];
@@ -231,7 +251,71 @@ $radius-md: 8px;
 $radius-lg: 12px;
 $space-sm: 8px;
 $space-md: 16px;
+// 添加到现有样式中
+.cover-menu-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
 
+  .menu-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid $border-light;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: $primary;
+      background-color: rgba(99, 102, 241, 0.05);
+    }
+
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      
+      &:hover {
+        border-color: $border-light;
+        background-color: transparent;
+      }
+    }
+
+    .option-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: $bg-gray;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      .el-icon {
+        font-size: 20px;
+        color: $primary;
+      }
+    }
+
+    .option-content {
+      flex: 1;
+
+      .option-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: $text-primary;
+        margin-bottom: 4px;
+      }
+
+      .option-desc {
+        font-size: 13px;
+        color: $text-secondary;
+        line-height: 1.4;
+      }
+    }
+  }
+}
 .cover-selector {
   .cover-display {
     display: flex;

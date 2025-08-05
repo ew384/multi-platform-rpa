@@ -56,11 +56,8 @@
         </div>
 
         <div v-else-if="filteredImages.length === 0" class="empty-state">
-          <el-icon><Picture /></el-icon>
-          <span>暂无图片素材</span>
           <el-button type="primary" @click="handleUpload">
-            <el-icon><Plus /></el-icon>
-            上传图片
+            + 上传图片
           </el-button>
         </div>
 
@@ -110,10 +107,6 @@
     <template #footer>
       <div class="dialog-footer">
         <div class="footer-left">
-          <el-button @click="handleUpload">
-            <el-icon><Upload /></el-icon>
-            上传新图片
-          </el-button>
         </div>
         
         <div class="footer-right">
