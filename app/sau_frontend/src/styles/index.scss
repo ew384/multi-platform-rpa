@@ -4,17 +4,51 @@
 // 导入变量
 @use './variables.scss' as *;
 
-// 全局样式
+// 全局样式 - 现代化字体和背景
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   color: $text-primary;
-  background-color: $bg-light;
+  background-color: $bg-white; // 改为纯白背景
+  font-size: 14px; // 设置基础字体大小
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #app {
   min-height: 100vh;
+  background-color: $bg-white; // 确保app容器也是纯白
+}
+
+// 🎨 Element Plus 组件主题覆盖
+:root {
+  --el-color-primary: #{$primary};
+  --el-color-primary-light-3: #{$primary-light};
+  --el-color-primary-dark-2: #{$primary-dark};
+  --el-border-radius-base: #{$radius-md};
+  --el-border-radius-small: #{$radius-sm};
+  --el-font-size-base: 14px;
+}
+
+// 🎨 自定义滚动条样式
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
 }
 
 // 通用工具类
@@ -57,6 +91,50 @@ body {
 
 .h-full {
   height: 100%;
+}
+
+// 🎨 现代化按钮样式类
+.btn-modern {
+  background: $primary;
+  color: white;
+  border: none;
+  border-radius: $radius-lg;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: $shadow-md;
+  
+  &:hover {
+    background: $primary-dark;
+    transform: translateY(-1px);
+    box-shadow: $shadow-hover;
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+// 🎨 现代化卡片样式类
+.card-modern {
+  background: $bg-white;
+  border: 1px solid $border-light;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    box-shadow: $shadow-hover;
+    transform: translateY(-1px);
+  }
 }
 
 // 间距工具类 - 使用新的变量名

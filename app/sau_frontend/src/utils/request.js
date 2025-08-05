@@ -35,7 +35,6 @@ request.interceptors.response.use(
       return response;
     }
 
-    // 🔥 直接返回数据，不做任何判断
     return response.data;
   },
   (error) => {
@@ -54,13 +53,13 @@ request.interceptors.response.use(
           ElMessage.error('请求地址不存在')
           break
         case 500:
-          ElMessage.error('服务器内部错误')
+          console.error('服务器内部错误')
           break
         default:
-          ElMessage.error('网络错误')
+          console.error('网络错误')
       }
     } else {
-      ElMessage.error('网络连接失败')
+      console.error('网络连接失败')
     }
 
     return Promise.reject(error)
@@ -132,13 +131,18 @@ export const http = {
     })
   },
 
-  // 🔥 新增：文件下载方法
   download(url, params = {}, filename = 'download.csv') {
     return request.get(url, { 
       params, 
       responseType: 'blob' 
     }).then(response => {
-      return downloadFile(response, filename);
+      const result = downloadFile(response, filename);
+      // 🔥 返回统一的API格式，以匹配其他API调用的期望
+      return {
+        code: result.success ? 200 : 500,
+        msg: result.success ? '下载成功' : result.error,
+        data: result
+      };
     });
   },
 

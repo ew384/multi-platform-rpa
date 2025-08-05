@@ -158,7 +158,7 @@ import {
   Clock 
 } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
-
+import { publishApi } from '@/api/publish';
 // Props
 const props = defineProps({
   visible: {
@@ -174,11 +174,6 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['update:visible', 'close']);
 
-// API配置
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
-const authHeaders = computed(() => ({
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-}));
 
 // 响应式数据
 const loading = ref(false);
@@ -202,11 +197,7 @@ const loadRecordDetail = async () => {
     loading.value = true;
     error.value = null;
 
-    const response = await fetch(`${apiBaseUrl}/getPublishRecordDetail?id=${props.recordId}`, {
-      headers: authHeaders.value
-    });
-
-    const data = await response.json();
+    const data = await publishApi.getPublishRecordDetail(props.recordId);
 
     if (data.code === 200) {
       recordDetail.value = data.data;
@@ -223,7 +214,6 @@ const loadRecordDetail = async () => {
     loading.value = false;
   }
 };
-
 const getOverallStatusType = (status) => {
   const typeMap = {
     'pending': 'warning',

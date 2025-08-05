@@ -2,46 +2,46 @@
   <el-dialog
     v-model="dialogVisible"
     title="新增发布"
-    width="90%"
+    width="720px"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
     class="new-publish-dialog"
     @close="handleDialogClose"
   >
     <!-- 步骤指示器 -->
-    <div class="steps-indicator">
+    <div class="steps-indicator-compact">
       <div
         v-for="(step, index) in steps"
         :key="step.key"
         :class="[
-          'step-item',
+          'step-item-compact',
           {
             active: currentStep === step.key,
             completed: getStepIndex(currentStep) > index,
           }
         ]"
       >
-        <div class="step-circle">
+        <div class="step-circle-compact">
           <el-icon v-if="getStepIndex(currentStep) > index"><Check /></el-icon>
           <span v-else>{{ index + 1 }}</span>
         </div>
-        <div class="step-label">{{ step.label }}</div>
+        <div class="step-label-compact">{{ step.label }}</div>
       </div>
     </div>
 
     <!-- 步骤内容 -->
-    <div class="step-content">
-      <!-- 步骤1: 选择视频 -->
-      <div v-show="currentStep === 'video'" class="step-panel">
-        <div class="step-header">
+    <div class="step-content-compact">
+      <!-- 步骤1: 选择视频 - 紧凑版 -->
+      <div v-show="currentStep === 'video'" class="step-panel-compact">
+        <div class="step-header-compact">
           <h4>选择视频文件</h4>
           <p>支持上传本地视频或从素材库选择</p>
         </div>
 
-        <div class="upload-section">
-          <div v-if="selectedVideos.length === 0" class="upload-area">
+        <div class="upload-section-compact">
+          <div v-if="selectedVideos.length === 0" class="upload-area-compact">
             <el-upload
-              class="video-uploader"
+              class="video-uploader-compact"
               drag
               multiple
               :auto-upload="true"
@@ -51,17 +51,17 @@
               accept="video/*"
               :headers="authHeaders"
             >
-              <div class="upload-content">
-                <el-icon class="upload-icon"><VideoCamera /></el-icon>
-                <div class="upload-text">
+              <div class="upload-content-compact">
+                <el-icon class="upload-icon-compact"><VideoCamera /></el-icon>
+                <div class="upload-text-compact">
                   <div>将视频文件拖拽到此处</div>
-                  <div class="upload-hint">或 <em>点击上传</em></div>
+                  <div class="upload-hint-compact">或 <em>点击上传</em></div>
                 </div>
               </div>
             </el-upload>
 
-            <div class="upload-options">
-              <el-button @click="selectFromLibrary" class="library-btn">
+            <div class="upload-options-compact">
+              <el-button @click="selectFromLibrary" class="library-btn-compact">
                 <el-icon><Folder /></el-icon>
                 从素材库选择
               </el-button>
@@ -69,23 +69,23 @@
           </div>
 
           <!-- 已选择的视频列表 -->
-          <div v-else class="selected-videos">
-            <div class="videos-header">
+          <div v-else class="selected-videos-compact">
+            <div class="videos-header-compact">
               <h5>已选择视频 ({{ selectedVideos.length }})</h5>
               <el-button size="small" @click="addMoreVideos">
                 <el-icon><Plus /></el-icon>
                 添加更多
               </el-button>
             </div>
-            <div class="videos-grid">
+            <div class="videos-grid-compact">
               <div
                 v-for="(video, index) in selectedVideos"
                 :key="index"
-                class="video-item"
+                class="video-item-compact"
               >
-                <div class="video-preview">
-                  <el-icon class="video-icon"><VideoPlay /></el-icon>
-                  <div class="video-overlay">
+                <div class="video-preview-compact">
+                  <el-icon class="video-icon-compact"><VideoPlay /></el-icon>
+                  <div class="video-overlay-compact">
                     <el-button size="small" @click="previewVideo(video)">
                       <el-icon><View /></el-icon>
                     </el-button>
@@ -98,9 +98,9 @@
                     </el-button>
                   </div>
                 </div>
-                <div class="video-info">
-                  <div class="video-name">{{ video.name }}</div>
-                  <div class="video-size">{{ formatFileSize(video.size) }}</div>
+                <div class="video-info-compact">
+                  <div class="video-name-compact">{{ video.name }}</div>
+                  <div class="video-size-compact">{{ formatFileSize(video.size) }}</div>
                 </div>
               </div>
             </div>
@@ -663,8 +663,10 @@ watch(dialogVisible, (newValue) => {
 </script>
 
 <style lang="scss" scoped>
-// 变量定义
-$primary: #5b73de;
+// 🎨 变量定义
+$primary: #6366f1;
+$primary-dark: #4f46e5;
+$primary-light: #a5b4fc;
 $success: #10b981;
 $warning: #f59e0b;
 $danger: #ef4444;
@@ -674,15 +676,17 @@ $bg-light: #f8fafc;
 $bg-white: #ffffff;
 $bg-gray: #f1f5f9;
 
-$text-primary: #1e293b;
-$text-secondary: #64748b;
+$text-primary: #0f172a;
+$text-secondary: #475569;
 $text-muted: #94a3b8;
 
 $border-light: #e2e8f0;
 $shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 $shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 
-$radius-sm: 4px;
+$radius-sm: 6px;
 $radius-md: 8px;
 $radius-lg: 12px;
 $radius-xl: 16px;
@@ -693,51 +697,58 @@ $space-md: 16px;
 $space-lg: 24px;
 $space-xl: 32px;
 
+// 🎨 紧凑版对话框
 .new-publish-dialog {
   :deep(.el-dialog) {
     border-radius: $radius-xl;
-    
+    margin: 5vh auto;
+
     .el-dialog__header {
       background: $bg-light;
       border-bottom: 1px solid $border-light;
       border-radius: $radius-xl $radius-xl 0 0;
+      padding: 16px 24px;
     }
     
     .el-dialog__body {
-      padding: $space-lg;
+      padding: 20px 24px;
+    }
+    
+    .el-dialog__footer {
+      padding: 16px 24px;
     }
   }
 
-  // 步骤指示器
-  .steps-indicator {
+  // 🔧 紧凑版步骤指示器
+  .steps-indicator-compact {
     display: flex;
     justify-content: center;
-    margin-bottom: $space-xl;
+    margin-bottom: 24px;
     position: relative;
 
     &::before {
       content: "";
       position: absolute;
-      top: 20px;
-      left: 20%;
-      right: 20%;
+      top: 16px;
+      left: 25%;
+      right: 25%;
       height: 2px;
       background-color: $border-light;
       z-index: 1;
     }
 
-    .step-item {
+    .step-item-compact {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: $space-sm;
+      gap: 8px;
       flex: 1;
-      max-width: 200px;
+      max-width: 120px;
       z-index: 2;
 
-      .step-circle {
-        width: 40px;
-        height: 40px;
+      .step-circle-compact {
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         background-color: $bg-white;
         border: 2px solid $border-light;
@@ -746,104 +757,106 @@ $space-xl: 32px;
         justify-content: center;
         font-weight: 600;
         color: $text-muted;
-        transition: all 0.3s ease;
+        font-size: 14px;
+        transition: all 0.2s ease;
       }
 
-      .step-label {
-        font-size: 14px;
+      .step-label-compact {
+        font-size: 13px;
         color: $text-muted;
         font-weight: 500;
         text-align: center;
       }
 
       &.active {
-        .step-circle {
+        .step-circle-compact {
           background-color: $primary;
           border-color: $primary;
           color: white;
         }
 
-        .step-label {
+        .step-label-compact {
           color: $primary;
           font-weight: 600;
         }
       }
 
       &.completed {
-        .step-circle {
+        .step-circle-compact {
           background-color: $success;
           border-color: $success;
           color: white;
         }
 
-        .step-label {
+        .step-label-compact {
           color: $success;
         }
       }
     }
   }
 
-  // 步骤内容
-  .step-content {
-    min-height: 400px;
+  // 🔧 紧凑版步骤内容
+  .step-content-compact {
+    min-height: 320px;
 
-    .step-panel {
-      .step-header {
+    .step-panel-compact {
+      .step-header-compact {
         text-align: center;
-        margin-bottom: $space-xl;
+        margin-bottom: 20px;
 
         h4 {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
           color: $text-primary;
-          margin: 0 0 $space-xs 0;
+          margin: 0 0 4px 0;
         }
 
         p {
           color: $text-secondary;
           margin: 0;
+          font-size: 13px;
         }
       }
     }
   }
 
-  // 视频上传区域
-  .upload-section {
-    .upload-area {
-      .video-uploader {
+  // 🔧 紧凑版上传区域
+  .upload-section-compact {
+    .upload-area-compact {
+      .video-uploader-compact {
         width: 100%;
 
         :deep(.el-upload-dragger) {
           width: 100%;
-          height: 200px;
+          height: 140px;
           border: 2px dashed $border-light;
-          border-radius: $radius-xl;
+          border-radius: $radius-lg;
           background-color: $bg-gray;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
 
           &:hover {
             border-color: $primary;
-            background-color: rgba(91, 115, 222, 0.05);
+            background-color: rgba(99, 102, 241, 0.05);
           }
         }
 
-        .upload-content {
+        .upload-content-compact {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: $space-md;
+          gap: 12px;
 
-          .upload-icon {
-            font-size: 48px;
+          .upload-icon-compact {
+            font-size: 32px;
             color: $primary;
           }
 
-          .upload-text {
+          .upload-text-compact {
             text-align: center;
 
-            .upload-hint {
+            .upload-hint-compact {
               color: $text-secondary;
-              font-size: 14px;
+              font-size: 13px;
 
               em {
                 color: $primary;
@@ -854,66 +867,66 @@ $space-xl: 32px;
         }
       }
 
-      .upload-options {
-        margin-top: $space-lg;
+      .upload-options-compact {
+        margin-top: 16px;
         text-align: center;
 
-        .library-btn {
-          padding: 12px 24px;
+        .library-btn-compact {
+          padding: 8px 16px;
           border-radius: $radius-lg;
         }
       }
     }
 
-    .selected-videos {
-      .videos-header {
+    .selected-videos-compact {
+      .videos-header-compact {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: $space-md;
+        margin-bottom: 12px;
 
         h5 {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 600;
           color: $text-primary;
           margin: 0;
         }
       }
 
-      .videos-grid {
+      .videos-grid-compact {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: $space-md;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
 
-        .video-item {
+        .video-item-compact {
           background: $bg-gray;
           border-radius: $radius-lg;
           overflow: hidden;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
 
           &:hover {
-            transform: translateY(-2px);
-            box-shadow: $shadow-md;
+            transform: translateY(-1px);
+            box-shadow: $shadow-soft;
 
-            .video-overlay {
+            .video-overlay-compact {
               opacity: 1;
             }
           }
 
-          .video-preview {
-            height: 120px;
+          .video-preview-compact {
+            height: 80px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
 
-            .video-icon {
-              font-size: 32px;
+            .video-icon-compact {
+              font-size: 24px;
               color: white;
             }
 
-            .video-overlay {
+            .video-overlay-compact {
               position: absolute;
               top: 0;
               left: 0;
@@ -923,26 +936,27 @@ $space-xl: 32px;
               display: flex;
               align-items: center;
               justify-content: center;
-              gap: $space-sm;
+              gap: 4px;
               opacity: 0;
-              transition: opacity 0.3s ease;
+              transition: opacity 0.2s ease;
             }
           }
 
-          .video-info {
-            padding: $space-md;
+          .video-info-compact {
+            padding: 8px;
 
-            .video-name {
+            .video-name-compact {
               font-weight: 500;
               color: $text-primary;
-              margin-bottom: $space-xs;
+              margin-bottom: 2px;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
+              font-size: 12px;
             }
 
-            .video-size {
-              font-size: 12px;
+            .video-size-compact {
+              font-size: 11px;
               color: $text-secondary;
             }
           }
@@ -951,10 +965,329 @@ $space-xl: 32px;
     }
   }
 
-  // 内容表单
+  // 🔧 账号选择区域样式
+  .step-panel-compact {
+    .accounts-section {
+      .accounts-layout {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 20px;
+        min-height: 280px;
+
+        .groups-sidebar {
+          background: $bg-gray;
+          border-radius: $radius-lg;
+          padding: 16px;
+          border: 1px solid $border-light;
+
+          .sidebar-header {
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid $border-light;
+
+            h5 {
+              font-size: 14px;
+              font-weight: 600;
+              color: $text-primary;
+              margin: 0;
+            }
+          }
+
+          .group-category-title {
+            font-size: 11px;
+            font-weight: 500;
+            color: $text-secondary;
+            margin: 12px 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .sidebar-group-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: $radius-md;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+
+            &:hover {
+              background-color: rgba(99, 102, 241, 0.1);
+            }
+
+            &.active {
+              background-color: rgba(99, 102, 241, 0.1);
+              border: 2px solid $primary;
+              color: $text-primary;
+            }
+
+            .group-icon {
+              width: 24px;
+              height: 24px;
+              border-radius: $radius-sm;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+
+              .el-icon {
+                font-size: 14px;
+                color: white;
+              }
+
+              &.platform-logo-container {
+                background: $bg-white;
+                border: 1px solid $border-light;
+
+                img {
+                  width: 20px;
+                  height: 20px;
+                  border-radius: $radius-sm;
+                  object-fit: cover;
+                }
+              }
+
+              &.all-accounts {
+                background-color: $info;
+              }
+            }
+
+            .group-info {
+              flex: 1;
+              min-width: 0;
+
+              .group-name {
+                display: block;
+                font-weight: 500;
+                color: $text-primary;
+                font-size: 12px;
+                margin-bottom: 2px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+
+              .group-count {
+                font-size: 10px;
+                color: $text-secondary;
+              }
+            }
+          }
+        }
+
+        .accounts-main {
+          .accounts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid $border-light;
+
+            .header-left {
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+
+              h5 {
+                font-size: 14px;
+                font-weight: 600;
+                color: $text-primary;
+                margin: 0;
+              }
+
+              .select-all-control {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+
+                .custom-checkbox {
+                  width: 16px;
+                  height: 16px;
+                  border: 2px solid $border-light;
+                  border-radius: $radius-sm;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  background: white;
+
+                  &.checked {
+                    background-color: $primary;
+                    border-color: $primary;
+                    color: white;
+                  }
+
+                  &.indeterminate {
+                    background-color: $warning;
+                    border-color: $warning;
+                    color: white;
+                  }
+
+                  .el-icon {
+                    font-size: 10px;
+                  }
+                }
+
+                .select-all-text {
+                  font-size: 12px;
+                  font-weight: 500;
+                  color: $text-secondary;
+                }
+              }
+            }
+
+            .header-right {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+
+              .selected-count {
+                font-size: 12px;
+                color: $text-secondary;
+                font-weight: 500;
+              }
+            }
+          }
+
+          .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            max-height: 220px;
+            overflow-y: auto;
+
+            .account-card {
+              background: $bg-gray;
+              border: 2px solid transparent;
+              border-radius: $radius-lg;
+              padding: 8px 12px;
+              cursor: pointer;
+              transition: all 0.2s ease;
+              position: relative;
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              height: 60px;
+
+              &:hover {
+                transform: translateY(-1px);
+                box-shadow: $shadow-md;
+              }
+
+              &.selected {
+                border-color: $primary;
+                background-color: rgba(99, 102, 241, 0.05);
+              }
+
+              &.disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+              }
+
+              .account-avatar {
+                flex-shrink: 0;
+
+                .avatar-container {
+                  position: relative;
+
+                  :deep(.el-avatar) {
+                    border: 2px solid #f1f5f9;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                  }
+
+                  .platform-logo {
+                    position: absolute;
+                    bottom: -2px;
+                    right: -2px;
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 50%;
+                    background: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+
+                    img {
+                      width: 14px;
+                      height: 14px;
+                      border-radius: 50%;
+                      object-fit: cover;
+                    }
+                  }
+
+                  .status-dot {
+                    position: absolute;
+                    top: 2px;
+                    right: 2px;
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+
+                    &.online {
+                      background-color: $success;
+                    }
+
+                    &.offline {
+                      background-color: $danger;
+                    }
+                  }
+
+                  .selected-mark {
+                    position: absolute;
+                    top: -4px;
+                    right: -4px;
+                    width: 16px;
+                    height: 16px;
+                    background-color: $primary;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 10px;
+                  }
+                }
+              }
+
+              .account-info {
+                flex: 1;
+                min-width: 0;
+
+                .account-name {
+                  font-weight: 500;
+                  color: $text-primary;
+                  font-size: 12px;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  margin: 0;
+                }
+
+                .account-group {
+                  margin-top: 2px;
+
+                  :deep(.el-tag) {
+                    font-size: 10px;
+                    height: 16px;
+                    padding: 0 4px;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 🔧 内容表单区域
   .content-form {
     .form-section {
-      margin-bottom: $space-xl;
+      margin-bottom: 20px;
 
       &:last-child {
         margin-bottom: 0;
@@ -964,21 +1297,21 @@ $space-xl: 32px;
         font-size: 14px;
         font-weight: 600;
         color: $text-primary;
-        margin: 0 0 $space-md 0;
+        margin: 0 0 8px 0;
       }
     }
 
     .video-display {
       display: flex;
       align-items: center;
-      gap: $space-md;
+      gap: 12px;
       background: $bg-gray;
-      padding: $space-md;
+      padding: 12px;
       border-radius: $radius-lg;
 
       .video-thumbnail {
-        width: 60px;
-        height: 40px;
+        width: 50px;
+        height: 30px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: $radius-md;
         display: flex;
@@ -987,7 +1320,7 @@ $space-xl: 32px;
         color: white;
 
         .video-icon {
-          font-size: 18px;
+          font-size: 14px;
         }
       }
 
@@ -996,10 +1329,11 @@ $space-xl: 32px;
           font-weight: 600;
           color: $text-primary;
           margin-bottom: 2px;
+          font-size: 12px;
         }
 
         .video-names {
-          font-size: 12px;
+          font-size: 10px;
           color: $text-secondary;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1011,51 +1345,64 @@ $space-xl: 32px;
     .selected-accounts-display {
       display: flex;
       flex-wrap: wrap;
-      gap: $space-sm;
+      gap: 6px;
 
       .account-tag {
         border-radius: $radius-md;
+        font-size: 11px;
+        height: 20px;
+        padding: 0 6px;
       }
     }
 
     .publish-form {
+      :deep(.el-form-item) {
+        margin-bottom: 16px;
+
+        .el-form-item__label {
+          font-size: 13px;
+          font-weight: 500;
+        }
+      }
+
       .title-input {
         :deep(.el-input__inner) {
-          height: 40px;
+          height: 36px;
           border-radius: $radius-md;
         }
       }
 
       .platform-form-section {
         background: $bg-light;
-        padding: $space-md;
+        padding: 12px;
         border-radius: $radius-lg;
-        margin-bottom: $space-md;
+        margin-bottom: 12px;
 
         h6 {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           color: $text-primary;
-          margin: 0 0 $space-md 0;
+          margin: 0 0 8px 0;
         }
       }
 
       .publish-settings {
         .schedule-options {
-          margin-top: $space-md;
-          padding: $space-md;
+          margin-top: 12px;
+          padding: 12px;
           background: $bg-gray;
           border-radius: $radius-md;
 
           .schedule-row {
             display: flex;
             align-items: center;
-            gap: $space-md;
+            gap: 12px;
 
             .label {
-              min-width: 80px;
+              min-width: 70px;
               font-weight: 500;
               color: $text-primary;
+              font-size: 13px;
             }
           }
         }
@@ -1063,63 +1410,53 @@ $space-xl: 32px;
     }
   }
 
-  // 对话框底部
-  .dialog-footer {
+  // 🔧 紧凑版对话框底部
+  .dialog-footer-compact {
     display: flex;
     justify-content: space-between;
     align-items: center;
 
-    .footer-left {
+    .footer-left-compact {
       flex: 1;
     }
 
-    .footer-right {
+    .footer-right-compact {
       display: flex;
-      gap: $space-sm;
+      gap: 8px;
     }
   }
 }
 
-// 响应式设计
+// 🔧 响应式设计优化
 @media (max-width: 768px) {
   .new-publish-dialog {
-    .steps-indicator {
-      .step-item {
-        .step-label {
-          font-size: 12px;
+    :deep(.el-dialog) {
+      width: 95% !important;
+      margin: 2vh auto;
+    }
+
+    .steps-indicator-compact {
+      .step-item-compact {
+        .step-label-compact {
+          font-size: 11px;
         }
       }
     }
 
-    .content-form {
-      .video-display {
-        flex-direction: column;
-        text-align: center;
-      }
-
-      .publish-form {
-        .platform-form-section {
-          padding: $space-sm;
-        }
-
-        .schedule-options {
-          .schedule-row {
-            flex-direction: column;
-            align-items: stretch;
-            gap: $space-sm;
-          }
-        }
-      }
+    .videos-grid-compact {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
     }
 
-    .dialog-footer {
-      flex-direction: column;
-      gap: $space-md;
+    .accounts-layout {
+      grid-template-columns: 1fr !important;
 
-      .footer-left,
-      .footer-right {
-        width: 100%;
-        justify-content: center;
+      .groups-sidebar {
+        order: 2;
+        margin-top: 16px;
+      }
+
+      .accounts-main {
+        order: 1;
       }
     }
   }

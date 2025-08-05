@@ -91,7 +91,7 @@ const isCollapsed = ref(false)
 // 菜单项配置
 const menuItems = [
   { path: '/', name: '首页', icon: 'HomeFilled' },
-  { path: '/publish-center', name: '发布', icon: 'Upload', badge: '3' },
+  { path: '/publish-records', name: '发布', icon: 'Upload' },
   { path: '/account-management', name: '账号', icon: 'User' },
   { path: '/material-management', name: '素材', icon: 'VideoCamera' },
   { path: '/website', name: '网站', icon: 'Monitor' },
@@ -116,18 +116,18 @@ const toggleSidebar = () => {
 </script>
 
 <style lang="scss" scoped>
-// 导入新的变量
-$primary: #5B73DE;
-$bg-dark: #1F2937;
-$bg-light: #F8FAFC;
-$bg-white: #FFFFFF;
-$text-primary: #1E293B;
-$text-secondary: #64748B;
-$text-muted: #94A3B8;
-$text-white: #FFFFFF;
-$border-light: #E2E8F0;
+$primary: #6366f1;       // 现代化深紫色
+$bg-dark: #1F2937;       // 深色侧边栏
+$bg-light: #FFFFFF;      // 纯白背景
+$bg-white: #FFFFFF;      // 白色
+$text-primary: #0f172a;  // 深色文字
+$text-secondary: #475569; // 次要文字
+$text-muted: #94A3B8;    // 弱化文字
+$text-white: #FFFFFF;    // 白色文字
+$border-light: #E2E8F0;  // 浅色边框
 $shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 $shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-hover: 0 8px 25px -8px rgba(99, 102, 241, 0.25);
 $radius-md: 8px;
 $radius-lg: 12px;
 $space-sm: 8px;
@@ -136,12 +136,13 @@ $space-lg: 24px;
 
 #app {
   min-height: 100vh;
-  background-color: $bg-light;
+  background-color: $bg-white; // 确保是纯白背景
 }
 
 .app-layout {
   display: flex;
   min-height: 100vh;
+  background-color: $bg-white; // 纯白背景
 }
 
 // 侧边栏样式
@@ -152,8 +153,8 @@ $space-lg: 24px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   z-index: 100;
-  box-shadow: $shadow-lg;
-  border-right: 1px solid $border-light;
+  box-shadow: none;        // 🔧 去掉阴影
+  border-right: none;      // 🔧 去掉右边框
 
   &.collapsed {
     width: 64px;
@@ -161,7 +162,7 @@ $space-lg: 24px;
 
   .sidebar-header {
     padding: $space-lg $space-md;
-    border-bottom: 1px solid $border-light;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.3); // 🔧 使用更淡的边框
 
     .logo {
       display: flex;
@@ -177,6 +178,7 @@ $space-lg: 24px;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        transition: all 0.2s ease;  // 🔧 添加过渡效果
 
         .el-icon {
           font-size: 18px;
@@ -208,21 +210,22 @@ $space-lg: 24px;
         padding: 12px $space-md;
         color: $text-secondary;
         text-decoration: none;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); // 🔧 改进过渡效果
         position: relative;
         margin: 0 $space-sm;
         border-radius: $radius-md;
 
         &:hover {
-          background-color: rgba(91, 115, 222, 0.08);
+          background-color: rgba(99, 102, 241, 0.08); // 🔧 使用新的紫色
           color: $primary;
-          transform: translateX(2px);
+          transform: translateX(2px) translateY(-1px);   // 🔧 添加Y轴悬浮
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); // 🔧 3D淡紫色阴影
         }
 
         &.active {
           background: linear-gradient(135deg, $primary 0%, #8B9EE8 100%);
           color: white;
-          box-shadow: 0 4px 12px rgba(91, 115, 222, 0.3);
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); // 🔧 增强激活状态阴影
 
           &::before {
             content: '';
@@ -273,24 +276,30 @@ $space-lg: 24px;
 
   .sidebar-footer {
     padding: $space-md;
-    border-top: 1px solid $border-light;
+    border-top: 1px solid rgba(226, 232, 240, 0.3); // 🔧 使用更淡的边框
 
     .collapse-btn {
       width: 100%;
       height: 40px;
-      background: rgba(91, 115, 222, 0.08);
+      background: rgba(99, 102, 241, 0.08); // 🔧 使用新的紫色
       border: none;
       border-radius: $radius-md;
       color: $text-secondary;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       align-items: center;
       justify-content: center;
 
       &:hover {
-        background-color: rgba(91, 115, 222, 0.15);
+        background-color: rgba(99, 102, 241, 0.15);
         color: $primary;
+        transform: translateY(-1px);                    // 🔧 悬浮效果
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); // 🔧 3D淡紫色阴影
+      }
+
+      &:active {
+        transform: translateY(0);
       }
 
       .el-icon {

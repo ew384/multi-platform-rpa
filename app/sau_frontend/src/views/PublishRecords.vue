@@ -78,19 +78,15 @@
 
     <!-- 发布记录列表 -->
     <div class="records-section">
-      <div v-if="loading" class="loading-container">
+        <div v-if="loading" class="loading-container">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>加载中...</span>
-      </div>
-
-      <div v-else-if="records.length === 0" class="empty-records">
-        <el-empty description="暂无发布记录">
-          <el-button type="primary" @click="showNewPublishDialog">
-            <el-icon><Plus /></el-icon>
-            创建第一个发布任务
-          </el-button>
-        </el-empty>
-      </div>
+        </div>
+        <div v-else-if="records.length === 0" class="empty-records">
+            <div class="custom-empty">
+                <div class="empty-text">暂无发布记录</div>
+            </div>
+        </div>
 
       <div v-else class="records-grid">
         <div
@@ -201,15 +197,12 @@ import {
   VideoPlay, 
   Loading 
 } from '@element-plus/icons-vue';
+import { publishApi } from '@/api/publish';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import PublishDetailSidebar from './components/PublishDetailSidebar.vue';
 import NewPublishDialog from './components/NewPublishDialog.vue';
 
-// API配置
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
-const authHeaders = computed(() => ({
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-}));
+
 
 // 响应式数据
 const loading = ref(false);
@@ -249,35 +242,33 @@ const loadRecords = async () => {
   try {
     loading.value = true;
     
-    const params = new URLSearchParams({
+    const data = await publishApi.getPublishRecords({
       publisher: filters.publisher,
       content_type: filters.contentType,
       status: filters.status,
-      limit: pagination.pageSize.toString(),
-      offset: ((pagination.currentPage - 1) * pagination.pageSize).toString()
+      limit: pagination.pageSize,
+      offset: (pagination.currentPage - 1) * pagination.pageSize
     });
-
-    const response = await fetch(`${apiBaseUrl}/getPublishRecords?${params}`, {
-      headers: authHeaders.value
-    });
-
-    const data = await response.json();
 
     if (data.code === 200) {
       records.value = data.data || [];
-      // 这里可以根据实际API返回调整总数计算
       pagination.total = data.total || records.value.length;
     } else {
-      ElMessage.error(data.msg || '获取发布记录失败');
+      console.warn('获取发布记录失败:', data.msg);
+      records.value = [];
+      pagination.total = 0;
     }
 
   } catch (error) {
     console.error('获取发布记录失败:', error);
-    ElMessage.error('获取发布记录失败');
+    // 设置空数据
+    records.value = [];
+    pagination.total = 0;
   } finally {
     loading.value = false;
   }
 };
+
 
 const applyFilters = () => {
   pagination.currentPage = 1; // 重置到第一页
@@ -288,38 +279,16 @@ const exportRecords = async () => {
   try {
     exporting.value = true;
 
-    const params = new URLSearchParams({
+    const result = await publishApi.exportPublishRecords({
       publisher: filters.publisher,
       content_type: filters.contentType,
       status: filters.status
     });
 
-    const response = await fetch(`${apiBaseUrl}/exportPublishRecords?${params}`, {
-      headers: authHeaders.value
-    });
-
-    if (response.ok) {
-      // 获取文件名
-      const contentDisposition = response.headers.get('content-disposition');
-      const filename = contentDisposition 
-        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
-        : `publish_records_${new Date().getTime()}.csv`;
-
-      // 下载文件
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
+    if (result.code === 200) {
       ElMessage.success('导出成功');
     } else {
-      const data = await response.json();
-      ElMessage.error(data.msg || '导出失败');
+      ElMessage.error(result.msg || '导出失败');
     }
 
   } catch (error) {
@@ -366,18 +335,7 @@ const confirmBatchDelete = async () => {
       }
     );
 
-    const response = await fetch(`${apiBaseUrl}/deletePublishRecords`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeaders.value
-      },
-      body: JSON.stringify({
-        recordIds: selectedRecords.value
-      })
-    });
-
-    const data = await response.json();
+    const data = await publishApi.deletePublishRecords(selectedRecords.value);
 
     if (data.code === 200) {
       ElMessage.success(data.msg || '删除成功');
@@ -450,284 +408,480 @@ onMounted(() => {
 });
 </script>
 
+<!-- PublishRecords.vue 样式部分的修改 -->
+
 <style lang="scss" scoped>
-// 变量定义
-$primary: #5b73de;
-$success: #10b981;
-$warning: #f59e0b;
-$danger: #ef4444;
-$info: #6b7280;
+// 🎨 现代化配色方案
+$primary: #6366f1;        // 深紫色主色调
+$primary-dark: #4f46e5;   // 深紫色悬停
+$primary-light: #a5b4fc;  // 浅紫色
+$secondary: #64748b;      // 次要文字色
+$text-primary: #0f172a;   // 主文字色
+$text-secondary: #475569; // 次要文字色
+$text-muted: #94a3b8;     // 弱化文字色
 
-$bg-light: #f8fafc;
-$bg-white: #ffffff;
-$bg-gray: #f1f5f9;
+$bg-white: #ffffff;       // 纯白背景
+$border-light: #e2e8f0;   // 浅色边框
+$border-lighter: #f1f5f9; // 更浅边框
 
-$text-primary: #1e293b;
-$text-secondary: #64748b;
-$text-muted: #94a3b8;
+// 🎨 现代化阴影
+$shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-hover: 0 8px 25px -8px rgba(99, 102, 241, 0.25);
 
-$border-light: #e2e8f0;
-$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-
-$radius-sm: 4px;
+// 🎨 现代化圆角
+$radius-sm: 6px;
 $radius-md: 8px;
 $radius-lg: 12px;
 $radius-xl: 16px;
 
-$space-xs: 4px;
-$space-sm: 8px;
-$space-md: 16px;
-$space-lg: 24px;
-$space-xl: 32px;
-
+// 基础布局
 .publish-records {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: $space-lg;
-
-  // 页面头部
+  min-height: 100vh;
+  background: $bg-white; // 纯白背景
+  padding: 32px 40px;    // 增加内边距
+  
+  // 🎨 页面头部 - 去掉分层设计
   .page-header {
-    margin-bottom: $space-lg;
-
+    margin-bottom: 32px;
+    
     .header-content {
       display: flex;
       justify-content: space-between;
       align-items: center;
-
+      
       .header-left {
         display: flex;
         align-items: center;
-        gap: $space-md;
-
+        gap: 16px;
+        
         .page-title {
-          font-size: 28px;
-          font-weight: 700;
-          color: $text-primary;
-          margin: 0;
+            font-size: 24px;        // 🔧 从32px调整为24px，保持字体和谐
+            font-weight: 600;       // 🔧 调整字重
+            color: $text-primary;
+            margin: 0;
+            letter-spacing: -0.01em; // 🔧 调整字间距
         }
-
+        
         .refresh-btn {
-          border-radius: $radius-md;
+            background: transparent;
+            border: none;           // 🔧 去掉边框
+            border-radius: $radius-md;
+            width: 36px;           // 🔧 稍微缩小尺寸
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          
+        &:hover {
+            background: rgba(99, 102, 241, 0.08); // 🔧 淡紫色背景
+            color: $primary;
+            transform: translateY(-1px);          // 🔧 轻微上浮
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); // 🔧 3D淡紫色阴影
+            }
+        }
+        &:active {
+          transform: translateY(0);
         }
       }
-
+      
       .header-actions {
         .new-publish-btn {
-          padding: 12px 24px;
+          background: $primary;
+          border: none;
+          color: white;
+          padding: 10px 20px;
+          font-size: 14px;
           font-weight: 600;
           border-radius: $radius-lg;
-          box-shadow: $shadow-md;
-          transition: all 0.3s ease;
-
-          &:hover {
-            transform: translateY(-2px);
-            box-shadow: $shadow-lg;
+          box-shadow: $shadow-soft;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          
+        &:hover {
+            background: $primary-dark;
+            transform: translateY(-2px);          // 🔧 增加悬浮效果
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3); // 🔧 增强3D阴影
+        }
+            
+        &:active {
+            transform: translateY(-1px);
+        }
+          
+        .el-icon {
+            margin-right: 8px;
           }
         }
       }
     }
   }
-
-  // 筛选器区域
-  .filters-section {
-    background: $bg-white;
-    border-radius: $radius-xl;
-    padding: $space-lg;
-    margin-bottom: $space-lg;
-    box-shadow: $shadow-sm;
-    border: 1px solid $border-light;
-
-    .filters-row {
-      display: flex;
-      align-items: center;
-      gap: $space-md;
-      flex-wrap: wrap;
-
-      .filter-group {
-        :deep(.el-select) {
-          width: 180px;
+  
+// 🔧 筛选器区域 - 去掉边框和过度效果
+.filters-section {
+  background: $bg-white;
+  border: none;              // 🔧 去掉边框
+  border-radius: $radius-lg;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: none;          // 🔧 去掉阴影
+  
+  .filters-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    
+    .filter-group {
+      :deep(.el-select) {
+        width: 160px;
+        
+        .el-input__wrapper {
+          background: $bg-white;
+          border: 1px solid $border-light;
+          border-radius: $radius-md;
+          box-shadow: none;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            border-color: $primary;
+            box-shadow: none;     // 🔧 去掉悬浮阴影
+          }
+          
+          &.is-focus {
+            border-color: $primary;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1); // 🔧 只保留focus状态的轻微效果
+          }
         }
       }
-
-      .filter-actions {
-        margin-left: auto;
-        display: flex;
-        gap: $space-sm;
+    }
+    
+    .filter-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 12px;
+      
+      .el-button {
+        border-radius: $radius-md;
+        font-weight: 500;
+        padding: 8px 16px;
+        border: 1px solid $border-light;  // 🔧 恢复边框
+        background: $bg-white;
+        color: $text-secondary;
+        box-shadow: none;                 // 🔧 去掉阴影
+        transition: all 0.2s ease;
+        
+        &:hover {
+          border-color: $primary;
+          color: $primary;
+          background: rgba(99, 102, 241, 0.05);
+          transform: none;                // 🔧 去掉悬浮效果
+          box-shadow: none;               // 🔧 去掉3D阴影
+        }
+        
+        &:active {
+          transform: none;                // 🔧 去掉按压效果
+        }
+        
+        &.el-button--danger {
+          border-color: #ef4444;
+          color: #ef4444;
+          
+          &:hover {
+            background: rgba(239, 68, 68, 0.05);
+            box-shadow: none;             // 🔧 去掉红色3D阴影
+          }
+        }
       }
     }
   }
+}
 
-  // 记录列表区域
+// 🔧 页面头部按钮 - 简化效果
+.page-header {
+  margin-bottom: 32px;
+  
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      
+      .page-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: $text-primary;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      
+      .refresh-btn {
+        background: transparent;
+        border: none;
+        border-radius: $radius-md;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: $text-secondary;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: rgba(99, 102, 241, 0.08);
+          color: $primary;
+          transform: none;              // 🔧 去掉悬浮效果
+          box-shadow: none;             // 🔧 去掉3D阴影
+        }
+        
+        &:active {
+          transform: none;
+        }
+      }
+    }
+    
+    .header-actions {
+      .new-publish-btn {
+        background: $primary;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: $radius-lg;
+        box-shadow: none;               // 🔧 去掉初始阴影
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: $primary-dark;
+          transform: none;              // 🔧 去掉悬浮效果
+          box-shadow: none;             // 🔧 去掉3D阴影
+        }
+        
+        &:active {
+          transform: none;
+        }
+        
+        .el-icon {
+          margin-right: 6px;
+        }
+      }
+    }
+  }
+}
+  
+  // 🎨 记录列表区域
   .records-section {
     .loading-container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: $space-md;
-      padding: $space-xl;
+      gap: 16px;
+      padding: 80px 24px;
       color: $text-secondary;
-
+      
       .is-loading {
         font-size: 32px;
+        color: $primary;
         animation: rotate 1s linear infinite;
       }
     }
-
+    
     .empty-records {
-      padding: $space-xl;
+      padding: 80px 24px;
       text-align: center;
+      
+    .custom-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+        
+        .empty-text {
+        color: $text-muted;
+        font-size: 16px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        }
     }
-
+    }
+    
     .records-grid {
-      display: grid;
-      gap: $space-lg;
-
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      
       .record-card {
         background: $bg-white;
-        border-radius: $radius-xl;
-        padding: $space-lg;
-        box-shadow: $shadow-sm;
-        border: 2px solid transparent;
-        transition: all 0.3s ease;
-        position: relative;
+        border: 1px solid $border-light;
+        border-radius: $radius-lg;
+        padding: 24px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
-
+        
         &:hover {
-          transform: translateY(-2px);
-          box-shadow: $shadow-lg;
           border-color: $primary;
+          box-shadow: $shadow-hover;
+          transform: translateY(-1px);
         }
-
+        
         &.batch-delete-mode {
           padding-left: 60px;
-
+          
           .batch-checkbox {
             position: absolute;
-            left: $space-lg;
+            left: 24px;
             top: 50%;
             transform: translateY(-50%);
           }
-
+          
           &.selected {
-            border-color: $danger;
-            background-color: rgba(239, 68, 68, 0.05);
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.02);
           }
         }
-
+        
         .record-content {
           display: flex;
-          gap: $space-lg;
+          gap: 20px;
+          align-items: flex-start;
         }
-
+        
         .video-preview {
-          width: 120px;
-          height: 80px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: $radius-lg;
+          width: 100px;
+          height: 60px;
+          background: linear-gradient(135deg, $primary 0%, $primary-light 100%);
+          border-radius: $radius-md;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           color: white;
           flex-shrink: 0;
-
+          
           .video-icon {
-            font-size: 24px;
-            margin-bottom: $space-xs;
+            font-size: 20px;
+            margin-bottom: 4px;
           }
-
+          
           .video-count {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
+            opacity: 0.9;
           }
         }
-
+        
         .record-info {
           flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: $space-sm;
-
+          
           .record-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-
+            margin-bottom: 12px;
+            
             .record-title {
               font-size: 16px;
               font-weight: 600;
               color: $text-primary;
               margin: 0;
-              flex: 1;
-              margin-right: $space-md;
+              line-height: 1.4;
+            }
+            
+            :deep(.el-tag) {
+              border-radius: $radius-sm;
+              font-weight: 500;
+              border: none;
             }
           }
-
+          
           .record-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: $space-md;
-
+            gap: 20px;
+            margin-bottom: 12px;
+            
             .meta-item {
               display: flex;
               align-items: center;
-              gap: $space-xs;
+              gap: 6px;
               font-size: 14px;
-
+              
               .meta-label {
                 color: $text-secondary;
                 font-weight: 500;
               }
-
+              
               .meta-value {
                 color: $text-primary;
-
+                font-weight: 600;
+                
                 &.success {
-                  color: $success;
-                  font-weight: 600;
+                  color: #10b981;
                 }
-
+                
                 &.failed {
-                  color: $danger;
-                  font-weight: 600;
+                  color: #ef4444;
                 }
               }
             }
           }
-
+          
           .record-footer {
             .time-info {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 12px;
+              font-size: 13px;
               color: $text-muted;
-
+              
               .created-time {
                 font-weight: 500;
               }
-
+              
               .duration {
-                background: $bg-gray;
-                padding: 2px 8px;
+                background: $border-lighter;
+                padding: 4px 8px;
                 border-radius: $radius-sm;
+                font-weight: 500;
               }
             }
           }
         }
       }
     }
-
+    
+    // 🎨 分页样式
     .pagination-section {
-      margin-top: $space-xl;
+      margin-top: 32px;
       display: flex;
       justify-content: center;
+      
+      :deep(.el-pagination) {
+        .el-pager li {
+          border-radius: $radius-sm;
+          margin: 0 2px;
+          
+          &.is-active {
+            background: $primary;
+            border-color: $primary;
+          }
+        }
+        
+        .btn-prev,
+        .btn-next {
+          border-radius: $radius-sm;
+        }
+      }
     }
   }
 }
 
+// 🎨 动画效果
 @keyframes rotate {
   from {
     transform: rotate(0deg);
@@ -737,56 +891,56 @@ $space-xl: 32px;
   }
 }
 
-// 响应式设计
+/* 🎨 响应式设计优化 */
 @media (max-width: 768px) {
   .publish-records {
-    padding: $space-md;
-
+    padding: 16px 20px;
+    
     .page-header .header-content {
       flex-direction: column;
       align-items: stretch;
-      gap: $space-md;
+      gap: 16px;
+      
+      .header-left {
+        justify-content: space-between;
+        
+        .page-title {
+          font-size: 24px;
+        }
+      }
     }
-
+    
     .filters-section .filters-row {
       flex-direction: column;
       align-items: stretch;
-
+      
       .filter-group {
         :deep(.el-select) {
           width: 100%;
         }
       }
-
+      
       .filter-actions {
         margin-left: 0;
         justify-content: stretch;
-
+        
         > * {
           flex: 1;
         }
       }
     }
-
+    
     .records-grid .record-card {
+      padding: 16px;
+      
       .record-content {
         flex-direction: column;
+        gap: 12px;
       }
-
+      
       .video-preview {
         width: 100%;
-        height: 120px;
-      }
-
-      .record-meta {
-        flex-direction: column;
-        gap: $space-xs;
-      }
-
-      .record-footer .time-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: $space-xs;
+        height: 80px;
       }
     }
   }
