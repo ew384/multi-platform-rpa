@@ -50,7 +50,7 @@
                 <div class="stat-label">任务耗时</div>
               </div>
               <div class="stat-card">
-                <div class="stat-value">{{ recordDetail.stats.duration_per_account }}分钟/个</div>
+                <div class="stat-value">{{ recordDetail.stats.duration_per_account }}秒/个</div>
                 <div class="stat-label">均耗时</div>
               </div>
             </div>

@@ -1,47 +1,6 @@
 <template>
   <div class="home">
-    <div class="welcome-section">
-      <h1>欢迎使用 Vue3 + Vite 项目</h1>
-      <p>这是一个集成了 Vue3、Vite、Element Plus、Pinia、Vue Router 和 Axios 的现代化前端项目</p>
-      <div class="features">
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-card class="feature-card">
-              <template #header>
-                <div class="card-header">
-                  <el-icon><Lightning /></el-icon>
-                  <span>快速开发</span>
-                </div>
-              </template>
-              <p>基于 Vite 构建，提供极速的开发体验</p>
-            </el-card>
-          </el-col>
-          <el-col :span="8">
-            <el-card class="feature-card">
-              <template #header>
-                <div class="card-header">
-                  <el-icon><Star /></el-icon>
-                  <span>现代化</span>
-                </div>
-              </template>
-              <p>使用 Vue3 Composition API 和 setup 语法</p>
-            </el-card>
-          </el-col>
-          <el-col :span="8">
-            <el-card class="feature-card">
-              <template #header>
-                <div class="card-header">
-                  <el-icon><Setting /></el-icon>
-                  <span>完整配置</span>
-                </div>
-              </template>
-              <p>集成路由、状态管理、HTTP请求等完整解决方案</p>
-            </el-card>
-          </el-col>
-        </el-row>
-      </div>
-    </div>
-    
+
     <div class="demo-section">
       <HelloWorld msg="Vue3 + Vite + Element Plus" />
     </div>

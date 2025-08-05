@@ -257,15 +257,16 @@
     <!-- 对话框底部按钮 -->
     <template #footer>
     <div class="dialog-footer-compact">
-        <!-- 🔥 修改：左右布局，去掉取消按钮 -->
-        <el-button 
-        v-if="currentStep !== 'video'" 
-        @click="previousStep"
-        class="prev-btn"
-        >
-        <el-icon><ArrowLeft /></el-icon>
-        上一步
-        </el-button>
+        <div class="footer-left-compact">
+            <el-button 
+                v-if="currentStep !== 'video'" 
+                @click="previousStep"
+                class="prev-btn"
+            >
+                <el-icon><ArrowLeft /></el-icon>
+                上一步
+            </el-button>
+        </div>
         
         <!-- 右侧按钮 -->
         <div class="footer-right-compact">  <!-- ✅ 使用正确的类名 -->
@@ -378,7 +379,7 @@ const publishForm = reactive({
     location: ''
   },
   wechat: {
-    original: false,
+    original: true,
     location: ''
   }
 });
@@ -1427,7 +1428,8 @@ $space-xl: 32px;
     align-items: center;
 
     .footer-left-compact {
-      flex: 1;
+      display: flex;
+      gap: 5px;
     }
 
     .footer-right-compact {

@@ -556,9 +556,9 @@ $space-lg: 24px;
 .account-selection {
   .accounts-layout {
     display: grid;
-    grid-template-columns: 200px 1fr;  // 🔥 从 250px 减少到 200px
-    gap: 16px;  // 🔥 从 24px 减少到 16px
-    height: 320px; 
+    grid-template-columns: 250px 1fr;
+    gap: $space-lg;
+    min-height: 400px;
 
     // 左侧分组栏
     .groups-sidebar {
@@ -566,11 +566,10 @@ $space-lg: 24px;
       border-radius: $radius-lg;
       padding: $space-md;
       border: 1px solid $border-light;
-      padding: 12px;  // 🔥 从 16px 减少到 12px
-      overflow-y: auto;  // 内容超出时滚动
+
       .sidebar-header {
-        margin-bottom: 8px;  // 🔥 从 16px 减少到 8px
-        padding-bottom: 6px; 
+        margin-bottom: $space-md;
+        padding-bottom: $space-sm;
         border-bottom: 1px solid $border-light;
 
         h5 {
@@ -585,7 +584,7 @@ $space-lg: 24px;
         font-size: 12px;
         font-weight: 500;
         color: $text-secondary;
-        margin: 8px 0 6px 0;
+        margin: $space-md 0 $space-sm 0;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
@@ -594,11 +593,11 @@ $space-lg: 24px;
         display: flex;
         align-items: center;
         gap: $space-sm;
-        padding: 6px 8px;  // 🔥 从 8px 减少到 6px 8px
+        padding: $space-sm;
         border-radius: $radius-md;
         cursor: pointer;
         transition: all 0.3s ease;
-        margin-bottom: 3px;
+        margin-bottom: $space-xs;
 
         &:hover {
           background-color: rgba(91, 115, 222, 0.1);
@@ -687,14 +686,14 @@ $space-lg: 24px;
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 8px;  // 🔥 从 16px 减少到 8px
-        padding-bottom: 6px;
+        margin-bottom: $space-md;
+        padding-bottom: $space-sm;
         border-bottom: 1px solid $border-light;
 
         .header-left {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: $space-sm;
 
           h5 {
             font-size: 16px;
@@ -778,8 +777,8 @@ $space-lg: 24px;
       .accounts-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        max-height: 240px;  // 🔥 从 350px 减少到 240px
-        gap: 8px;
+        gap: $space-md;
+        max-height: 350px;
         overflow-y: auto;
         padding-right: $space-xs;
 
@@ -787,14 +786,14 @@ $space-lg: 24px;
           background: $bg-gray;
           border: 2px solid transparent;
           border-radius: $radius-lg;
-          height: 60px;  // 🔥 从 70px 减少到 60px
-          padding: 6px 12px;
+          padding: $space-sm $space-md;
           cursor: pointer;
           transition: all 0.3s ease;
           position: relative;
           display: flex;
           align-items: center;
           gap: $space-md;
+          height: 70px;
           width: 100%;
 
           &:hover {
@@ -914,30 +913,33 @@ $space-lg: 24px;
       }
 
       .empty-accounts {
-        padding: 16px;
+        padding: $space-lg;
         text-align: center;
       }
     }
 
     // 响应式设计
     @media (max-width: 768px) {
-    .account-selection {
-        .accounts-layout {
-        grid-template-columns: 1fr;
-        height: auto;
-        max-height: 400px;
-        
-        .groups-sidebar {
-            order: 2;
-            margin-top: 12px;
-            max-height: 120px;
+      grid-template-columns: 1fr;
+
+      .groups-sidebar {
+        order: 2;
+        margin-top: $space-lg;
+      }
+
+      .accounts-main {
+        order: 1;
+
+        .accounts-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: $space-sm;
+
+          .header-right {
+            justify-content: space-between;
+          }
         }
-        
-        .accounts-main {
-            order: 1;
-        }
-        }
-    }
+      }
     }
   }
 }

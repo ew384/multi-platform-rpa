@@ -1,29 +1,5 @@
 <template>
   <div class="dashboard">
-    <!-- 欢迎区域 -->
-    <div class="welcome-section">
-      <div class="welcome-content">
-        <div class="welcome-text">
-          <h1 class="welcome-title">欢迎回来！</h1>
-          <p class="welcome-subtitle">今天是个发布内容的好日子，开始您的创作之旅吧</p>
-        </div>
-        <div class="welcome-actions">
-          <el-button type="primary" size="large" @click="navigateTo('/publish-center')" class="primary-action">
-            <el-icon><Upload /></el-icon>
-            立即发布内容
-          </el-button>
-          <el-button size="large" @click="navigateTo('/material-management')" class="secondary-action">
-            <el-icon><Folder /></el-icon>
-            管理素材库
-          </el-button>
-        </div>
-      </div>
-      <div class="welcome-illustration">
-        <div class="illustration-bg">
-          <el-icon class="illustration-icon"><VideoCamera /></el-icon>
-        </div>
-      </div>
-    </div>
 
     <!-- 数据概览 -->
     <div class="overview-section">
@@ -119,63 +95,6 @@
       </div>
     </div>
 
-    <!-- 快捷操作 -->
-    <div class="quick-actions-section">
-      <h2 class="section-title">快捷操作</h2>
-      <div class="actions-grid">
-        <div class="action-card" @click="navigateTo('/account-management')">
-          <div class="action-icon primary">
-            <el-icon><UserFilled /></el-icon>
-          </div>
-          <div class="action-content">
-            <h3 class="action-title">账号管理</h3>
-            <p class="action-desc">添加和管理多平台账号</p>
-          </div>
-          <div class="action-arrow">
-            <el-icon><ArrowRight /></el-icon>
-          </div>
-        </div>
-
-        <div class="action-card" @click="navigateTo('/material-management')">
-          <div class="action-icon success">
-            <el-icon><Picture /></el-icon>
-          </div>
-          <div class="action-content">
-            <h3 class="action-title">素材管理</h3>
-            <p class="action-desc">上传和整理创作素材</p>
-          </div>
-          <div class="action-arrow">
-            <el-icon><ArrowRight /></el-icon>
-          </div>
-        </div>
-
-        <div class="action-card" @click="navigateTo('/publish-center')">
-          <div class="action-icon warning">
-            <el-icon><Upload /></el-icon>
-          </div>
-          <div class="action-content">
-            <h3 class="action-title">发布中心</h3>
-            <p class="action-desc">一键发布到多个平台</p>
-          </div>
-          <div class="action-arrow">
-            <el-icon><ArrowRight /></el-icon>
-          </div>
-        </div>
-
-        <div class="action-card" @click="navigateTo('/data-analysis')">
-          <div class="action-icon info">
-            <el-icon><DataAnalysis /></el-icon>
-          </div>
-          <div class="action-content">
-            <h3 class="action-title">数据分析</h3>
-            <p class="action-desc">查看内容表现数据</p>
-          </div>
-          <div class="action-arrow">
-            <el-icon><ArrowRight /></el-icon>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- 最近活动 -->
     <div class="recent-activities-section">
@@ -215,45 +134,7 @@
       </div>
     </div>
 
-    <!-- 平台状态 -->
-    <div class="platform-status-section">
-      <h2 class="section-title">平台状态</h2>
-      <div class="platform-grid">
-        <div 
-          v-for="platform in platformStatus" 
-          :key="platform.name"
-          :class="['platform-card', platform.status]"
-        >
-          <div class="platform-header">
-            <div :class="['platform-icon', platform.class]">
-              <component :is="platform.icon" />
-            </div>
-            <div :class="['platform-status', platform.status]">
-              <div class="status-dot"></div>
-              <span>{{ platform.statusText }}</span>
-            </div>
-          </div>
-          <div class="platform-content">
-            <h3 class="platform-name">{{ platform.name }}</h3>
-            <div class="platform-stats">
-              <div class="stat-item">
-                <span class="stat-label">账号数</span>
-                <span class="stat-value">{{ platform.accounts }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">今日发布</span>
-                <span class="stat-value">{{ platform.todayPosts }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="platform-actions">
-            <el-button size="small" @click="managePlatform(platform)">
-              管理
-            </el-button>
-          </div>
-        </div>
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -446,112 +327,13 @@ $space-2xl: 48px;
   margin: 0 0 $space-lg 0;
 }
 
-// 欢迎区域
-.welcome-section {
-  background: linear-gradient(135deg, $primary 0%, #8B9EE8 100%);
-  border-radius: $radius-2xl;
-  padding: $space-2xl;
-  margin-bottom: $space-2xl;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 300px;
-    height: 300px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    transform: rotate(45deg);
-  }
-
-  .welcome-content {
-    flex: 1;
-    z-index: 2;
-
-    .welcome-title {
-      font-size: 32px;
-      font-weight: 800;
-      margin: 0 0 $space-sm 0;
-      color: white;
-    }
-
-    .welcome-subtitle {
-      font-size: 16px;
-      margin: 0 0 $space-xl 0;
-      color: rgba(255, 255, 255, 0.9);
-      line-height: 1.6;
-    }
-
-    .welcome-actions {
-      display: flex;
-      gap: $space-md;
-
-      .primary-action {
-        background: white;
-        color: $primary;
-        border: none;
-        padding: 12px 24px;
-        font-weight: 600;
-        border-radius: $radius-lg;
-        box-shadow: $shadow-md;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: $shadow-lg;
-        }
-      }
-
-      .secondary-action {
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        padding: 12px 24px;
-        font-weight: 600;
-        border-radius: $radius-lg;
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.3);
-          transform: translateY(-2px);
-        }
-      }
-    }
-  }
-
-  .welcome-illustration {
-    z-index: 2;
-
-    .illustration-bg {
-      width: 120px;
-      height: 120px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(10px);
-
-      .illustration-icon {
-        font-size: 48px;
-        color: white;
-      }
-    }
-  }
-}
-
 // 数据概览
 .overview-section {
   margin-bottom: $space-2xl;
 
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: $space-lg;
 
     .stat-card {
@@ -578,15 +360,15 @@ $space-2xl: 48px;
       }
 
       &.success::before {
-        background: linear-gradient(90deg, $success 0%, #34D399 100%);
+        background: linear-gradient(90deg, $success 0%, #4e34d3 100%);
       }
 
       &.warning::before {
-        background: linear-gradient(90deg, $warning 0%, #FBBF24 100%);
+        background: linear-gradient(90deg, $warning 0%, #2724fb 100%);
       }
 
       &.info::before {
-        background: linear-gradient(90deg, $info 0%, #9CA3AF 100%);
+        background: linear-gradient(90deg, $info 0%, #26147c 100%);
       }
 
       &:hover {
@@ -601,8 +383,8 @@ $space-2xl: 48px;
         margin-bottom: $space-md;
 
         .stat-icon {
-          width: 48px;
-          height: 48px;
+          width: 28px;
+          height: 28px;
           border-radius: $radius-lg;
           display: flex;
           align-items: center;
@@ -694,96 +476,6 @@ $space-2xl: 48px;
   }
 }
 
-// 快捷操作
-.quick-actions-section {
-  margin-bottom: $space-2xl;
-
-  .actions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: $space-md;
-
-    .action-card {
-      background: $bg-white;
-      border-radius: $radius-xl;
-      padding: $space-lg;
-      display: flex;
-      align-items: center;
-      gap: $space-md;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: $shadow-sm;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: $shadow-md;
-      }
-
-      .action-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: $radius-lg;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-
-        .el-icon {
-          font-size: 24px;
-          color: white;
-        }
-
-        &.primary {
-          background: linear-gradient(135deg, $primary 0%, #8B9EE8 100%);
-        }
-
-        &.success {
-          background: linear-gradient(135deg, $success 0%, #34D399 100%);
-        }
-
-        &.warning {
-          background: linear-gradient(135deg, $warning 0%, #FBBF24 100%);
-        }
-
-        &.info {
-          background: linear-gradient(135deg, $info 0%, #9CA3AF 100%);
-        }
-      }
-
-      .action-content {
-        flex: 1;
-
-        .action-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: $text-primary;
-          margin: 0 0 $space-xs 0;
-        }
-
-        .action-desc {
-          font-size: 14px;
-          color: $text-secondary;
-          margin: 0;
-          line-height: 1.4;
-        }
-      }
-
-      .action-arrow {
-        color: $text-muted;
-        transition: all 0.3s ease;
-
-        .el-icon {
-          font-size: 16px;
-        }
-      }
-
-      &:hover .action-arrow {
-        color: $primary;
-        transform: translateX(4px);
-      }
-    }
-  }
-}
 
 // 最近活动
 .recent-activities-section {
