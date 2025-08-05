@@ -5,7 +5,6 @@
       <div class="cover-image" @click="openCoverMenu">
         <img v-if="currentCover" :src="currentCover" alt="视频封面" />
         <div v-else class="cover-placeholder">
-          <el-icon><Picture /></el-icon>
           <span>点击选择封面</span>
         </div>
         <div class="cover-overlay">
@@ -242,11 +241,11 @@ const handleMaterialSelected = (imageUrl) => {
 <style lang="scss" scoped>
 $primary: #6366f1;
 $bg-white: #ffffff;
-$bg-gray: #f1f5f9;
+$bg-gray: #fbfbfb;
 $text-primary: #0f172a;
 $text-secondary: #475569;
 $text-muted: #94a3b8;
-$border-light: #e2e8f0;
+$border-light: #ffffff;
 $radius-md: 8px;
 $radius-lg: 12px;
 $space-sm: 8px;
