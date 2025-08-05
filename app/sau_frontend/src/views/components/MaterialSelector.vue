@@ -200,6 +200,7 @@ import {
   Check
 } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
+import { nextTick } from 'vue';
 
 // Props
 const props = defineProps({
@@ -218,11 +219,6 @@ const authHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 }));
 
-// 响应式数据
-const dialogVisible = computed({
-  get: () => props.visible,
-  set: (value) => emit('update:visible', value)
-});
 
 const loading = ref(false);
 const activeTab = ref('recent');
@@ -236,36 +232,36 @@ const getTotalSelectedCount = () => {
   return selectedRecentIds.value.length + selectedLibraryIds.value.length;
 };
 
-// 方法定义
 const loadAllVideoSources = async () => {
   loading.value = true;
   try {
-    // 并行加载两种数据源
     const [recentResponse, libraryResponse] = await Promise.all([
-      // 最近上传的视频
       fetch(`${apiBaseUrl}/getRecentUploads`, {
         headers: authHeaders.value
       }).then(res => res.json()),
-      // 素材库视频
       fetch(`${apiBaseUrl}/getFiles`, {
         headers: authHeaders.value
       }).then(res => res.json())
     ]);
 
-    // 处理最近上传的视频
+    // 🔥 使用 nextTick 确保 DOM 更新完成
+    await nextTick();
+
     if (recentResponse.code === 200) {
-      recentVideos.value = recentResponse.data || [];
+      // 🔥 创建新数组避免响应式冲突
+      recentVideos.value = [...(recentResponse.data || [])];
       console.log('最近上传的视频:', recentVideos.value);
     } else {
       console.error('获取最近上传视频失败:', recentResponse.msg);
       recentVideos.value = [];
     }
 
-    // 处理素材库视频
     if (libraryResponse.code === 200) {
-      libraryMaterials.value = (libraryResponse.data || []).filter(material =>
+      const filteredMaterials = (libraryResponse.data || []).filter(material =>
         isVideoFile(material.filename)
       );
+      // 🔥 创建新数组避免响应式冲突
+      libraryMaterials.value = [...filteredMaterials];
       console.log('素材库视频:', libraryMaterials.value);
     } else {
       console.error('获取素材库视频失败:', libraryResponse.msg);
@@ -281,6 +277,26 @@ const loadAllVideoSources = async () => {
     loading.value = false;
   }
 };
+
+// 修改 watch 监听器
+watch(() => props.visible, async (newVisible) => {
+  if (newVisible) {
+    clearAllSelections();
+    // 🔥 使用 nextTick 避免立即触发响应式更新
+    await nextTick();
+    await loadAllVideoSources();
+  }
+}, { immediate: false }); // 🔥 不要立即执行
+
+// 确保 dialogVisible 计算属性正确
+const dialogVisible = computed({
+  get: () => props.visible,
+  set: (value) => {
+    if (value !== props.visible) {
+      emit('update:visible', value);
+    }
+  }
+});
 
 const isVideoFile = (filename) => {
   const videoExtensions = [
@@ -394,13 +410,7 @@ const handleConfirm = () => {
   clearAllSelections();
 };
 
-// 监听器
-watch(() => props.visible, (newVisible) => {
-  if (newVisible) {
-    clearAllSelections();
-    loadAllVideoSources();
-  }
-});
+
 </script>
 
 <style lang="scss" scoped>

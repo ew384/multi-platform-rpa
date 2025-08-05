@@ -327,7 +327,7 @@ import { ElMessage } from 'element-plus';
 import { useAccountStore } from '@/stores/account';
 import AccountSelection from './AccountSelection.vue';
 import MaterialSelector from './MaterialSelector.vue';
-
+import { nextTick } from 'vue';
 // Props
 const props = defineProps({
   visible: {
@@ -348,11 +348,7 @@ const authHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 }));
 
-// 响应式数据
-const dialogVisible = computed({
-  get: () => props.visible,
-  set: (value) => emit('update:visible', value)
-});
+
 
 const currentStep = ref('video');
 const publishing = ref(false);
@@ -464,11 +460,17 @@ const handleVideoUploadError = (error) => {
 };
 
 const selectFromLibrary = () => {
-  materialSelectorVisible.value = true;
+  // 🔥 使用 nextTick 避免响应式循环
+  nextTick(() => {
+    materialSelectorVisible.value = true;
+  });
 };
 
+// 修改 addMoreVideos 方法
 const addMoreVideos = () => {
-  materialSelectorVisible.value = true;
+  nextTick(() => {
+    materialSelectorVisible.value = true;
+  });
 };
 
 const handleMaterialSelected = (materials) => {
@@ -655,9 +657,12 @@ const handleDialogClose = () => {
 };
 
 // 监听器
-watch(dialogVisible, (newValue) => {
-  if (newValue) {
-    resetForm();
+const dialogVisible = computed({
+  get: () => props.visible,
+  set: (value) => {
+    if (value !== props.visible) {
+      emit('update:visible', value);
+    }
   }
 });
 </script>
