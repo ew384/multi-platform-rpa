@@ -124,38 +124,40 @@
 
       <!-- 步骤3: 编辑内容 -->
       <div v-show="currentStep === 'content'" class="step-panel">
-        <div class="step-header">
-          <h4>内容编辑</h4>
-          <p>编辑发布内容的标题、描述等信息</p>
-        </div>
 
         <div class="content-form">
           <!-- 视频预览 -->
           <div class="form-section">
-            <div class="video-display">
-              <div class="video-thumbnail">
-                <el-icon class="video-icon"><VideoPlay /></el-icon>
-              </div>
-              <div class="video-info">
-                <div class="video-count">{{ selectedVideos.length }} 个视频</div>
-                <div class="video-names">
-                  {{ selectedVideos.map(v => v.name).join(', ') }}
-                </div>
-              </div>
-            </div>
+            <h5>视频</h5>
+            <VideoPreview
+              :videos="selectedVideos"
+              :current-index="0"
+              @video-loaded="handleVideoLoaded"
+              @video-error="handleVideoError"
+            />
+          </div>
+
+          <!-- 封面选择 -->
+          <div class="form-section">
+            <h5>封面</h5>
+            <CoverSelector
+              v-model:cover="publishForm.cover"
+              :video-url="currentVideoUrl"
+              @cover-changed="handleCoverChanged"
+            />
           </div>
 
           <!-- 选中的账号 -->
           <div class="form-section">
             <h5>发布账号</h5>
             <div class="selected-accounts-display">
-              <el-tag
-                v-for="accountId in selectedAccounts"
-                :key="accountId"
-                class="account-tag"
-              >
-                {{ getAccountName(accountId) }}
-              </el-tag>
+              <CompactAccountCard
+                v-for="account in selectedAccountsData"
+                :key="account.id"
+                :account="account"
+                :removable="true"
+                @remove="handleRemoveAccount"
+              />
             </div>
           </div>
 
@@ -269,7 +271,7 @@
         </div>
         
         <!-- 右侧按钮 -->
-        <div class="footer-right-compact">  <!-- ✅ 使用正确的类名 -->
+        <div class="footer-right-compact">
             <el-button
                 v-if="currentStep !== 'content'"
                 type="primary"
@@ -286,7 +288,7 @@
             v-else
             split-button
             type="primary"
-            @click="publishContent('browser')"
+            @click="publishContent('background')"
             :disabled="!canPublish"
             :loading="publishing"
             class="publish-btn"
@@ -295,7 +297,7 @@
             <template #dropdown>
             <el-dropdown-menu>
                 <el-dropdown-item @click="publishContent('background')">
-                后台发布
+                本机发布
                 </el-dropdown-item>
                 <el-dropdown-item @click="publishContent('browser')">
                 浏览器发布
@@ -332,6 +334,10 @@ import { ElMessage } from 'element-plus';
 import { useAccountStore } from '@/stores/account';
 import AccountSelection from './AccountSelection.vue';
 import MaterialSelector from './MaterialSelector.vue';
+import VideoPreview from './video/VideoPreview.vue';
+import CoverSelector from './video/CoverSelector.vue';
+import CompactAccountCard from './common/CompactAccountCard.vue';
+
 import { nextTick } from 'vue';
 // Props
 const props = defineProps({
@@ -372,6 +378,7 @@ const selectedAccounts = ref([]);
 const publishForm = reactive({
   title: '',
   description: '',
+  cover: '',
   scheduleEnabled: false,
   scheduleTime: '',
   douyin: {
@@ -386,6 +393,17 @@ const publishForm = reactive({
 
 // 计算属性
 const availableAccounts = computed(() => accountStore.accounts);
+// 新增：当前视频URL计算属性
+const currentVideoUrl = computed(() => {
+  return selectedVideos.value.length > 0 ? selectedVideos.value[0].url : '';
+});
+
+// 新增：选中账号的详细数据
+const selectedAccountsData = computed(() => {
+  return selectedAccounts.value.map(accountId => {
+    return availableAccounts.value.find(acc => acc.id === accountId);
+  }).filter(Boolean);
+});
 
 const hasDouyinAccounts = computed(() => {
   return selectedAccounts.value.some(accountId => {
@@ -507,7 +525,32 @@ const formatFileSize = (size) => {
   const mb = size / (1024 * 1024);
   return mb.toFixed(1) + "MB";
 };
+// 视频相关处理方法
+const handleVideoLoaded = (videoData) => {
+  console.log('视频已加载:', videoData);
+  // 可以在这里处理视频加载完成后的逻辑
+};
 
+const handleVideoError = (error) => {
+  console.error('视频加载错误:', error);
+  ElMessage.error('视频加载失败');
+};
+
+// 封面相关处理方法
+const handleCoverChanged = (coverUrl) => {
+  console.log('封面已更新:', coverUrl);
+  // 可以在这里处理封面更改后的逻辑
+  // 例如：预览更新、数据同步等
+};
+
+// 账号相关处理方法
+const handleRemoveAccount = (account) => {
+  const index = selectedAccounts.value.indexOf(account.id);
+  if (index > -1) {
+    selectedAccounts.value.splice(index, 1);
+    ElMessage.success(`已移除账号：${account.userName}`);
+  }
+};
 const publishContent = async (mode = 'browser') => {
   if (!canPublish.value) {
     ElMessage.warning('请完善发布信息');
