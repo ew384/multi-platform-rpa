@@ -256,7 +256,7 @@
 
     <!-- 对话框底部按钮 -->
     <template #footer>
-    <div class="dialog-footer-optimized">
+    <div class="dialog-footer-compact">
         <!-- 🔥 修改：左右布局，去掉取消按钮 -->
         <el-button 
         v-if="currentStep !== 'video'" 
@@ -268,17 +268,17 @@
         </el-button>
         
         <!-- 右侧按钮 -->
-        <div class="right-buttons">
-        <el-button
-            v-if="currentStep !== 'content'"
-            type="primary"
-            @click="nextStep"
-            :disabled="!canProceedToNextStep"
-            class="next-btn"
-        >
-            下一步
-            <el-icon><ArrowRight /></el-icon>
-        </el-button>
+        <div class="footer-right-compact">  <!-- ✅ 使用正确的类名 -->
+            <el-button
+                v-if="currentStep !== 'content'"
+                type="primary"
+                @click="nextStep"
+                :disabled="!canProceedToNextStep"
+                class="next-btn"
+            >
+                下一步
+                <el-icon><ArrowRight /></el-icon>
+            </el-button>
 
         <!-- 一键发布按钮 -->
         <el-dropdown
