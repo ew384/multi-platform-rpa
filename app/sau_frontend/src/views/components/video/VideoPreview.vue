@@ -13,8 +13,16 @@
         </div>
       </div>
 
-      <!-- 视频播放器 -->
-      <div class="video-player">
+      <!-- 封面模式 -->
+      <div v-if="!isPlaying && hasCover" class="cover-mode" @click="startPlay">
+        <img :src="coverUrl" :alt="currentVideo?.name" class="cover-image" />
+        <div class="play-overlay">
+          <el-icon class="play-icon"><VideoPlay /></el-icon>
+        </div>
+      </div>
+
+      <!-- 视频模式 -->
+      <div v-else class="video-player">
         <video
           ref="videoElement"
           :src="currentVideo?.url"
@@ -26,7 +34,7 @@
         >
           您的浏览器不支持视频播放
         </video>
-        
+
         <!-- 加载状态 -->
         <div v-if="loading" class="video-loading">
           <el-icon class="rotating"><Loading /></el-icon>
@@ -39,48 +47,71 @@
           <span>{{ error }}</span>
         </div>
       </div>
-
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
-import { Loading, VideoCamera } from '@element-plus/icons-vue';
+import { ref, computed, watch, nextTick } from "vue";
+import { Loading, VideoCamera, VideoPlay } from "@element-plus/icons-vue";
 
 // Props
 const props = defineProps({
   videos: {
     type: Array,
-    default: () => []
+    default: () => [],
+  },
+  coverScreenshots: {
+    type: Array,
+    default: () => [],
+  },
+  mode: {
+    type: String,
+    default: "cover", // cover | video
   },
   currentIndex: {
     type: Number,
-    default: 0
-  }
+    default: 0,
+  },
 });
 
 // Emits
-const emit = defineEmits(['video-loaded', 'video-error', 'current-changed']);
+const emit = defineEmits(["video-loaded", "video-error", "current-changed"]);
 
 // 响应式数据
 const videoElement = ref(null);
+const isPlaying = ref(false);
 const currentVideoIndex = ref(props.currentIndex);
 const loading = ref(false);
-const error = ref('');
+const error = ref("");
 const videoDuration = ref(0);
 
 // 计算属性
 const currentVideo = computed(() => {
   return props.videos[currentVideoIndex.value] || null;
 });
-
-// 监听器
-watch(() => props.currentIndex, (newIndex) => {
-  if (newIndex !== currentVideoIndex.value) {
-    currentVideoIndex.value = newIndex;
-  }
+const hasCover = computed(() => {
+  return (
+    props.coverScreenshots && props.coverScreenshots[currentVideoIndex.value]
+  );
 });
+
+const coverUrl = computed(() => {
+  if (!hasCover.value) return null;
+  const coverPath = props.coverScreenshots[currentVideoIndex.value];
+  return `${
+    import.meta.env.VITE_API_BASE_URL
+  }/api/getFile?filename=${encodeURIComponent(coverPath)}`;
+});
+// 监听器
+watch(
+  () => props.currentIndex,
+  (newIndex) => {
+    if (newIndex !== currentVideoIndex.value) {
+      currentVideoIndex.value = newIndex;
+    }
+  }
+);
 
 watch(currentVideo, async (newVideo) => {
   if (newVideo) {
@@ -92,7 +123,7 @@ watch(currentVideo, async (newVideo) => {
 const switchVideo = (index) => {
   if (index >= 0 && index < props.videos.length) {
     currentVideoIndex.value = index;
-    emit('current-changed', index);
+    emit("current-changed", index);
   }
 };
 
@@ -100,43 +131,42 @@ const loadVideo = async () => {
   if (!currentVideo.value || !videoElement.value) return;
 
   loading.value = true;
-  error.value = '';
+  error.value = "";
 
   try {
     await nextTick();
-    
+
     // 重置视频元素
     videoElement.value.currentTime = 0;
-    
+
     // 等待视频加载
     await new Promise((resolve, reject) => {
       const video = videoElement.value;
-      
+
       const onLoaded = () => {
-        video.removeEventListener('loadedmetadata', onLoaded);
-        video.removeEventListener('error', onError);
+        video.removeEventListener("loadedmetadata", onLoaded);
+        video.removeEventListener("error", onError);
         resolve();
       };
-      
+
       const onError = () => {
-        video.removeEventListener('loadedmetadata', onLoaded);
-        video.removeEventListener('error', onError);
-        reject(new Error('视频加载失败'));
+        video.removeEventListener("loadedmetadata", onLoaded);
+        video.removeEventListener("error", onError);
+        reject(new Error("视频加载失败"));
       };
-      
-      video.addEventListener('loadedmetadata', onLoaded);
-      video.addEventListener('error', onError);
-      
+
+      video.addEventListener("loadedmetadata", onLoaded);
+      video.addEventListener("error", onError);
+
       // 如果已经加载完成
       if (video.readyState >= 1) {
         onLoaded();
       }
     });
-
   } catch (err) {
-    error.value = err.message || '视频加载失败';
-    console.error('视频加载失败:', err);
-    emit('video-error', err);
+    error.value = err.message || "视频加载失败";
+    console.error("视频加载失败:", err);
+    emit("video-error", err);
   } finally {
     loading.value = false;
   }
@@ -145,34 +175,43 @@ const loadVideo = async () => {
 const handleVideoLoaded = () => {
   if (videoElement.value) {
     videoDuration.value = videoElement.value.duration;
-    emit('video-loaded', {
+    emit("video-loaded", {
       duration: videoDuration.value,
       width: videoElement.value.videoWidth,
-      height: videoElement.value.videoHeight
+      height: videoElement.value.videoHeight,
     });
   }
 };
 
 const handleVideoError = (event) => {
-  const errorMsg = '视频播放出错';
+  const errorMsg = "视频播放出错";
   error.value = errorMsg;
-  console.error('视频播放错误:', event);
-  emit('video-error', new Error(errorMsg));
+  console.error("视频播放错误:", event);
+  emit("video-error", new Error(errorMsg));
 };
 
 const formatFileSize = (size) => {
-  if (!size) return '0 MB';
+  if (!size) return "0 MB";
   const mb = size / (1024 * 1024);
-  return mb.toFixed(1) + ' MB';
+  return mb.toFixed(1) + " MB";
 };
 
 const formatDuration = (duration) => {
-  if (!duration) return '00:00';
+  if (!duration) return "00:00";
   const minutes = Math.floor(duration / 60);
   const seconds = Math.floor(duration % 60);
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes.toString().padStart(2, "0")}:${seconds
+    .toString()
+    .padStart(2, "0")}`;
 };
-
+const startPlay = () => {
+  isPlaying.value = true;
+  nextTick(() => {
+    if (videoElement.value) {
+      videoElement.value.play();
+    }
+  });
+};
 // 暴露方法给父组件
 defineExpose({
   getCurrentTime: () => videoElement.value?.currentTime || 0,
@@ -183,17 +222,17 @@ defineExpose({
   },
   captureFrame: () => {
     if (!videoElement.value) return null;
-    
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
     canvas.width = videoElement.value.videoWidth;
     canvas.height = videoElement.value.videoHeight;
-    
+
     ctx.drawImage(videoElement.value, 0, 0, canvas.width, canvas.height);
-    
-    return canvas.toDataURL('image/jpeg', 0.8);
-  }
+
+    return canvas.toDataURL("image/jpeg", 0.8);
+  },
 });
 </script>
 
@@ -271,7 +310,6 @@ $space-md: 16px;
       border-radius: 4px; // 可选：视频圆角
     }
 
-
     .video-loading,
     .video-error {
       position: absolute;
@@ -287,7 +325,7 @@ $space-md: 16px;
 
       .el-icon {
         font-size: 32px;
-        
+
         &.rotating {
           animation: rotate 2s linear infinite;
         }
@@ -334,7 +372,47 @@ $space-md: 16px;
     }
   }
 }
+.cover-mode {
+  position: relative;
+  width: 70%;
+  max-width: 180px;
+  aspect-ratio: 9 / 16;
+  margin: 0 auto;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
 
+  .cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .play-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+
+    .play-icon {
+      color: white;
+      font-size: 24px;
+    }
+  }
+
+  &:hover .play-overlay {
+    background: rgba(0, 0, 0, 0.9);
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
 @keyframes rotate {
   from {
     transform: rotate(0deg);
