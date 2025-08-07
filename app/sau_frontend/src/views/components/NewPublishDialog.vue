@@ -621,6 +621,7 @@ const publishContent = async (mode = "background") => {
             followersCount: account.followersCount,
             videosCount: account.videosCount,
           })),
+          thumbnail: publishForm.cover,
           enableTimer: publishForm.scheduleEnabled ? 1 : 0,
           videosPerDay: 1,
           dailyTimes: ["10:00"],
