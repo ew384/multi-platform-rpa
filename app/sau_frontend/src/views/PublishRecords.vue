@@ -120,15 +120,7 @@
             },
           ]"
         >
-          <!-- 视频预览区域 - 使用封面截图或视频 -->
-          <div class="video-preview">
-            <VideoPreview
-              :videos="record.video_files"
-              :cover-screenshots="record.cover_screenshots"
-              :mode="isEditing ? 'video' : 'cover'"
-              class="record-video-preview"
-            />
-          </div>
+
           <!-- 批量删除复选框 -->
           <div v-if="batchDeleteMode" class="batch-checkbox">
             <el-checkbox
@@ -139,12 +131,14 @@
 
           <!-- 记录卡片内容 -->
           <div class="record-content" @click="showRecordDetail(record)">
-            <!-- 视频预览 -->
+            <!-- 视频预览区域 - 使用封面截图或视频 -->
             <div class="video-preview">
-              <el-icon class="video-icon"><VideoPlay /></el-icon>
-              <div class="video-count">
-                {{ record.video_files.length }} 个视频
-              </div>
+              <VideoPreview
+                :videos="record.video_files"
+                :cover-screenshots="record.cover_screenshots"
+                :mode="isEditing ? 'video' : 'cover'"
+                class="record-video-preview"
+              />
             </div>
 
             <!-- 记录信息 -->

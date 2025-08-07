@@ -101,7 +101,7 @@ const coverUrl = computed(() => {
   const coverPath = props.coverScreenshots[currentVideoIndex.value];
   return `${
     import.meta.env.VITE_API_BASE_URL
-  }/api/getFile?filename=${encodeURIComponent(coverPath)}`;
+  }/getFile?filename=${encodeURIComponent(coverPath)}`;
 });
 // 监听器
 watch(

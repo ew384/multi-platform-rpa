@@ -138,8 +138,8 @@ const error = ref('');
 const playing = ref(false);
 const currentTime = ref(0);
 const duration = ref(0);
-const previewWidth = ref(320);
-const previewHeight = ref(180);
+const previewWidth = ref(640);
+const previewHeight = ref(360);
 
 // 计算属性
 const dialogVisible = computed({
@@ -291,7 +291,7 @@ const handleCapture = () => {
 
   try {
     // 获取高质量截图
-    const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+    const dataURL = canvas.toDataURL('image/jpeg', 1.0);
     emit('captured', dataURL);
     dialogVisible.value = false;
     ElMessage.success('封面截取成功');
