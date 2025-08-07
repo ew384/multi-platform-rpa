@@ -134,9 +134,9 @@
             <!-- 视频预览区域 - 使用封面截图或视频 -->
             <div class="video-preview">
               <VideoPreview
-                :videos="record.video_files"
+                :videos="formatVideosForPreview(record.video_files, record.cover_screenshots)"
                 :cover-screenshots="record.cover_screenshots"
-                :mode="isEditing ? 'video' : 'cover'"
+                :mode="'cover'"
                 class="record-video-preview"
               />
             </div>
@@ -255,6 +255,27 @@ const pagination = reactive({
   pageSize: 20,
   total: 0,
 });
+function formatVideosForPreview(videoFiles) {
+  if (!Array.isArray(videoFiles)) {
+    return [];
+  }
+
+  const result = videoFiles.map(function(filename) {
+    const coverName = filename.replace(/\.[^/.]+$/, '_cover.jpg');
+    const encodedCoverName = encodeURIComponent(coverName);
+
+    return {
+      name: filename,
+      url: `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=covers/${encodedCoverName}`,
+      path: filename
+    };
+  });
+
+  console.log("📹 格式化视频预览数据:", result);
+  return result;
+}
+
+
 
 // 计算属性
 const filteredRecords = computed(() => {
@@ -280,6 +301,14 @@ const loadRecords = async () => {
 
     if (data.code === 200) {
       records.value = data.data || [];
+      console.log('📊 发布记录数据:', records.value);
+      records.value.forEach((record, index) => {
+        console.log(`记录 ${index + 1}:`, {
+          title: record.title,
+          cover_screenshots: record.cover_screenshots,
+          video_files: record.video_files
+        });
+      });
       pagination.total = data.total || records.value.length;
     } else {
       console.warn("获取发布记录失败:", data.msg);

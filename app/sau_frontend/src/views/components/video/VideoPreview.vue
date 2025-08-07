@@ -15,7 +15,7 @@
 
       <!-- 封面模式 -->
       <div v-if="!isPlaying && hasCover" class="cover-mode" @click="startPlay">
-        <img :src="coverUrl" :alt="currentVideo?.name" class="cover-image" />
+        <img :src="currentVideo?.url" class="cover-image" />
         <div class="play-overlay">
           <el-icon class="play-icon"><VideoPlay /></el-icon>
         </div>
