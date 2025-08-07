@@ -18,7 +18,7 @@
           {
             active: currentStep === step.key,
             completed: getStepIndex(currentStep) > index,
-          }
+          },
         ]"
       >
         <div class="step-circle-compact">
@@ -100,7 +100,9 @@
                 </div>
                 <div class="video-info-compact">
                   <div class="video-name-compact">{{ video.name }}</div>
-                  <div class="video-size-compact">{{ formatFileSize(video.size) }}</div>
+                  <div class="video-size-compact">
+                    {{ formatFileSize(video.size) }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -111,7 +113,7 @@
       <!-- 步骤2: 选择账号 -->
       <div v-show="currentStep === 'accounts'" class="step-panel">
         <div class="step-header">
-         <!-- <h4>选择发布账号</h4>-->
+          <!-- <h4>选择发布账号</h4>-->
           <!-- <p>选择要发布内容的账号</p> -->
         </div>
 
@@ -124,7 +126,6 @@
 
       <!-- 步骤3: 编辑内容 -->
       <div v-show="currentStep === 'content'" class="step-panel">
-
         <div class="content-form">
           <!-- 视频预览 -->
           <div class="form-section">
@@ -163,7 +164,11 @@
 
           <!-- 表单内容 -->
           <div class="form-section">
-            <el-form :model="publishForm" label-width="80px" class="publish-form">
+            <el-form
+              :model="publishForm"
+              label-width="80px"
+              class="publish-form"
+            >
               <!-- 标题 -->
               <el-form-item label="标题" required>
                 <el-input
@@ -191,19 +196,31 @@
               <template v-if="hasDouyinAccounts">
                 <div class="platform-form-section">
                   <h6>抖音发布设置</h6>
-                  
+
                   <el-form-item label="声明">
-                    <el-select v-model="publishForm.douyin.statement" placeholder="选择声明">
+                    <el-select
+                      v-model="publishForm.douyin.statement"
+                      placeholder="选择声明"
+                    >
                       <el-option label="无需声明" value="无需声明" />
                       <el-option label="内容由AI生成" value="内容由AI生成" />
                       <el-option label="可能引人不适" value="可能引人不适" />
-                      <el-option label="虚构演绎仅供娱乐" value="虚构演绎仅供娱乐" />
-                      <el-option label="危险行为，请勿模仿" value="危险行为，请勿模仿" />
+                      <el-option
+                        label="虚构演绎仅供娱乐"
+                        value="虚构演绎仅供娱乐"
+                      />
+                      <el-option
+                        label="危险行为，请勿模仿"
+                        value="危险行为，请勿模仿"
+                      />
                     </el-select>
                   </el-form-item>
 
                   <el-form-item label="位置">
-                    <el-input v-model="publishForm.douyin.location" placeholder="输入发布地点" />
+                    <el-input
+                      v-model="publishForm.douyin.location"
+                      placeholder="输入发布地点"
+                    />
                   </el-form-item>
                 </div>
               </template>
@@ -212,7 +229,7 @@
               <template v-if="hasWechatAccounts">
                 <div class="platform-form-section">
                   <h6>视频号发布设置</h6>
-                  
+
                   <el-form-item label="原创">
                     <el-switch
                       v-model="publishForm.wechat.original"
@@ -222,7 +239,10 @@
                   </el-form-item>
 
                   <el-form-item label="位置">
-                    <el-input v-model="publishForm.wechat.location" placeholder="输入发布地点" />
+                    <el-input
+                      v-model="publishForm.wechat.location"
+                      placeholder="输入发布地点"
+                    />
                   </el-form-item>
                 </div>
               </template>
@@ -236,7 +256,10 @@
                     inactive-text="立即发布"
                   />
 
-                  <div v-if="publishForm.scheduleEnabled" class="schedule-options">
+                  <div
+                    v-if="publishForm.scheduleEnabled"
+                    class="schedule-options"
+                  >
                     <div class="schedule-row">
                       <span class="label">发布时间:</span>
                       <el-date-picker
@@ -258,33 +281,33 @@
 
     <!-- 对话框底部按钮 -->
     <template #footer>
-    <div class="dialog-footer-compact">
+      <div class="dialog-footer-compact">
         <div class="footer-left-compact">
-            <el-button 
-                v-if="currentStep !== 'video'" 
-                @click="previousStep"
-                class="prev-btn"
-            >
-                <el-icon><ArrowLeft /></el-icon>
-                上一步
-            </el-button>
+          <el-button
+            v-if="currentStep !== 'video'"
+            @click="previousStep"
+            class="prev-btn"
+          >
+            <el-icon><ArrowLeft /></el-icon>
+            上一步
+          </el-button>
         </div>
-        
+
         <!-- 右侧按钮 -->
         <div class="footer-right-compact">
-            <el-button
-                v-if="currentStep !== 'content'"
-                type="primary"
-                @click="nextStep"
-                :disabled="!canProceedToNextStep"
-                class="next-btn"
-            >
-                下一步
-                <el-icon><ArrowRight /></el-icon>
-            </el-button>
+          <el-button
+            v-if="currentStep !== 'content'"
+            type="primary"
+            @click="nextStep"
+            :disabled="!canProceedToNextStep"
+            class="next-btn"
+          >
+            下一步
+            <el-icon><ArrowRight /></el-icon>
+          </el-button>
 
-        <!-- 一键发布按钮 -->
-        <el-dropdown
+          <!-- 一键发布按钮 -->
+          <el-dropdown
             v-else
             split-button
             type="primary"
@@ -292,21 +315,21 @@
             :disabled="!canPublish"
             :loading="publishing"
             class="publish-btn"
-        >
-            {{ publishing ? '发布中...' : '一键发布' }}
+          >
+            {{ publishing ? "发布中..." : "一键发布" }}
             <template #dropdown>
-            <el-dropdown-menu>
+              <el-dropdown-menu>
                 <el-dropdown-item @click="publishContent('background')">
-                本机发布
+                  本机发布
                 </el-dropdown-item>
                 <el-dropdown-item @click="publishContent('browser')">
-                浏览器发布
+                  浏览器发布
                 </el-dropdown-item>
-            </el-dropdown-menu>
+              </el-dropdown-menu>
             </template>
-        </el-dropdown>
+          </el-dropdown>
         </div>
-    </div>
+      </div>
     </template>
 
     <!-- 素材选择对话框 -->
@@ -318,7 +341,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue';
+import { ref, reactive, computed, watch } from "vue";
 import {
   Plus,
   Check,
@@ -328,27 +351,27 @@ import {
   View,
   Delete,
   ArrowLeft,
-  ArrowRight
-} from '@element-plus/icons-vue';
-import { ElMessage } from 'element-plus';
-import { useAccountStore } from '@/stores/account';
-import AccountSelection from './AccountSelection.vue';
-import MaterialSelector from './MaterialSelector.vue';
-import VideoPreview from './video/VideoPreview.vue';
-import CoverSelector from './video/CoverSelector.vue';
-import CompactAccountCard from './common/CompactAccountCard.vue';
+  ArrowRight,
+} from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import { useAccountStore } from "@/stores/account";
+import AccountSelection from "./AccountSelection.vue";
+import MaterialSelector from "./MaterialSelector.vue";
+import VideoPreview from "./video/VideoPreview.vue";
+import CoverSelector from "./video/CoverSelector.vue";
+import CompactAccountCard from "./common/CompactAccountCard.vue";
 
-import { nextTick } from 'vue';
+import { nextTick } from "vue";
 // Props
 const props = defineProps({
   visible: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 
 // Emits
-const emit = defineEmits(['update:visible', 'published']);
+const emit = defineEmits(["update:visible", "published"]);
 
 // Store
 const accountStore = useAccountStore();
@@ -359,73 +382,73 @@ const authHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 }));
 
-
-
-const currentStep = ref('video');
+const currentStep = ref("video");
 const publishing = ref(false);
 const materialSelectorVisible = ref(false);
 
 // 步骤配置
 const steps = [
-  { key: 'video', label: '选择视频' },
-  { key: 'accounts', label: '选择账号' },
-  { key: 'content', label: '编辑内容' }
+  { key: "video", label: "选择视频" },
+  { key: "accounts", label: "选择账号" },
+  { key: "content", label: "编辑内容" },
 ];
 
 // 表单数据
 const selectedVideos = ref([]);
 const selectedAccounts = ref([]);
 const publishForm = reactive({
-  title: '',
-  description: '',
-  cover: '',
+  title: "",
+  description: "",
+  cover: "",
   scheduleEnabled: false,
-  scheduleTime: '',
+  scheduleTime: "",
   douyin: {
-    statement: '无需声明',
-    location: ''
+    statement: "无需声明",
+    location: "",
   },
   wechat: {
     original: true,
-    location: ''
-  }
+    location: "",
+  },
 });
 
 // 计算属性
 const availableAccounts = computed(() => accountStore.accounts);
 // 新增：当前视频URL计算属性
 const currentVideoUrl = computed(() => {
-  return selectedVideos.value.length > 0 ? selectedVideos.value[0].url : '';
+  return selectedVideos.value.length > 0 ? selectedVideos.value[0].url : "";
 });
 
 // 新增：选中账号的详细数据
 const selectedAccountsData = computed(() => {
-  return selectedAccounts.value.map(accountId => {
-    return availableAccounts.value.find(acc => acc.id === accountId);
-  }).filter(Boolean);
+  return selectedAccounts.value
+    .map((accountId) => {
+      return availableAccounts.value.find((acc) => acc.id === accountId);
+    })
+    .filter(Boolean);
 });
 
 const hasDouyinAccounts = computed(() => {
-  return selectedAccounts.value.some(accountId => {
-    const account = availableAccounts.value.find(acc => acc.id === accountId);
-    return account?.platform === '抖音';
+  return selectedAccounts.value.some((accountId) => {
+    const account = availableAccounts.value.find((acc) => acc.id === accountId);
+    return account?.platform === "抖音";
   });
 });
 
 const hasWechatAccounts = computed(() => {
-  return selectedAccounts.value.some(accountId => {
-    const account = availableAccounts.value.find(acc => acc.id === accountId);
-    return account?.platform === '视频号' || account?.platform === '微信视频号';
+  return selectedAccounts.value.some((accountId) => {
+    const account = availableAccounts.value.find((acc) => acc.id === accountId);
+    return account?.platform === "视频号" || account?.platform === "微信视频号";
   });
 });
 
 const canProceedToNextStep = computed(() => {
   switch (currentStep.value) {
-    case 'video':
+    case "video":
       return selectedVideos.value.length > 0;
-    case 'accounts':
+    case "accounts":
       return selectedAccounts.value.length > 0;
-    case 'content':
+    case "content":
       return publishForm.title.trim().length > 0;
     default:
       return true;
@@ -433,9 +456,11 @@ const canProceedToNextStep = computed(() => {
 });
 
 const canPublish = computed(() => {
-  return selectedVideos.value.length > 0 &&
-         selectedAccounts.value.length > 0 &&
-         publishForm.title.trim().length > 0;
+  return (
+    selectedVideos.value.length > 0 &&
+    selectedAccounts.value.length > 0 &&
+    publishForm.title.trim().length > 0
+  );
 });
 
 // 方法定义
@@ -497,9 +522,9 @@ const addMoreVideos = () => {
 };
 
 const handleMaterialSelected = (materials) => {
-  materials.forEach(material => {
+  materials.forEach((material) => {
     // 避免重复添加
-    const exists = selectedVideos.value.find(v => v.path === material.path);
+    const exists = selectedVideos.value.find((v) => v.path === material.path);
     if (!exists) {
       selectedVideos.value.push(material);
     }
@@ -513,11 +538,11 @@ const removeVideo = (index) => {
 };
 
 const previewVideo = (video) => {
-  window.open(video.url, '_blank');
+  window.open(video.url, "_blank");
 };
 
 const getAccountName = (accountId) => {
-  const account = availableAccounts.value.find(acc => acc.id === accountId);
+  const account = availableAccounts.value.find((acc) => acc.id === accountId);
   return account ? account.userName : accountId;
 };
 
@@ -527,18 +552,18 @@ const formatFileSize = (size) => {
 };
 // 视频相关处理方法
 const handleVideoLoaded = (videoData) => {
-  console.log('视频已加载:', videoData);
+  console.log("视频已加载:", videoData);
   // 可以在这里处理视频加载完成后的逻辑
 };
 
 const handleVideoError = (error) => {
-  console.error('视频加载错误:', error);
-  ElMessage.error('视频加载失败');
+  console.error("视频加载错误:", error);
+  ElMessage.error("视频加载失败");
 };
 
 // 封面相关处理方法
 const handleCoverChanged = (coverUrl) => {
-  console.log('封面已更新:', coverUrl);
+  console.log("封面已更新:", coverUrl);
   // 可以在这里处理封面更改后的逻辑
   // 例如：预览更新、数据同步等
 };
@@ -551,9 +576,9 @@ const handleRemoveAccount = (account) => {
     ElMessage.success(`已移除账号：${account.userName}`);
   }
 };
-const publishContent = async (mode = 'browser') => {
+const publishContent = async (mode = "background") => {
   if (!canPublish.value) {
-    ElMessage.warning('请完善发布信息');
+    ElMessage.warning("请完善发布信息");
     return;
   }
 
@@ -562,8 +587,10 @@ const publishContent = async (mode = 'browser') => {
 
     // 按平台分组账号
     const accountsByPlatform = {};
-    selectedAccounts.value.forEach(accountId => {
-      const account = availableAccounts.value.find(acc => acc.id === accountId);
+    selectedAccounts.value.forEach((accountId) => {
+      const account = availableAccounts.value.find(
+        (acc) => acc.id === accountId
+      );
       if (account) {
         const platformType = getPlatformType(account.platform);
         if (!accountsByPlatform[platformType]) {
@@ -574,65 +601,72 @@ const publishContent = async (mode = 'browser') => {
     });
 
     // 为每个平台发送发布请求
-    const publishPromises = Object.entries(accountsByPlatform).map(async ([platformType, accounts]) => {
-      const publishData = {
-        type: parseInt(platformType),
-        title: publishForm.title,
-        tags: extractTags(publishForm.description),
-        fileList: selectedVideos.value.map(video => video.path || video.name),
-        accountList: accounts.map(account => ({
-          filePath: account.filePath,
-          accountName: account.userName,
-          accountId: account.accountId,
-          platform: account.platform,
-          type: account.type,
-          avatar: account.avatar,
-          bio: account.bio,
-          followersCount: account.followersCount,
-          videosCount: account.videosCount,
-        })),
-        enableTimer: publishForm.scheduleEnabled ? 1 : 0,
-        videosPerDay: 1,
-        dailyTimes: ["10:00"],
-        startDays: 0,
-        category: 0,
-        // 平台特定设置
-        ...getPlatformSpecificSettings(parseInt(platformType))
-      };
+    const publishPromises = Object.entries(accountsByPlatform).map(
+      async ([platformType, accounts]) => {
+        const publishData = {
+          type: parseInt(platformType),
+          title: publishForm.title,
+          tags: extractTags(publishForm.description),
+          fileList: selectedVideos.value.map(
+            (video) => video.path || video.name
+          ),
+          accountList: accounts.map((account) => ({
+            filePath: account.filePath,
+            accountName: account.userName,
+            accountId: account.accountId,
+            platform: account.platform,
+            type: account.type,
+            avatar: account.avatar,
+            bio: account.bio,
+            followersCount: account.followersCount,
+            videosCount: account.videosCount,
+          })),
+          enableTimer: publishForm.scheduleEnabled ? 1 : 0,
+          videosPerDay: 1,
+          dailyTimes: ["10:00"],
+          startDays: 0,
+          category: 0,
+          mode: mode,
+          ...getPlatformSpecificSettings(parseInt(platformType)),
+        };
 
-      const response = await fetch(`${apiBaseUrl}/postVideo`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders.value,
-        },
-        body: JSON.stringify(publishData),
-      });
+        const response = await fetch(`${apiBaseUrl}/postVideo`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders.value,
+          },
+          body: JSON.stringify(publishData),
+        });
 
-      return await response.json();
-    });
+        return await response.json();
+      }
+    );
 
     const results = await Promise.all(publishPromises);
-    
+
     // 处理结果
-    const allSuccess = results.every(result => result.code === 200);
-    const successCount = results.filter(result => result.code === 200).length;
-    
+    const allSuccess = results.every((result) => result.code === 200);
+    const successCount = results.filter((result) => result.code === 200).length;
+
     if (allSuccess) {
-      ElMessage.success(`发布成功！共发布到 ${Object.keys(accountsByPlatform).length} 个平台`);
-      emit('published');
+      ElMessage.success(
+        `发布成功！共发布到 ${Object.keys(accountsByPlatform).length} 个平台`
+      );
+      emit("published");
       handleDialogClose();
     } else if (successCount > 0) {
-      ElMessage.warning(`部分发布成功：${successCount}/${results.length} 个平台成功`);
-      emit('published');
+      ElMessage.warning(
+        `部分发布成功：${successCount}/${results.length} 个平台成功`
+      );
+      emit("published");
       handleDialogClose();
     } else {
-      ElMessage.error('发布失败，请检查网络连接和账号状态');
+      ElMessage.error("发布失败，请检查网络连接和账号状态");
     }
-
   } catch (error) {
-    console.error('发布失败:', error);
-    ElMessage.error('发布失败：' + error.message);
+    console.error("发布失败:", error);
+    ElMessage.error("发布失败：" + error.message);
   } finally {
     publishing.value = false;
   }
@@ -640,26 +674,28 @@ const publishContent = async (mode = 'browser') => {
 
 const getPlatformType = (platformName) => {
   const typeMap = {
-    '小红书': 1,
-    '视频号': 2,
-    '微信视频号': 2,
-    '抖音': 3,
-    '快手': 4
+    小红书: 1,
+    视频号: 2,
+    微信视频号: 2,
+    抖音: 3,
+    快手: 4,
   };
   return typeMap[platformName] || 2;
 };
 
 const getPlatformSpecificSettings = (platformType) => {
   const settings = {};
-  
-  if (platformType === 3) { // 抖音
+
+  if (platformType === 3) {
+    // 抖音
     settings.statement = publishForm.douyin.statement;
     settings.location = publishForm.douyin.location;
-  } else if (platformType === 2) { // 视频号
+  } else if (platformType === 2) {
+    // 视频号
     settings.original = publishForm.wechat.original;
     settings.location = publishForm.wechat.location;
   }
-  
+
   return settings;
 };
 
@@ -668,52 +704,51 @@ const extractTags = (description) => {
   const tagRegex = /#([^#\s]+)/g;
   const tags = [];
   let match;
-  
+
   while ((match = tagRegex.exec(description)) !== null) {
     tags.push(match[1]);
   }
-  
+
   return tags;
 };
 
 const dialogVisible = computed({
   get: () => props.visible,
-  set: (value) => emit('update:visible', value)  // 移除不必要的判断
+  set: (value) => emit("update:visible", value), // 移除不必要的判断
 });
 
 // 2. 修复 resetForm 方法
 const resetForm = () => {
-  currentStep.value = 'video';
-  selectedVideos.value.length = 0;  // 清空数组而不是重新赋值
+  currentStep.value = "video";
+  selectedVideos.value.length = 0; // 清空数组而不是重新赋值
   selectedAccounts.value.length = 0;
-  
+
   // 重置表单
-  publishForm.title = '';
-  publishForm.description = '';
+  publishForm.title = "";
+  publishForm.description = "";
   publishForm.scheduleEnabled = false;
-  publishForm.scheduleTime = '';
-  publishForm.douyin.statement = '无需声明';
-  publishForm.douyin.location = '';
+  publishForm.scheduleTime = "";
+  publishForm.douyin.statement = "无需声明";
+  publishForm.douyin.location = "";
   publishForm.wechat.original = false;
-  publishForm.wechat.location = '';
-  
+  publishForm.wechat.location = "";
+
   publishing.value = false;
 };
 
 // 3. 修复 handleDialogClose 方法
 const handleDialogClose = () => {
   if (publishing.value) {
-    ElMessage.warning('发布中，请稍候...');
+    ElMessage.warning("发布中，请稍候...");
     return;
   }
-  
+
   // 先重置表单，再关闭对话框
   resetForm();
   nextTick(() => {
-    emit('update:visible', false);
+    emit("update:visible", false);
   });
 };
-
 </script>
 
 <style lang="scss" scoped>
@@ -736,9 +771,12 @@ $text-muted: #94a3b8;
 
 $border-light: #e2e8f0;
 $shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-$shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+  0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  0 2px 4px -1px rgba(0, 0, 0, 0.06);
 
 $radius-sm: 6px;
 $radius-md: 8px;
@@ -763,11 +801,11 @@ $space-xl: 32px;
       border-radius: $radius-xl $radius-xl 0 0;
       padding: 16px 24px;
     }
-    
+
     .el-dialog__body {
       padding: 20px 24px;
     }
-    
+
     .el-dialog__footer {
       padding: 16px 24px;
     }
