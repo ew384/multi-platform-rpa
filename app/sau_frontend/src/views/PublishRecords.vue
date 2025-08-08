@@ -120,7 +120,6 @@
             },
           ]"
         >
-
           <!-- 批量删除复选框 -->
           <div v-if="batchDeleteMode" class="batch-checkbox">
             <el-checkbox
@@ -134,7 +133,12 @@
             <!-- 视频预览区域 - 使用封面截图或视频 -->
             <div class="video-preview">
               <VideoPreview
-                :videos="formatVideosForPreview(record.video_files, record.cover_screenshots)"
+                :videos="
+                  formatVideosForPreview(
+                    record.video_files,
+                    record.cover_screenshots
+                  )
+                "
                 :cover-screenshots="record.cover_screenshots"
                 :mode="'cover'"
                 class="record-video-preview"
@@ -231,7 +235,7 @@ import { publishApi } from "@/api/publish";
 import { ElMessage, ElMessageBox } from "element-plus";
 import PublishDetailSidebar from "./components/PublishDetailSidebar.vue";
 import NewPublishDialog from "./components/NewPublishDialog.vue";
-
+import VideoPreview from "./components/video/VideoPreview.vue";
 // 响应式数据
 const loading = ref(false);
 const exporting = ref(false);
@@ -260,22 +264,22 @@ function formatVideosForPreview(videoFiles) {
     return [];
   }
 
-  const result = videoFiles.map(function(filename) {
-    const coverName = filename.replace(/\.[^/.]+$/, '_cover.jpg');
+  const result = videoFiles.map(function (filename) {
+    const coverName = filename.replace(/\.[^/.]+$/, "_cover.jpg");
     const encodedCoverName = encodeURIComponent(coverName);
 
     return {
       name: filename,
-      url: `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=covers/${encodedCoverName}`,
-      path: filename
+      url: `${
+        import.meta.env.VITE_API_BASE_URL
+      }/getFile?filename=covers/${encodedCoverName}`,
+      path: filename,
     };
   });
 
   console.log("📹 格式化视频预览数据:", result);
   return result;
 }
-
-
 
 // 计算属性
 const filteredRecords = computed(() => {
@@ -301,12 +305,12 @@ const loadRecords = async () => {
 
     if (data.code === 200) {
       records.value = data.data || [];
-      console.log('📊 发布记录数据:', records.value);
+      console.log("📊 发布记录数据:", records.value);
       records.value.forEach((record, index) => {
         console.log(`记录 ${index + 1}:`, {
           title: record.title,
           cover_screenshots: record.cover_screenshots,
-          video_files: record.video_files
+          video_files: record.video_files,
         });
       });
       pagination.total = data.total || records.value.length;
@@ -765,17 +769,24 @@ $radius-xl: 16px;
     }
 
     .records-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      @media (max-width: 1200px) {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      }
 
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+      }
       .record-card {
         background: $bg-white;
         border: 1px solid $border-light;
         border-radius: $radius-lg;
-        padding: 24px;
+        padding: 16px; // 减少内边距
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
+        height: fit-content;
 
         &:hover {
           border-color: $primary;
@@ -806,16 +817,11 @@ $radius-xl: 16px;
         }
 
         .video-preview {
-          width: 100px;
-          height: 60px;
-          background: linear-gradient(135deg, $primary 0%, $primary-light 100%);
+          width: 90px; // 调整宽度
+          height: 120px; // 调整高度，保持4:3比例
           border-radius: $radius-md;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          color: white;
           flex-shrink: 0;
+          overflow: hidden; // 添加这行，确保图片不溢出
 
           .video-icon {
             font-size: 20px;
@@ -831,6 +837,7 @@ $radius-xl: 16px;
 
         .record-info {
           flex: 1;
+          min-width: 0; // 防止内容溢出
 
           .record-header {
             display: flex;

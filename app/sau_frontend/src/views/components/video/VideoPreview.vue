@@ -14,8 +14,8 @@
       </div>
 
       <!-- 封面模式 -->
-      <div v-if="!isPlaying && hasCover" class="cover-mode" @click="startPlay">
-        <img :src="currentVideo?.url" class="cover-image" />
+      <div v-if="!isPlaying && hasCover" class="cover-mode">
+        <img :src="coverUrl" class="cover-image" />
         <div class="play-overlay">
           <el-icon class="play-icon"><VideoPlay /></el-icon>
         </div>
@@ -91,17 +91,11 @@ const currentVideo = computed(() => {
   return props.videos[currentVideoIndex.value] || null;
 });
 const hasCover = computed(() => {
-  return (
-    props.coverScreenshots && props.coverScreenshots[currentVideoIndex.value]
-  );
+  return currentVideo.value && currentVideo.value.url;
 });
 
 const coverUrl = computed(() => {
-  if (!hasCover.value) return null;
-  const coverPath = props.coverScreenshots[currentVideoIndex.value];
-  return `${
-    import.meta.env.VITE_API_BASE_URL
-  }/getFile?filename=${encodeURIComponent(coverPath)}`;
+  return currentVideo.value?.url || null;
 });
 // 监听器
 watch(
@@ -374,11 +368,10 @@ $space-md: 16px;
 }
 .cover-mode {
   position: relative;
-  width: 70%;
-  max-width: 180px;
-  aspect-ratio: 9 / 16;
-  margin: 0 auto;
-  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 3 / 4; // 宽3高4的比例
+  cursor: default; // 改为默认光标，不显示pointer
   border-radius: 8px;
   overflow: hidden;
 
@@ -400,7 +393,7 @@ $space-md: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    // 移除transition和hover效果，保持静态
 
     .play-icon {
       color: white;
