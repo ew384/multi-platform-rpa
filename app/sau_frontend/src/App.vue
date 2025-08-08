@@ -2,15 +2,21 @@
   <div id="app">
     <div class="app-layout">
       <!-- 侧边栏 -->
-      <div :class="['sidebar', { collapsed: isCollapsed }]">
-        <!-- Logo区域 -->
+      <div 
+        :class="['sidebar', { collapsed: isCollapsed }]"
+      >
+        <!-- 用户信息区域 -->
         <div class="sidebar-header">
-          <div class="logo">
-            <div class="logo-icon">
-              <el-icon><VideoCamera /></el-icon>
+          <div class="user-info">
+            <div class="user-avatar">
+              <el-avatar :size="40" src="/vite.svg" />
+              <div class="online-status"></div>
             </div>
             <transition name="fade">
-              <span v-show="!isCollapsed" class="logo-text">Agent运营平台</span>
+              <div v-show="!isCollapsed" class="user-details">
+                <div class="user-name">endian</div>
+                <div class="user-role">管理员</div>
+              </div>
             </transition>
           </div>
         </div>
@@ -35,38 +41,26 @@
           </nav>
         </div>
 
-        <!-- 折叠按钮 -->
-        <div class="sidebar-footer">
-          <button @click="toggleSidebar" class="collapse-btn">
-            <el-icon>
-              <component :is="isCollapsed ? 'Expand' : 'Fold'" />
-            </el-icon>
-          </button>
+        <!-- 拖拽调整区域 -->
+        <div 
+          class="resize-handle"
+          @mouseenter="showResizeHandle = true"
+          @mouseleave="showResizeHandle = false"
+          @mousedown="startResize"
+          :class="{ 'show-handle': showResizeHandle || isDragging }"
+        >
+          <div class="resize-indicator">
+            <div class="resize-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- 主内容区 -->
-      <div class="main-content">
-        <!-- 顶部栏 -->
-        <header class="top-header">
-          <div class="header-left">
-            <div class="page-title">{{ currentPageTitle }}</div>
-          </div>
-          <div class="header-right">
-            <div class="header-actions">
-              <el-button type="text" class="action-btn">
-                <el-icon><Bell /></el-icon>
-              </el-button>
-              <el-button type="text" class="action-btn">
-                <el-icon><Setting /></el-icon>
-              </el-button>
-              <div class="user-avatar">
-                <el-avatar :size="32" src="/vite.svg" />
-              </div>
-            </div>
-          </div>
-        </header>
-
+      <div class="main-content" :style="{ marginLeft: (isCollapsed ? 64 : 240) + 'px' }">
         <!-- 页面内容 -->
         <main class="page-content">
           <router-view />
@@ -77,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { 
   VideoCamera, HomeFilled, Upload, User, 
@@ -87,44 +81,90 @@ import {
 
 const route = useRoute()
 const isCollapsed = ref(false)
+const showResizeHandle = ref(false)
+const isDragging = ref(false)
+const dragStartX = ref(0)
+
+// 固定宽度值
+const EXPANDED_WIDTH = 240
+const COLLAPSED_WIDTH = 64
+
+// 计算当前宽度
+const sidebarWidth = computed(() => {
+  return isCollapsed.value ? COLLAPSED_WIDTH : EXPANDED_WIDTH
+})
 
 // 菜单项配置
 const menuItems = [
   { path: '/', name: '首页', icon: 'HomeFilled' },
   { path: '/publish-records', name: '发布', icon: 'Upload' },
   { path: '/account-management', name: '账号', icon: 'User' },
+  { path: '/data', name: '数据', icon: 'DataAnalysis' },
+  { path: '/team', name: '团队', icon: 'User' },
   { path: '/material-management', name: '素材', icon: 'VideoCamera' },
   { path: '/website', name: '网站', icon: 'Monitor' },
-  { path: '/data', name: '数据', icon: 'DataAnalysis' }
+  { path: '/private-evaluation', name: '私信管理', icon: 'DataAnalysis', badge: 'NEW' }
 ]
-
-// 当前页面标题
-const currentPageTitle = computed(() => {
-  const currentItem = menuItems.find(item => item.path === route.path)
-  return currentItem ? currentItem.name : 'Agent运营平台'
-})
 
 // 判断路由是否激活
 const isActiveRoute = (path) => {
   return route.path === path
 }
 
-// 切换侧边栏
-const toggleSidebar = () => {
-  isCollapsed.value = !isCollapsed.value
+// 拖拽触发折叠/展开
+const startResize = (e) => {
+  isDragging.value = true
+  dragStartX.value = e.clientX
+  document.addEventListener('mousemove', handleDrag)
+  document.addEventListener('mouseup', stopDrag)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
 }
+
+const handleDrag = (e) => {
+  if (!isDragging.value) return
+  
+  const deltaX = e.clientX - dragStartX.value
+  const threshold = 30 // 拖拽阈值，超过30px才触发状态切换
+  
+  // 向右拖拽且当前是折叠状态 -> 展开
+  if (deltaX > threshold && isCollapsed.value) {
+    isCollapsed.value = false
+    stopDrag()
+  }
+  // 向左拖拽且当前是展开状态 -> 折叠
+  else if (deltaX < -threshold && !isCollapsed.value) {
+    isCollapsed.value = true
+    stopDrag()
+  }
+}
+
+const stopDrag = () => {
+  isDragging.value = false
+  document.removeEventListener('mousemove', handleDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+// 清理事件监听器
+onUnmounted(() => {
+  if (isDragging.value) {
+    stopDrag()
+  }
+})
 </script>
 
 <style lang="scss" scoped>
-$primary: #6366f1;       // 现代化深紫色
-$bg-dark: #1F2937;       // 深色侧边栏
-$bg-light: #FFFFFF;      // 纯白背景
-$bg-white: #FFFFFF;      // 白色
-$text-primary: #0f172a;  // 深色文字
-$text-secondary: #475569; // 次要文字
-$text-muted: #94A3B8;    // 弱化文字
-$text-white: #FFFFFF;    // 白色文字
-$border-light: #E2E8F0;  // 浅色边框
+$primary: #6366f1;
+$bg-dark: #1F2937;
+$bg-light: #f8fafc;
+$bg-white: #FFFFFF;
+$text-primary: #0f172a;
+$text-secondary: #475569;
+$text-muted: #94A3B8;
+$text-white: #FFFFFF;
+$border-light: #E2E8F0;
 $shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 $shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 $shadow-hover: 0 8px 25px -8px rgba(99, 102, 241, 0.25);
@@ -136,61 +176,81 @@ $space-lg: 24px;
 
 #app {
   min-height: 100vh;
-  background-color: $bg-white; // 确保是纯白背景
+  background-color: $bg-white;
 }
 
 .app-layout {
-  display: flex;
   min-height: 100vh;
-  background-color: $bg-white; // 纯白背景
+  background-color: $bg-light;
 }
 
 // 侧边栏样式
 .sidebar {
   width: 240px;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: $bg-white;
   color: $text-primary;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  z-index: 100;
-  box-shadow: none;        // 🔧 去掉阴影
-  border-right: none;      // 🔧 去掉右边框
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 1000;
+  border-right: 1px solid $border-light;
+  display: flex;
+  flex-direction: column;
+  min-width: 64px;
+  max-width: 300px;
 
   &.collapsed {
     width: 64px;
   }
 
   .sidebar-header {
-    padding: $space-lg $space-md;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.3); // 🔧 使用更淡的边框
+    padding: $space-lg;
+    border-bottom: 1px solid $border-light;
+    flex-shrink: 0;
 
-    .logo {
+    .user-info {
       display: flex;
       align-items: center;
-      gap: $space-sm;
+      gap: $space-md;
 
-      .logo-icon {
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, $primary 0%, #8B9EE8 100%);
-        border-radius: $radius-md;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      .user-avatar {
+        position: relative;
         flex-shrink: 0;
-        transition: all 0.2s ease;  // 🔧 添加过渡效果
 
-        .el-icon {
-          font-size: 18px;
-          color: white;
+        .online-status {
+          position: absolute;
+          bottom: 2px;
+          right: 2px;
+          width: 12px;
+          height: 12px;
+          background: #10b981;
+          border: 2px solid $bg-white;
+          border-radius: 50%;
         }
       }
 
-      .logo-text {
-        font-size: 16px;
-        font-weight: 600;
-        color: $text-primary;
-        white-space: nowrap;
+      .user-details {
+        min-width: 0;
+        flex: 1;
+
+        .user-name {
+          font-size: 16px;
+          font-weight: 600;
+          color: $text-primary;
+          line-height: 1.2;
+          margin-bottom: 2px;
+        }
+
+        .user-role {
+          font-size: 12px;
+          color: $text-muted;
+          background: #f1f5f9;
+          padding: 2px 8px;
+          border-radius: 12px;
+          display: inline-block;
+        }
       }
     }
   }
@@ -198,11 +258,13 @@ $space-lg: 24px;
   .sidebar-menu {
     flex: 1;
     padding: $space-md 0;
+    overflow-y: auto;
 
     .nav-menu {
       display: flex;
       flex-direction: column;
       gap: 4px;
+      padding: 0 $space-md;
 
       .nav-item {
         display: flex;
@@ -210,27 +272,25 @@ $space-lg: 24px;
         padding: 12px $space-md;
         color: $text-secondary;
         text-decoration: none;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); // 🔧 改进过渡效果
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
-        margin: 0 $space-sm;
         border-radius: $radius-md;
 
         &:hover {
-          background-color: rgba(99, 102, 241, 0.08); // 🔧 使用新的紫色
+          background-color: rgba(99, 102, 241, 0.08);
           color: $primary;
-          transform: translateX(2px) translateY(-1px);   // 🔧 添加Y轴悬浮
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); // 🔧 3D淡紫色阴影
+          transform: translateX(2px);
         }
 
         &.active {
           background: linear-gradient(135deg, $primary 0%, #8B9EE8 100%);
           color: white;
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); // 🔧 增强激活状态阴影
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 
           &::before {
             content: '';
             position: absolute;
-            left: -8px;
+            left: -16px;
             top: 50%;
             transform: translateY(-50%);
             width: 4px;
@@ -254,7 +314,7 @@ $space-lg: 24px;
         }
 
         .nav-text {
-          margin-left: $space-sm;
+          margin-left: $space-md;
           font-size: 14px;
           font-weight: 500;
           white-space: nowrap;
@@ -262,119 +322,136 @@ $space-lg: 24px;
 
         .nav-badge {
           margin-left: auto;
-          background-color: #EF4444;
+          background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
           color: white;
-          font-size: 12px;
+          font-size: 10px;
+          font-weight: 600;
           padding: 2px 6px;
           border-radius: 10px;
           min-width: 18px;
           text-align: center;
+          box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
         }
       }
     }
   }
 
-  .sidebar-footer {
-    padding: $space-md;
-    border-top: 1px solid rgba(226, 232, 240, 0.3); // 🔧 使用更淡的边框
+  // 折叠状态下的特殊样式
+  &.collapsed {
+    .sidebar-menu {
+      .nav-menu {
+        padding: 0 $space-sm;
 
-    .collapse-btn {
-      width: 100%;
-      height: 40px;
-      background: rgba(99, 102, 241, 0.08); // 🔧 使用新的紫色
-      border: none;
-      border-radius: $radius-md;
-      color: $text-secondary;
-      cursor: pointer;
+        .nav-item {
+          padding: 12px 0;
+          justify-content: center;
+
+          .nav-icon {
+            margin: 0;
+          }
+
+          .nav-text,
+          .nav-badge {
+            display: none;
+          }
+
+          &:hover {
+            transform: translateX(0);
+          }
+
+          &.active::before {
+            left: -8px;
+          }
+        }
+      }
+    }
+
+    .sidebar-header {
+      .user-info {
+        justify-content: center;
+
+        .user-avatar {
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  // 拖拽调整区域
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    right: -4px;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+
+    &:hover,
+    &.show-handle {
+      .resize-indicator {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .resize-indicator {
+      width: 4px;
+      height: 60px;
+      background: rgba(99, 102, 241, 0.1);
+      border-radius: 2px;
+      position: relative;
+      opacity: 0;
+      transform: translateX(4px);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border: 1px solid rgba(99, 102, 241, 0.2);
 
       &:hover {
-        background-color: rgba(99, 102, 241, 0.15);
-        color: $primary;
-        transform: translateY(-1px);                    // 🔧 悬浮效果
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); // 🔧 3D淡紫色阴影
+        background: rgba(99, 102, 241, 0.2);
+        border-color: rgba(99, 102, 241, 0.3);
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
       }
 
-      &:active {
-        transform: translateY(0);
-      }
+      .resize-dots {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
 
-      .el-icon {
-        font-size: 16px;
+        span {
+          width: 2px;
+          height: 2px;
+          background: rgba(99, 102, 241, 0.6);
+          border-radius: 50%;
+          display: block;
+        }
       }
+    }
+
+    &:active .resize-indicator {
+      background: rgba(99, 102, 241, 0.3);
+      border-color: rgba(99, 102, 241, 0.4);
     }
   }
 }
 
 // 主内容区样式
 .main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   min-height: 100vh;
-}
-
-.top-header {
-  height: 64px;
-  background-color: $bg-white;
-  border-bottom: 1px solid $border-light;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 $space-lg;
-  box-shadow: $shadow-md;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-
-  .header-left {
-    .page-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: $text-primary;
-    }
-  }
-
-  .header-right {
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: $space-sm;
-
-      .action-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: $radius-md;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: $text-secondary;
-        transition: all 0.3s ease;
-
-        &:hover {
-          background-color: $bg-light;
-          color: $primary;
-        }
-
-        .el-icon {
-          font-size: 18px;
-        }
-      }
-
-      .user-avatar {
-        margin-left: $space-sm;
-      }
-    }
-  }
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .page-content {
-  flex: 1;
   padding: $space-lg;
   background-color: $bg-light;
+  min-height: 100vh;
 }
 
 // 动画效果
@@ -389,27 +466,13 @@ $space-lg: 24px;
 // 响应式设计
 @media (max-width: 768px) {
   .sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100vh;
-    z-index: 1000;
-
     &.collapsed {
       transform: translateX(-100%);
     }
   }
 
   .main-content {
-    margin-left: 0;
-  }
-
-  .top-header {
-    padding: 0 $space-md;
-
-    .page-title {
-      font-size: 18px;
-    }
+    margin-left: 0 !important;
   }
 
   .page-content {
