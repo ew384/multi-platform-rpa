@@ -51,18 +51,14 @@
                   >
                     <!-- 视频预览 -->
                     <div class="video-preview">
-                      <el-icon class="video-icon"><VideoPlay /></el-icon>
-                      <div class="video-overlay">
-                        <div class="overlay-content">
-                          <el-button
-                            size="small"
-                            @click.stop="previewRecentVideo(video)"
-                          >
-                            <el-icon><View /></el-icon>
-                            预览
-                          </el-button>
-                        </div>
-                      </div>
+                      <VideoPreview
+                        :videos="[formatVideoForPreview(video, 'recent')]"
+                        mode="record"
+                        size="small"
+                        :clickable="true"
+                        @video-click="previewRecentVideo"
+                      />
+
                       <!-- 选中标记 -->
                       <div
                         v-if="selectedRecentIds.includes(video.id)"
@@ -129,18 +125,14 @@
                   >
                     <!-- 视频预览 -->
                     <div class="video-preview">
-                      <el-icon class="video-icon"><VideoPlay /></el-icon>
-                      <div class="video-overlay">
-                        <div class="overlay-content">
-                          <el-button
-                            size="small"
-                            @click.stop="previewLibraryMaterial(material)"
-                          >
-                            <el-icon><View /></el-icon>
-                            预览
-                          </el-button>
-                        </div>
-                      </div>
+                      <VideoPreview
+                        :videos="[formatVideoForPreview(material, 'library')]"
+                        mode="record"
+                        size="small"
+                        :clickable="true"
+                        @video-click="previewLibraryMaterial"
+                      />
+
                       <!-- 选中标记 -->
                       <div
                         v-if="selectedLibraryIds.includes(material.id)"
@@ -158,7 +150,9 @@
                         {{ material.filename }}
                       </div>
                       <div class="video-meta">
-                        <span class="video-size">{{ material.filesize }} MB</span>
+                        <span class="video-size"
+                          >{{ material.filesize }} MB</span
+                        >
                         <span class="video-date">{{
                           formatDate(material.upload_time)
                         }}</span>
@@ -193,30 +187,25 @@
 
 <script setup>
 // 在 MaterialSelector.vue 的 <script setup> 部分替换现有代码
-
-import { ref, computed, watch } from 'vue';
-import {
-  Loading,
-  VideoPlay,
-  View,
-  Check
-} from '@element-plus/icons-vue';
-import { ElMessage } from 'element-plus';
-import { nextTick } from 'vue';
+import VideoPreview from "./video/VideoPreview.vue";
+import { ref, computed, watch } from "vue";
+import { Loading, VideoPlay, View, Check } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import { nextTick } from "vue";
 
 // Props
 const props = defineProps({
   visible: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 
 // Emits
-const emit = defineEmits(['update:visible', 'selected']);
+const emit = defineEmits(["update:visible", "selected"]);
 
 // 🔍 调试：组件初始化日志
-console.log('🔍 MaterialSelector 组件初始化');
+console.log("🔍 MaterialSelector 组件初始化");
 
 // API配置
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
@@ -225,59 +214,85 @@ const authHeaders = computed(() => ({
 }));
 
 const loading = ref(false);
-const activeTab = ref('recent');
+const activeTab = ref("recent");
 const recentVideos = ref([]);
 const libraryMaterials = ref([]);
 const selectedRecentIds = ref([]);
 const selectedLibraryIds = ref([]);
 
 // 🔍 调试：监控 props.visible 的变化
-watch(() => props.visible, (newValue, oldValue) => {
-  console.log('📊 MaterialSelector props.visible 变化:', {
-    old: oldValue,
-    new: newValue,
-    timestamp: new Date().toISOString(),
-    stack: new Error().stack.split('\n').slice(0, 5) // 只显示前5行调用栈
-  });
-}, { immediate: true });
+watch(
+  () => props.visible,
+  (newValue, oldValue) => {
+    console.log("📊 MaterialSelector props.visible 变化:", {
+      old: oldValue,
+      new: newValue,
+      timestamp: new Date().toISOString(),
+      stack: new Error().stack.split("\n").slice(0, 5), // 只显示前5行调用栈
+    });
+  },
+  { immediate: true }
+);
 
 // 🔍 调试：使用标志位防止循环的 dialogVisible
 let isUpdatingDialogVisible = false;
+const formatVideoForPreview = (video, source) => {
+  let videoUrl;
 
+  if (source === "recent") {
+    videoUrl = `${apiBaseUrl}/getFile?filename=${video.file_path}`;
+  } else {
+    // 素材库视频
+    const filename = video.file_path
+      ? video.file_path.split("/").pop()
+      : video.filename;
+    videoUrl = `${apiBaseUrl}/getFile?filename=${filename}`;
+  }
+
+  return {
+    name: video.filename,
+    path: video.file_path || video.filename,
+    url: videoUrl,
+    size: (video.filesize || 0) * 1024 * 1024,
+    type: "video/mp4",
+    id: `${source}_${video.id}`,
+    source: source,
+  };
+};
 const dialogVisible = computed({
   get: () => {
-    console.log('📥 MaterialSelector dialogVisible get:', props.visible);
+    console.log("📥 MaterialSelector dialogVisible get:", props.visible);
     return props.visible;
   },
   set: (value) => {
-    console.log('📤 MaterialSelector dialogVisible set:', {
+    console.log("📤 MaterialSelector dialogVisible set:", {
       current: props.visible,
       new: value,
       isUpdating: isUpdatingDialogVisible,
       timestamp: new Date().toISOString(),
-      stack: new Error().stack.split('\n').slice(0, 3) // 只显示前3行调用栈
+      stack: new Error().stack.split("\n").slice(0, 3), // 只显示前3行调用栈
     });
-    
+
     // 防止循环更新
     if (isUpdatingDialogVisible) {
-      console.log('⚠️ MaterialSelector 跳过设置，正在更新中');
+      console.log("⚠️ MaterialSelector 跳过设置，正在更新中");
       return;
     }
-    
+
     if (value !== props.visible) {
-      console.log('✅ MaterialSelector 准备发射 update:visible:', value);
+      console.log("✅ MaterialSelector 准备发射 update:visible:", value);
       isUpdatingDialogVisible = true;
-      emit('update:visible', value);
-      
+      emit("update:visible", value);
+
       // 在下一个 tick 重置标志位
       nextTick(() => {
         isUpdatingDialogVisible = false;
-        console.log('🔄 MaterialSelector 重置更新标志位');
+        console.log("🔄 MaterialSelector 重置更新标志位");
       });
     } else {
-      console.log('⚠️ MaterialSelector 跳过发射，值相同');
+      console.log("⚠️ MaterialSelector 跳过发射，值相同");
     }
-  }
+  },
 });
 
 // 计算属性
@@ -286,16 +301,16 @@ const getTotalSelectedCount = () => {
 };
 
 const loadAllVideoSources = async () => {
-  console.log('🚀 MaterialSelector 开始加载视频源');
+  console.log("🚀 MaterialSelector 开始加载视频源");
   loading.value = true;
   try {
     const [recentResponse, libraryResponse] = await Promise.all([
       fetch(`${apiBaseUrl}/getRecentUploads`, {
-        headers: authHeaders.value
-      }).then(res => res.json()),
+        headers: authHeaders.value,
+      }).then((res) => res.json()),
       fetch(`${apiBaseUrl}/getFiles`, {
-        headers: authHeaders.value
-      }).then(res => res.json())
+        headers: authHeaders.value,
+      }).then((res) => res.json()),
     ]);
 
     // 使用 nextTick 确保 DOM 更新完成
@@ -303,57 +318,80 @@ const loadAllVideoSources = async () => {
 
     if (recentResponse.code === 200) {
       recentVideos.value = [...(recentResponse.data || [])];
-      console.log('✅ MaterialSelector 最近上传的视频:', recentVideos.value.length);
+      console.log(
+        "✅ MaterialSelector 最近上传的视频:",
+        recentVideos.value.length
+      );
     } else {
-      console.error('❌ MaterialSelector 获取最近上传视频失败:', recentResponse.msg);
+      console.error(
+        "❌ MaterialSelector 获取最近上传视频失败:",
+        recentResponse.msg
+      );
       recentVideos.value = [];
     }
 
     if (libraryResponse.code === 200) {
-      const filteredMaterials = (libraryResponse.data || []).filter(material =>
-        isVideoFile(material.filename)
+      const filteredMaterials = (libraryResponse.data || []).filter(
+        (material) => isVideoFile(material.filename)
       );
       libraryMaterials.value = [...filteredMaterials];
-      console.log('✅ MaterialSelector 素材库视频:', libraryMaterials.value.length);
+      console.log(
+        "✅ MaterialSelector 素材库视频:",
+        libraryMaterials.value.length
+      );
     } else {
-      console.error('❌ MaterialSelector 获取素材库视频失败:', libraryResponse.msg);
+      console.error(
+        "❌ MaterialSelector 获取素材库视频失败:",
+        libraryResponse.msg
+      );
       libraryMaterials.value = [];
     }
-
   } catch (error) {
-    console.error('❌ MaterialSelector 获取视频列表出错:', error);
-    ElMessage.error('获取视频列表失败');
+    console.error("❌ MaterialSelector 获取视频列表出错:", error);
+    ElMessage.error("获取视频列表失败");
     recentVideos.value = [];
     libraryMaterials.value = [];
   } finally {
     loading.value = false;
-    console.log('🏁 MaterialSelector 视频源加载完成');
+    console.log("🏁 MaterialSelector 视频源加载完成");
   }
 };
 
 // 🔍 调试：监控 visible 变化的 watch
-watch(() => props.visible, async (newVisible, oldVisible) => {
-  console.log('🎬 MaterialSelector visible watch 触发:', {
-    old: oldVisible,
-    new: newVisible,
-    timestamp: new Date().toISOString()
-  });
-  
-  if (newVisible) {
-    console.log('👁️ MaterialSelector 对话框显示，开始初始化');
-    clearAllSelections();
-    await nextTick();
-    await loadAllVideoSources();
-  } else {
-    console.log('👁️‍🗨️ MaterialSelector 对话框隐藏');
-  }
-}, { immediate: false });
+watch(
+  () => props.visible,
+  async (newVisible, oldVisible) => {
+    console.log("🎬 MaterialSelector visible watch 触发:", {
+      old: oldVisible,
+      new: newVisible,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (newVisible) {
+      console.log("👁️ MaterialSelector 对话框显示，开始初始化");
+      clearAllSelections();
+      await nextTick();
+      await loadAllVideoSources();
+    } else {
+      console.log("👁️‍🗨️ MaterialSelector 对话框隐藏");
+    }
+  },
+  { immediate: false }
+);
 
 const isVideoFile = (filename) => {
   const videoExtensions = [
-    '.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.webm', '.m4v', '.3gp'
+    ".mp4",
+    ".avi",
+    ".mov",
+    ".mkv",
+    ".flv",
+    ".wmv",
+    ".webm",
+    ".m4v",
+    ".3gp",
   ];
-  return videoExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+  return videoExtensions.some((ext) => filename.toLowerCase().endsWith(ext));
 };
 
 const toggleRecentSelection = (videoId) => {
@@ -383,86 +421,87 @@ const clearLibrarySelection = () => {
 };
 
 const clearAllSelections = () => {
-  console.log('🧹 MaterialSelector 清空所有选择');
+  console.log("🧹 MaterialSelector 清空所有选择");
   selectedRecentIds.value = [];
   selectedLibraryIds.value = [];
 };
 
-const previewRecentVideo = (video) => {
-  const previewUrl = `${apiBaseUrl}/getFile?filename=${video.file_path}`;
-  window.open(previewUrl, '_blank');
+const previewRecentVideo = (videoData) => {
+  // videoData 现在是格式化后的视频对象
+  window.open(videoData.url, "_blank");
 };
 
-const previewLibraryMaterial = (material) => {
-  const filename = material.file_path ? material.file_path.split('/').pop() : material.filename;
-  const previewUrl = `${apiBaseUrl}/getFile?filename=${filename}`;
-  window.open(previewUrl, '_blank');
+const previewLibraryMaterial = (videoData) => {
+  // videoData 现在是格式化后的视频对象
+  window.open(videoData.url, "_blank");
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return '-';
+  if (!dateString) return "-";
   const date = new Date(dateString);
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+  return date.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
 };
 
 const handleCancel = () => {
-  console.log('❌ MaterialSelector 用户点击取消按钮');
+  console.log("❌ MaterialSelector 用户点击取消按钮");
   clearAllSelections();
   // 🔍 直接设置为 false，不触发计算属性
-  emit('update:visible', false);
+  emit("update:visible", false);
 };
 
 const handleConfirm = () => {
-  console.log('✅ MaterialSelector 用户点击确认按钮');
+  console.log("✅ MaterialSelector 用户点击确认按钮");
   const selectedVideos = [];
 
   // 处理最近上传的视频
-  const selectedRecentVideos = recentVideos.value.filter(video =>
+  const selectedRecentVideos = recentVideos.value.filter((video) =>
     selectedRecentIds.value.includes(video.id)
   );
 
-  selectedRecentVideos.forEach(video => {
+  selectedRecentVideos.forEach((video) => {
     selectedVideos.push({
       name: video.filename,
       path: video.file_path,
       url: `${apiBaseUrl}/getFile?filename=${video.file_path}`,
       size: (video.filesize || 0) * 1024 * 1024,
-      type: 'video/mp4',
+      type: "video/mp4",
       id: `recent_${video.id}`,
-      source: 'recent'
+      source: "recent",
     });
   });
 
   // 处理素材库视频
-  const selectedLibraryMaterials = libraryMaterials.value.filter(material =>
+  const selectedLibraryMaterials = libraryMaterials.value.filter((material) =>
     selectedLibraryIds.value.includes(material.id)
   );
 
-  selectedLibraryMaterials.forEach(material => {
-    const filename = material.file_path ? material.file_path.split('/').pop() : material.filename;
+  selectedLibraryMaterials.forEach((material) => {
+    const filename = material.file_path
+      ? material.file_path.split("/").pop()
+      : material.filename;
     selectedVideos.push({
       name: material.filename,
       path: material.file_path || material.filename,
       url: `${apiBaseUrl}/getFile?filename=${filename}`,
       size: (material.filesize || 0) * 1024 * 1024,
-      type: 'video/mp4',
+      type: "video/mp4",
       id: `library_${material.id}`,
-      source: 'library'
+      source: "library",
     });
   });
 
   if (selectedVideos.length === 0) {
-    ElMessage.warning('请选择至少一个视频');
+    ElMessage.warning("请选择至少一个视频");
     return;
   }
 
-  console.log('📤 MaterialSelector 发射选中的视频:', selectedVideos.length);
-  emit('selected', selectedVideos);
-  emit('update:visible', false);
+  console.log("📤 MaterialSelector 发射选中的视频:", selectedVideos.length);
+  emit("selected", selectedVideos);
+  emit("update:visible", false);
   clearAllSelections();
 };
 </script>
@@ -485,7 +524,8 @@ $text-muted: #94a3b8;
 
 $border-light: #e2e8f0;
 $shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  0 2px 4px -1px rgba(0, 0, 0, 0.06);
 
 $radius-sm: 4px;
 $radius-md: 8px;
@@ -607,28 +647,33 @@ $space-xl: 32px;
               align-items: center;
               justify-content: center;
               position: relative;
+              overflow: hidden; // 确保内容不会溢出
 
-              .video-icon {
-                font-size: 32px;
-                color: white;
-              }
+              // 确保 VideoPreview 组件填满容器
+              :deep(.video-preview) {
+                width: 100%;
+                height: 100%;
+                border: none;
+                border-radius: 0;
 
-              .video-overlay {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.7);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                opacity: 0;
-                transition: opacity 0.3s ease;
+                .video-container {
+                  width: 100%;
+                  height: 100%;
+                  border: none;
+                  border-radius: 0;
+                  background: transparent;
+                }
 
-                .overlay-content {
-                  display: flex;
-                  gap: $space-sm;
+                .video-player {
+                  width: 100%;
+                  height: 100%;
+                  border-radius: 0;
+
+                  video {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover; // 使用 cover 确保填满容器，保持等比例
+                  }
                 }
               }
 
@@ -645,7 +690,8 @@ $space-xl: 32px;
                 justify-content: center;
                 color: white;
                 font-size: 14px;
-                box-shadow: $shadow-md;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                z-index: 10;
               }
 
               .source-badge {
@@ -653,10 +699,11 @@ $space-xl: 32px;
                 top: 8px;
                 left: 8px;
                 padding: 2px 8px;
-                border-radius: $radius-sm;
+                border-radius: 4px;
                 font-size: 11px;
                 font-weight: 500;
                 color: white;
+                z-index: 10;
 
                 &.recent {
                   background-color: $warning;

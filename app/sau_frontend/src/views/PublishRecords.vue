@@ -133,14 +133,9 @@
             <!-- 视频预览区域 - 使用封面截图或视频 -->
             <div class="video-preview">
               <VideoPreview
-                :videos="
-                  formatVideosForPreview(
-                    record.video_files,
-                    record.cover_screenshots
-                  )
-                "
-                :cover-screenshots="record.cover_screenshots"
-                :mode="'cover'"
+                :videos="formatVideosForPreview(record.video_files)"
+                mode="record"
+                size="small"
                 class="record-video-preview"
               />
             </div>
@@ -265,14 +260,15 @@ function formatVideosForPreview(videoFiles) {
   }
 
   const result = videoFiles.map(function (filename) {
-    const coverName = filename.replace(/\.[^/.]+$/, "_cover.jpg");
-    const encodedCoverName = encodeURIComponent(coverName);
+    // 直接使用视频文件的URL，而不是封面截图
+    const encodedFilename = encodeURIComponent(filename);
 
     return {
       name: filename,
+      //coverurl: `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=covers/${encodedCoverName}`,
       url: `${
         import.meta.env.VITE_API_BASE_URL
-      }/getFile?filename=covers/${encodedCoverName}`,
+      }/getFile?filename=${encodedFilename}`,
       path: filename,
     };
   });
@@ -817,11 +813,33 @@ $radius-xl: 16px;
         }
 
         .video-preview {
-          width: 90px; // 调整宽度
-          height: 120px; // 调整高度，保持4:3比例
+          width: 90px;
+          height: 120px;
           border-radius: $radius-md;
           flex-shrink: 0;
-          overflow: hidden; // 添加这行，确保图片不溢出
+          overflow: hidden;
+          display: flex; // 添加 flex 布局
+          align-items: center; // 垂直居中
+          justify-content: center; // 水平居中
+          background: #f8fafc; // 添加背景色
+
+          // 确保 VideoPreview 组件在容器中居中
+          :deep(.video-preview) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+          }
+
+          // 确保视频容器也居中
+          :deep(.video-container) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+          }
 
           .video-icon {
             font-size: 20px;

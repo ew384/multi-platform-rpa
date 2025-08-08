@@ -84,20 +84,31 @@
                 class="video-item-compact"
               >
                 <div class="video-preview-compact">
-                  <el-icon class="video-icon-compact"><VideoPlay /></el-icon>
+                  <VideoPreview
+                    :videos="[video]"
+                    mode="record"
+                    size="small"
+                    :clickable="true"
+                    @video-click="previewVideo"
+                  />
+
+                  <!-- 操作按钮覆盖层 -->
                   <div class="video-overlay-compact">
-                    <el-button size="small" @click="previewVideo(video)">
-                      <el-icon><View /></el-icon>
-                    </el-button>
-                    <el-button
-                      size="small"
-                      type="danger"
-                      @click="removeVideo(index)"
-                    >
-                      <el-icon><Delete /></el-icon>
-                    </el-button>
+                    <div class="overlay-content">
+                      <el-button size="small" @click.stop="previewVideo(video)">
+                        <el-icon><View /></el-icon>
+                      </el-button>
+                      <el-button
+                        size="small"
+                        type="danger"
+                        @click.stop="removeVideo(index)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </div>
                   </div>
                 </div>
+
                 <div class="video-info-compact">
                   <div class="video-name-compact">{{ video.name }}</div>
                   <div class="video-size-compact">
@@ -132,6 +143,8 @@
             <h5>视频</h5>
             <VideoPreview
               :videos="selectedVideos"
+              mode="preview"
+              size="medium"
               :current-index="0"
               @video-loaded="handleVideoLoaded"
               @video-error="handleVideoError"
@@ -996,6 +1009,7 @@ $space-xl: 32px;
           border-radius: $radius-lg;
           overflow: hidden;
           transition: all 0.2s ease;
+          position: relative;
 
           &:hover {
             transform: translateY(-1px);
@@ -1008,15 +1022,35 @@ $space-xl: 32px;
 
           .video-preview-compact {
             height: 80px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
             position: relative;
+            overflow: hidden;
 
-            .video-icon-compact {
-              font-size: 24px;
-              color: white;
+            // 确保 VideoPreview 组件填满容器
+            :deep(.video-preview) {
+              width: 100%;
+              height: 100%;
+              border: none;
+              border-radius: 0;
+
+              .video-container {
+                width: 100%;
+                height: 100%;
+                border: none;
+                border-radius: 0;
+                background: transparent;
+              }
+
+              .video-player {
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+
+                video {
+                  width: 100%;
+                  height: 100%;
+                  object-fit: cover; // 填满容器，保持等比例
+                }
+              }
             }
 
             .video-overlay-compact {
@@ -1029,9 +1063,25 @@ $space-xl: 32px;
               display: flex;
               align-items: center;
               justify-content: center;
-              gap: 4px;
               opacity: 0;
               transition: opacity 0.2s ease;
+              z-index: 10;
+
+              .overlay-content {
+                display: flex;
+                gap: 4px;
+              }
+
+              .el-button {
+                --el-button-size: 24px;
+                width: 24px;
+                height: 24px;
+                padding: 0;
+
+                .el-icon {
+                  font-size: 12px;
+                }
+              }
             }
           }
 

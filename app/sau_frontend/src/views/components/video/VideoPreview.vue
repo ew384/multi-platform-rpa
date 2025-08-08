@@ -1,5 +1,5 @@
 <template>
-  <div class="video-preview">
+  <div class="video-preview" :class="[`mode-${mode}`, `size-${size}`]">
     <div class="video-container">
       <!-- 多视频切换标签 -->
       <div v-if="videos.length > 1" class="video-tabs">
@@ -13,27 +13,31 @@
         </div>
       </div>
 
-      <!-- 封面模式 -->
-      <div v-if="!isPlaying && hasCover" class="cover-mode">
-        <img :src="coverUrl" class="cover-image" />
-        <div class="play-overlay">
-          <el-icon class="play-icon"><VideoPlay /></el-icon>
-        </div>
-      </div>
-
-      <!-- 视频模式 -->
-      <div v-else class="video-player">
+      <!-- 视频播放器 -->
+      <div class="video-player" @click="handleVideoClick">
         <video
           ref="videoElement"
           :src="currentVideo?.url"
-          :poster="currentVideo?.cover"
-          controls
+          :controls="enableControls"
+          :muted="!enableControls"
           preload="metadata"
           @loadedmetadata="handleVideoLoaded"
           @error="handleVideoError"
+          @click.stop="handleVideoClick"
         >
           您的浏览器不支持视频播放
         </video>
+
+        <!-- 播放按钮覆盖层 (仅在预览模式显示) -->
+        <div
+          v-if="mode === 'preview' && !isPlaying"
+          class="play-overlay"
+          @click.stop="handlePlayClick"
+        >
+          <div class="play-button">
+            <el-icon class="play-icon"><VideoPlay /></el-icon>
+          </div>
+        </div>
 
         <!-- 加载状态 -->
         <div v-if="loading" class="video-loading">
@@ -61,42 +65,52 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  coverScreenshots: {
-    type: Array,
-    default: () => [],
-  },
   mode: {
     type: String,
-    default: "cover", // cover | video
+    default: "preview", // preview | record | editor
+    validator: (value) => ["preview", "record", "editor"].includes(value),
+  },
+  size: {
+    type: String,
+    default: "medium", // small | medium | large
+    validator: (value) => ["small", "medium", "large"].includes(value),
   },
   currentIndex: {
     type: Number,
     default: 0,
   },
+  clickable: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Emits
-const emit = defineEmits(["video-loaded", "video-error", "current-changed"]);
+const emit = defineEmits([
+  "video-loaded",
+  "video-error",
+  "current-changed",
+  "video-click",
+]);
 
 // 响应式数据
 const videoElement = ref(null);
-const isPlaying = ref(false);
 const currentVideoIndex = ref(props.currentIndex);
 const loading = ref(false);
 const error = ref("");
 const videoDuration = ref(0);
+const isPlaying = ref(false);
 
 // 计算属性
 const currentVideo = computed(() => {
   return props.videos[currentVideoIndex.value] || null;
 });
-const hasCover = computed(() => {
-  return currentVideo.value && currentVideo.value.url;
+
+// 是否启用视频控制栏
+const enableControls = computed(() => {
+  return props.mode === "editor";
 });
 
-const coverUrl = computed(() => {
-  return currentVideo.value?.url || null;
-});
 // 监听器
 watch(
   () => props.currentIndex,
@@ -124,11 +138,6 @@ const switchVideo = (index) => {
 const loadVideo = async () => {
   if (!currentVideo.value) return;
 
-  // 检查是否处于封面模式，如果是则不需要加载视频
-  if (props.mode === "cover" && !isPlaying.value) {
-    return;
-  }
-
   // 确保 video 元素存在
   if (!videoElement.value) {
     console.warn("Video element not ready, skipping load");
@@ -137,6 +146,7 @@ const loadVideo = async () => {
 
   loading.value = true;
   error.value = "";
+  isPlaying.value = false;
 
   try {
     await nextTick();
@@ -195,28 +205,36 @@ const handleVideoError = (event) => {
   emit("video-error", new Error(errorMsg));
 };
 
-const formatFileSize = (size) => {
-  if (!size) return "0 MB";
-  const mb = size / (1024 * 1024);
-  return mb.toFixed(1) + " MB";
+const handleVideoClick = () => {
+  if (props.clickable) {
+    emit("video-click", currentVideo.value);
+  }
 };
 
-const formatDuration = (duration) => {
-  if (!duration) return "00:00";
-  const minutes = Math.floor(duration / 60);
-  const seconds = Math.floor(duration % 60);
-  return `${minutes.toString().padStart(2, "0")}:${seconds
-    .toString()
-    .padStart(2, "0")}`;
-};
-const startPlay = () => {
-  isPlaying.value = true;
-  nextTick(() => {
-    if (videoElement.value) {
+const handlePlayClick = () => {
+  if (props.mode === "preview" && videoElement.value) {
+    if (isPlaying.value) {
+      videoElement.value.pause();
+      isPlaying.value = false;
+    } else {
       videoElement.value.play();
+      isPlaying.value = true;
     }
-  });
+  }
 };
+
+// 监听视频播放状态
+watch(
+  () => videoElement.value,
+  (video) => {
+    if (video) {
+      video.addEventListener("play", () => (isPlaying.value = true));
+      video.addEventListener("pause", () => (isPlaying.value = false));
+      video.addEventListener("ended", () => (isPlaying.value = false));
+    }
+  }
+);
+
 // 暴露方法给父组件
 defineExpose({
   getCurrentTime: () => videoElement.value?.currentTime || 0,
@@ -244,17 +262,54 @@ defineExpose({
 <style lang="scss" scoped>
 $primary: #6366f1;
 $bg-light: #ffffff;
-$bg-gray: #ffffff;
+$bg-gray: #f1f5f9;
 $text-primary: #0f172a;
 $text-secondary: #475569;
 $text-muted: #94a3b8;
-$border-light: #ffffff;
+$border-light: #e2e8f0;
 $radius-md: 8px;
 $radius-lg: 12px;
 $space-sm: 8px;
 $space-md: 16px;
 
 .video-preview {
+  &.mode-record {
+    // 发布记录模式：小尺寸，紧凑显示
+    .video-container {
+      width: 90px;
+      height: 120px;
+    }
+  }
+
+  &.mode-preview {
+    // 预览模式：手机模拟器效果，25% 宽度居中
+    display: flex;
+    justify-content: center;
+
+    .video-container {
+      width: 25%;
+      max-width: 200px;
+      min-width: 150px;
+
+      .video-player {
+        aspect-ratio: 9 / 16; // 手机竖屏比例
+      }
+    }
+  }
+
+  &.mode-editor {
+    // 编辑器模式：大尺寸，完整控制
+    .video-container {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+
+      .video-player {
+        aspect-ratio: 16 / 9; // 横屏比例
+      }
+    }
+  }
+
   .video-container {
     background: $bg-light;
     border-radius: $radius-lg;
@@ -296,23 +351,62 @@ $space-md: 16px;
 
   .video-player {
     position: relative;
-    width: 70%;
-    max-width: 180px; // 增大容器尺寸
-    aspect-ratio: 9 / 16; // iPhone风格纵横比
+    width: 100%;
     background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto;
-    padding: 2px; // 添加内边距作为边框
-    border-radius: 8px; // 可选：圆角
+    border-radius: $radius-md;
+    overflow: hidden;
 
     video {
-      width: 100%; // 改为100%，让视频填满容器
-      height: 100%; // 改为100%，让视频填满容器
-      object-fit: contain;
-      background: transparent; // 移除视频背景色
-      border-radius: 4px; // 可选：视频圆角
+      width: 100%;
+      height: 100%;
+      object-fit: contain; // 保持视频原始比例
+      background: transparent;
+    }
+
+    .play-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.3);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      cursor: pointer;
+
+      .play-button {
+        width: 48px;
+        height: 48px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+
+        .play-icon {
+          color: $primary;
+          font-size: 24px;
+          margin-left: 2px;
+        }
+      }
+
+      &:hover {
+        .play-button {
+          background: white;
+          transform: scale(1.1);
+        }
+      }
+    }
+
+    &:hover .play-overlay {
+      opacity: 1;
     }
 
     .video-loading,
@@ -327,6 +421,7 @@ $space-md: 16px;
       gap: $space-sm;
       color: white;
       text-align: center;
+      z-index: 10;
 
       .el-icon {
         font-size: 32px;
@@ -346,77 +441,8 @@ $space-md: 16px;
       color: #ef4444;
     }
   }
-
-  .video-info {
-    padding: $space-md;
-    background: white;
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 4px 0;
-
-      &:not(:last-child) {
-        border-bottom: 1px solid $border-light;
-        margin-bottom: 4px;
-        padding-bottom: 8px;
-      }
-
-      .label {
-        font-size: 13px;
-        color: $text-secondary;
-        font-weight: 500;
-      }
-
-      .value {
-        font-size: 13px;
-        color: $text-primary;
-        font-weight: 500;
-      }
-    }
-  }
 }
-.cover-mode {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  aspect-ratio: 3 / 4; // 宽3高4的比例
-  cursor: default; // 改为默认光标，不显示pointer
-  border-radius: 8px;
-  overflow: hidden;
 
-  .cover-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .play-overlay {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 48px;
-    height: 48px;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    // 移除transition和hover效果，保持静态
-
-    .play-icon {
-      color: white;
-      font-size: 24px;
-    }
-  }
-
-  &:hover .play-overlay {
-    background: rgba(0, 0, 0, 0.9);
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-}
 @keyframes rotate {
   from {
     transform: rotate(0deg);
@@ -429,8 +455,16 @@ $space-md: 16px;
 // 响应式设计
 @media (max-width: 768px) {
   .video-preview {
-    .video-player {
-      aspect-ratio: 16 / 9; // 移动端使用横屏比例
+    &.mode-preview .video-container {
+      width: 40%; // 移动端稍大一些
+    }
+
+    &.mode-editor .video-container {
+      max-width: 100%;
+
+      .video-player {
+        aspect-ratio: 16 / 9;
+      }
     }
   }
 }
