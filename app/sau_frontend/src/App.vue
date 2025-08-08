@@ -10,7 +10,7 @@
               <el-icon><VideoCamera /></el-icon>
             </div>
             <transition name="fade">
-              <span v-show="!isCollapsed" class="logo-text">自动化发布系统</span>
+              <span v-show="!isCollapsed" class="logo-text">Agent运营平台</span>
             </transition>
           </div>
         </div>
@@ -101,7 +101,7 @@ const menuItems = [
 // 当前页面标题
 const currentPageTitle = computed(() => {
   const currentItem = menuItems.find(item => item.path === route.path)
-  return currentItem ? currentItem.name : '自媒体运营系统'
+  return currentItem ? currentItem.name : 'Agent运营平台'
 })
 
 // 判断路由是否激活
