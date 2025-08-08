@@ -122,7 +122,18 @@ const switchVideo = (index) => {
 };
 
 const loadVideo = async () => {
-  if (!currentVideo.value || !videoElement.value) return;
+  if (!currentVideo.value) return;
+
+  // 检查是否处于封面模式，如果是则不需要加载视频
+  if (props.mode === "cover" && !isPlaying.value) {
+    return;
+  }
+
+  // 确保 video 元素存在
+  if (!videoElement.value) {
+    console.warn("Video element not ready, skipping load");
+    return;
+  }
 
   loading.value = true;
   error.value = "";
