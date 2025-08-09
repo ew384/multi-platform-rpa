@@ -417,11 +417,11 @@ const showNewPublishDialog = () => {
   newPublishDialogVisible.value = true;
 };
 
-const handlePublishSuccess = () => {
+const handlePublishSuccess = (publishData) => {
   newPublishDialogVisible.value = false;
   loadRecords(); // 刷新列表
   // 如果需要显示详情，自动打开最新记录的侧边栏
-  if (data?.showDetail && records.value.length > 0) {
+  if (publishData?.showDetail && records.value.length > 0) {
     // 获取最新的记录（第一条，因为记录按时间倒序排列）
     const latestRecord = records.value[0];
     selectedRecordId.value = latestRecord.id;
