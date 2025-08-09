@@ -80,6 +80,14 @@
                     <div class="account-name">
                       {{ accountStatus.account_name }}
                       <span class="platform-name">({{ accountStatus.platform }})</span>
+                      <el-tag 
+                        v-if="isAccountInvalid(accountStatus)"
+                        type="danger" 
+                        size="small"
+                        style="margin-left: 8px;"
+                        >
+                        账号已失效
+                    </el-tag>
                     </div>
                   </div>
                   <div class="account-status">
@@ -159,7 +167,14 @@ import {
 } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import { publishApi } from '@/api/publish';
-// Props
+
+
+// 🔥 判断账号是否失效（基于错误信息）
+const isAccountInvalid = (accountStatus) => {
+  return accountStatus.error_message && 
+         (accountStatus.error_message.includes('账号已失效') || 
+          accountStatus.error_message.includes('请重新登录'));
+};
 const props = defineProps({
   visible: {
     type: Boolean,
@@ -276,7 +291,7 @@ const startAutoRefresh = () => {
     if (props.visible && props.recordId) {
       loadRecordDetail();
     }
-  }, 3000); // 每3秒刷新一次
+  }, 3000); // 每秒刷新一次
 };
 
 const stopAutoRefresh = () => {
