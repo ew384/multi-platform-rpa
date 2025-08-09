@@ -597,7 +597,8 @@ const publishContent = async (mode = "background") => {
 
   try {
     publishing.value = true;
-
+    emit("published", { showDetail: true });
+    handleDialogClose();
     // 按平台分组账号
     const accountsByPlatform = {};
     selectedAccounts.value.forEach((accountId) => {
@@ -667,14 +668,12 @@ const publishContent = async (mode = "background") => {
       ElMessage.success(
         `发布成功！共发布到 ${Object.keys(accountsByPlatform).length} 个平台`
       );
-      emit("published");
-      handleDialogClose();
+      
     } else if (successCount > 0) {
       ElMessage.warning(
         `部分发布成功：${successCount}/${results.length} 个平台成功`
       );
-      emit("published");
-      handleDialogClose();
+
     } else {
       ElMessage.error("发布失败，请检查网络连接和账号状态");
     }

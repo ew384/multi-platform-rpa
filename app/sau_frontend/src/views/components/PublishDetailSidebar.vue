@@ -25,7 +25,7 @@
       </div>
 
       <!-- 侧边栏内容 -->
-      <div class="sidebar-content">
+      <div class="sidebar-content" ref="sidebarContentRef">
         <!-- 加载状态 -->
         <div v-if="loading" class="loading-container">
           <el-icon class="is-loading"><Loading /></el-icon>
@@ -150,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onUnmounted,nextTick } from 'vue';
 import { 
   Close, 
   Loading, 
@@ -174,7 +174,7 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['update:visible', 'close']);
 
-
+const refreshInterval = ref(null);
 // 响应式数据
 const loading = ref(false);
 const recordDetail = ref(null);
@@ -189,18 +189,73 @@ const closeSidebar = () => {
 const handleOverlayClick = () => {
   closeSidebar();
 };
+// 保存滚动位置
+const scrollPosition = ref(0);
+const sidebarContentRef = ref(null);
 
+// 智能更新数据的方法
+const updateRecordDetailSmartly = (newData) => {
+  if (!recordDetail.value) {
+    recordDetail.value = newData;
+    return;
+  }
+
+  // 保存当前滚动位置
+  if (sidebarContentRef.value) {
+    scrollPosition.value = sidebarContentRef.value.scrollTop;
+  }
+
+  // 只更新变化的字段
+  recordDetail.value.status = newData.status;
+  recordDetail.value.stats = newData.stats;
+  
+  // 智能更新账号状态：只更新变化的账号
+  newData.account_statuses.forEach(newStatus => {
+    const existingIndex = recordDetail.value.account_statuses.findIndex(
+      item => item.account_name === newStatus.account_name && 
+              item.record_id === newStatus.record_id
+    );
+    
+    if (existingIndex !== -1) {
+      // 检查是否真的有变化
+      const existing = recordDetail.value.account_statuses[existingIndex];
+      if (JSON.stringify(existing) !== JSON.stringify(newStatus)) {
+        // 只有真正变化时才更新
+        Object.assign(existing, newStatus);
+      }
+    }
+  });
+
+  // 在下一帧恢复滚动位置
+  nextTick(() => {
+    if (sidebarContentRef.value) {
+      sidebarContentRef.value.scrollTop = scrollPosition.value;
+    }
+  });
+};
 const loadRecordDetail = async () => {
   if (!props.recordId) return;
 
   try {
-    loading.value = true;
+    // 🔥 如果是首次加载，显示loading
+    if (!recordDetail.value) {
+      loading.value = true;
+    }
+    
     error.value = null;
 
     const data = await publishApi.getPublishRecordDetail(props.recordId);
 
     if (data.code === 200) {
-      recordDetail.value = data.data;
+      // 🔥 使用智能更新而不是直接替换
+      updateRecordDetailSmartly(data.data);
+      
+      // 根据状态决定是否继续轮询
+      if (data.data.status === 'pending') {
+        startAutoRefresh();
+      } else {
+        stopAutoRefresh();
+      }
     } else {
       error.value = data.msg || '获取发布详情失败';
       ElMessage.error(error.value);
@@ -212,6 +267,22 @@ const loadRecordDetail = async () => {
     ElMessage.error('获取发布详情失败');
   } finally {
     loading.value = false;
+  }
+};
+const startAutoRefresh = () => {
+  if (refreshInterval.value) return; // 避免重复启动
+  
+  refreshInterval.value = setInterval(() => {
+    if (props.visible && props.recordId) {
+      loadRecordDetail();
+    }
+  }, 3000); // 每3秒刷新一次
+};
+
+const stopAutoRefresh = () => {
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value);
+    refreshInterval.value = null;
   }
 };
 const getOverallStatusType = (status) => {
@@ -296,6 +367,9 @@ const getStepStatus = (statusText) => {
 watch(() => props.visible, (newVisible) => {
   if (newVisible && props.recordId) {
     loadRecordDetail();
+  } else if (!newVisible) {
+    // 🔥 新增：侧边栏关闭时停止刷新
+    stopAutoRefresh();
   }
 });
 
@@ -303,6 +377,9 @@ watch(() => props.recordId, (newRecordId) => {
   if (props.visible && newRecordId) {
     loadRecordDetail();
   }
+});
+onUnmounted(() => {
+  stopAutoRefresh();
 });
 </script>
 

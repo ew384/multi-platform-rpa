@@ -103,7 +103,7 @@ const menuItems = [
   { path: '/team', name: '团队', icon: 'User' },
   { path: '/material-management', name: '素材', icon: 'VideoCamera' },
   { path: '/website', name: '网站', icon: 'Monitor' },
-  { path: '/private-evaluation', name: '私信管理', icon: 'DataAnalysis', badge: 'NEW' }
+  { path: '/private-message', name: '私信管理', icon: 'DataAnalysis', badge: 'NEW' }
 ]
 
 // 判断路由是否激活
