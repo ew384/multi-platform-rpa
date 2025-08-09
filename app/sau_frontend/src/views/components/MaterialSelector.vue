@@ -55,10 +55,18 @@
                         :videos="[formatVideoForPreview(video, 'recent')]"
                         mode="record"
                         size="small"
-                        :clickable="true"
-                        @video-click="previewRecentVideo"
+                        :clickable="false"
                       />
-
+                      <div class="play-overlay">
+                        <el-button 
+                          circle 
+                          type="primary" 
+                          size="small"
+                          @click.stop="showVideoDialog(formatVideoForPreview(video, 'recent'))"
+                        >
+                          <el-icon><VideoPlay /></el-icon>
+                        </el-button>
+                      </div>
                       <!-- 选中标记 -->
                       <div
                         v-if="selectedRecentIds.includes(video.id)"
@@ -183,6 +191,27 @@
       </div>
     </template>
   </el-dialog>
+  <el-dialog
+    v-model="videoDialogVisible"
+    title="视频预览"
+    width="50%"
+    :modal="false"
+    :append-to-body="true"
+    class="video-preview-dialog"
+    @close="handleVideoDialogClose"
+  >
+    <div class="video-player-container">
+      <video 
+        ref="previewVideoRef"
+        v-if="currentPreviewVideo" 
+        :src="currentPreviewVideo.url" 
+        controls 
+        autoplay
+        style="width: 100%; height: 300px; border-radius: 8px; object-fit: contain;"
+      >
+      </video>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -192,12 +221,22 @@ import { ref, computed, watch } from "vue";
 import { Loading, VideoPlay, View, Check } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { nextTick } from "vue";
-
+const videoDialogVisible = ref(false);
+const currentPreviewVideo = ref(null);
+const previewVideoRef = ref(null); 
+const showVideoDialog = (video) => {
+  currentPreviewVideo.value = video;
+  videoDialogVisible.value = true;
+};
 // Props
 const props = defineProps({
   visible: {
     type: Boolean,
     default: false,
+  },
+  defaultTab: {
+    type: String,
+    default: "recent",
   },
 });
 
@@ -219,7 +258,29 @@ const recentVideos = ref([]);
 const libraryMaterials = ref([]);
 const selectedRecentIds = ref([]);
 const selectedLibraryIds = ref([]);
+// 新增：处理视频对话框关闭
+const handleVideoDialogClose = () => {
+  // 停止视频播放
+  if (previewVideoRef.value) {
+    previewVideoRef.value.pause();
+    previewVideoRef.value.currentTime = 0; // 重置播放进度
+  }
+  videoDialogVisible.value = false;
+  currentPreviewVideo.value = null;
+};
 
+// 新增：监听对话框关闭
+watch(videoDialogVisible, (newValue) => {
+  if (!newValue && previewVideoRef.value) {
+    previewVideoRef.value.pause();
+    previewVideoRef.value.currentTime = 0;
+  }
+});
+watch(() => props.defaultTab, (newTab) => {
+  if (newTab) {
+    activeTab.value = newTab;
+  }
+}, { immediate: true });
 // 🔍 调试：监控 props.visible 的变化
 watch(
   () => props.visible,
@@ -676,6 +737,30 @@ $space-xl: 32px;
                   }
                 }
               }
+              // 新增：播放按钮覆盖层
+              .play-overlay {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                opacity: 0;
+                transition: opacity 0.2s ease;
+                z-index: 5;
+
+                .el-button {
+                  background: rgba(0, 0, 0, 0.7);
+                  border: none;
+                  color: white;
+                  
+                  &:hover {
+                    background: rgba(0, 0, 0, 0.8);
+                  }
+                }
+              }
+              // 悬浮时显示播放按钮
+              &:hover .play-overlay {
+                opacity: 1;
+              }
 
               .selected-mark {
                 position: absolute;
@@ -749,7 +834,23 @@ $space-xl: 32px;
       }
     }
   }
-
+.video-preview-dialog {
+  :deep(.el-dialog) {
+    position: relative;
+    z-index: 3000; // 确保在 MaterialSelector 对话框之上
+    max-height: 80vh; // 限制最大高度
+  }
+  
+  :deep(.el-dialog__body) {
+    padding: 10px 20px; // 减少内边距
+  }
+  
+  .video-player-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
   .dialog-footer {
     display: flex;
     justify-content: flex-end;

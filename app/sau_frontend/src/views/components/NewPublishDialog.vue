@@ -61,6 +61,10 @@
             </el-upload>
 
             <div class="upload-options-compact">
+              <el-button @click="selectFromRecent" class="library-btn-compact">
+                <el-icon><Clock /></el-icon>
+                从最近上传选择
+              </el-button>
               <el-button @click="selectFromLibrary" class="library-btn-compact">
                 <el-icon><Folder /></el-icon>
                 从素材库选择
@@ -348,6 +352,7 @@
     <!-- 素材选择对话框 -->
     <MaterialSelector
       v-model:visible="materialSelectorVisible"
+      :default-tab="selectedMaterialTab"
       @selected="handleMaterialSelected"
     />
   </el-dialog>
@@ -360,6 +365,7 @@ import {
   Check,
   VideoCamera,
   Folder,
+  Clock,
   VideoPlay,
   View,
   Delete,
@@ -520,8 +526,18 @@ const handleVideoUploadError = (error) => {
   console.error("上传错误:", error);
 };
 
+const selectedMaterialTab = ref("recent");
+
+// 修改方法
+const selectFromRecent = () => {
+  selectedMaterialTab.value = "recent";
+  nextTick(() => {
+    materialSelectorVisible.value = true;
+  });
+};
+
 const selectFromLibrary = () => {
-  // 🔥 使用 nextTick 避免响应式循环
+  selectedMaterialTab.value = "library";
   nextTick(() => {
     materialSelectorVisible.value = true;
   });
@@ -642,6 +658,7 @@ const publishContent = async (mode = "background") => {
           startDays: 0,
           category: 0,
           mode: mode,
+          original: publishForm.wechat.original,
           ...getPlatformSpecificSettings(parseInt(platformType)),
         };
 
