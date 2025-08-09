@@ -303,6 +303,7 @@ const stopAutoRefresh = () => {
 const getOverallStatusType = (status) => {
   const typeMap = {
     'pending': 'warning',
+    'uploading': 'warning',
     'success': 'success',
     'partial': 'warning', 
     'failed': 'danger'
@@ -313,6 +314,7 @@ const getOverallStatusType = (status) => {
 const getOverallStatusText = (status) => {
   const textMap = {
     'pending': '发布中',
+    'uploading': '发布中',
     'success': '发布成功',
     'partial': '部分成功',
     'failed': '发布失败'
@@ -372,10 +374,19 @@ const getProcessSteps = (accountStatus) => {
 };
 
 const getStepStatus = (statusText) => {
-  if (!statusText) return 'pending';
-  if (statusText.includes('成功')) return 'success';
-  if (statusText.includes('失败')) return 'failed';
-  if (statusText.includes('中') || statusText.includes('待')) return 'pending';
+  if (!statusText || statusText === '待处理' || statusText === '待推送' || statusText === '待审核' || statusText === '待开始') {
+    return 'pending';
+  }
+  if (statusText.includes('成功') || statusText === '发布成功') {
+    return 'success';
+  }
+  if (statusText.includes('失败')) {
+    return 'failed';
+  }
+  // 🔥 处理进行中的状态
+  if (statusText.includes('中') || statusText.includes('验证')) {
+    return 'pending';
+  }
   return 'pending';
 };
 
