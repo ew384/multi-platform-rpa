@@ -354,12 +354,12 @@ const getProcessSteps = (accountStatus) => {
       status: getStepStatus(accountStatus.push_status),
       statusText: accountStatus.push_status || '待处理'
     },
-    {
-      key: 'transcode',
-      label: '转码状态',
-      status: getStepStatus(accountStatus.transcode_status),
-      statusText: accountStatus.transcode_status || '待处理'
-    },
+    //{
+    //  key: 'transcode',
+    //  label: '转码状态',
+    //  status: getStepStatus(accountStatus.transcode_status),
+    //  statusText: accountStatus.transcode_status || '待处理'
+    //},
     {
       key: 'review',
       label: '审核状态',
@@ -375,6 +375,7 @@ const getStepStatus = (statusText) => {
   if (!statusText) return 'pending';
   if (statusText.includes('成功')) return 'success';
   if (statusText.includes('失败')) return 'failed';
+  if (statusText.includes('中') || statusText.includes('待')) return 'pending';
   return 'pending';
 };
 
