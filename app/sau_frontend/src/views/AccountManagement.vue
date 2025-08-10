@@ -1068,6 +1068,7 @@ const submitGroupSet = async () => {
 // 恢复账号
 const handleRecover = (account) => {
   // 复用现有的添加账号流程
+  console.log('🔄 开始恢复账号:', account); 
   dialogType.value = 'recover';
   accountForm.platform = account.platform;
   accountForm.userName = account.userName;
@@ -1076,9 +1077,14 @@ const handleRecover = (account) => {
   // 直接跳到二维码步骤
   dialogStep.value = 2;
   dialogVisible.value = true;
-  
+  console.log('🔄 调用 connectSSE:', {
+    platform: account.platform,
+    userName: account.userName,
+    isRecover: true,
+    accountId: account.id
+  }); // 调试日志
   // 开始 SSE 连接
-  connectSSE(account.platform, account.userName);
+  connectSSE(account.platform, account.userName, true, account.id);
 };
 const getPlatformClass = (platform) => {
   const classMap = {
@@ -1100,7 +1106,7 @@ const closeSSEConnection = () => {
   }
 };
 
-const connectSSE = (platform, name) => {
+const connectSSE = (platform, name, isRecover = false, accountId = null) => {
   closeSSEConnection();
 
   sseConnecting.value = true;
@@ -1116,8 +1122,12 @@ const connectSSE = (platform, name) => {
 
   const type = platformTypeMap[platform] || "1";
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
-  const url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}`;
-
+  let url;
+  if (isRecover && accountId) {
+    url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}&mode=recover&accountId=${accountId}`;
+  } else {
+    url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}`;
+  }
   eventSource = new EventSource(url);
 
   eventSource.onmessage = (event) => {
