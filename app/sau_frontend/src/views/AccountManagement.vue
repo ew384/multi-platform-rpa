@@ -198,22 +198,34 @@
 
                 <!-- 操作按钮 -->
                 <div class="account-actions">
+                  <!-- 三点菜单 -->
+                  <el-dropdown @command="handleActionCommand" trigger="click">
+                    <el-button size="small" class="action-btn">
+                      <el-icon><More /></el-icon>
+                    </el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item :command="`group-${account.id}`">
+                          <el-icon><Collection /></el-icon>
+                          分组
+                        </el-dropdown-item>
+                        <el-dropdown-item :command="`delete-${account.id}`" class="danger-item">
+                          <el-icon><Delete /></el-icon>
+                          删除
+                        </el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
+                  
+                  <!-- 恢复按钮 - 仅异常账号显示 -->
                   <el-button
+                    v-if="account.status === '异常'"
                     size="small"
-                    @click="handleEdit(account)"
-                    class="action-btn"
-                    title="编辑"
+                    type="primary"
+                    @click="handleRecover(account)"
+                    class="recover-btn"
                   >
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                  <el-button
-                    size="small"
-                    type="danger"
-                    @click="handleDelete(account)"
-                    class="action-btn danger"
-                    title="删除"
-                  >
-                    <el-icon><Delete /></el-icon>
+                    恢复
                   </el-button>
                 </div>
               </div>
@@ -621,6 +633,44 @@
         </div>
       </template>
     </el-dialog>
+    <!-- 分组设置对话框 -->
+    <el-dialog
+      v-model="groupSetDialogVisible"
+      title="设置分组"
+      width="400px"
+      class="group-set-dialog"
+    >
+      <div class="group-set-content">
+        <p class="account-info">
+          账号：{{ currentAccount?.userName }}
+        </p>
+        <el-form :model="groupSetForm" label-width="80px">
+          <el-form-item label="选择分组">
+            <el-select
+              v-model="groupSetForm.groupId"
+              placeholder="请选择分组"
+              clearable
+              style="width: 100%"
+            >
+              <el-option label="不分组" :value="null" />
+              <el-option
+                v-for="group in accountStore.groups"
+                :key="group.id"
+                :label="group.name"
+                :value="group.id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="groupSetDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitGroupSet">确定</el-button>
+        </div>
+      </template>
+    </el-dialog>    
   </div>
 </template>
 
@@ -883,6 +933,12 @@ const fetchAccounts = async (forceCheck = false) => {
     appStore.setAccountRefreshing(false);
   }
 };
+// 分组设置相关
+const groupSetDialogVisible = ref(false);
+const currentAccount = ref(null);
+const groupSetForm = reactive({
+  groupId: null
+});
 const getPlatformLogo = (platform) => {
   const logoMap = {
     抖音: "/logos/douyin.png",
@@ -972,7 +1028,58 @@ const handleDelete = (account) => {
     })
     .catch(() => {});
 };
+// 处理下拉菜单命令
+const handleActionCommand = (command) => {
+  const [action, accountId] = command.split('-');
+  const account = accountStore.accounts.find(acc => acc.id == accountId);
+  
+  if (!account) return;
+  
+  switch (action) {
+    case 'group':
+      handleSetGroup(account);
+      break;
+    case 'delete':
+      handleDelete(account);
+      break;
+  }
+};
 
+// 设置分组
+const handleSetGroup = (account) => {
+  currentAccount.value = account;
+  groupSetForm.groupId = account.group_id || null;
+  groupSetDialogVisible.value = true;
+};
+
+// 提交分组设置
+const submitGroupSet = async () => {
+  if (!currentAccount.value) return;
+  
+  try {
+    await moveAccountToGroup(currentAccount.value.id, groupSetForm.groupId);
+    groupSetDialogVisible.value = false;
+    currentAccount.value = null;
+  } catch (error) {
+    console.error('设置分组失败:', error);
+  }
+};
+
+// 恢复账号
+const handleRecover = (account) => {
+  // 复用现有的添加账号流程
+  dialogType.value = 'recover';
+  accountForm.platform = account.platform;
+  accountForm.userName = account.userName;
+  accountForm.id = account.id;
+  
+  // 直接跳到二维码步骤
+  dialogStep.value = 2;
+  dialogVisible.value = true;
+  
+  // 开始 SSE 连接
+  connectSSE(account.platform, account.userName);
+};
 const getPlatformClass = (platform) => {
   const classMap = {
     抖音: "douyin",
@@ -1285,7 +1392,6 @@ const handleDragLeave = (event) => {
   console.log("真正离开分组区域，移除悬停样式");
   groupCard.classList.remove("drag-over");
 };
-// 移动账号到指定分组
 // 移动账号到指定分组 - 修改版
 const moveAccountToGroup = async (accountId, groupId) => {
   console.log("移出分组操作:", { accountId, groupId }); // 添加调试
@@ -1790,18 +1896,19 @@ $space-2xl: 48px;
 .accounts-section {
   .accounts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: $space-lg;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); // 从 240px 改为 200px
+    gap: $space-sm; // 从 $space-md 改为 $space-sm
   }
 
   .account-card {
     background: $bg-white;
-    border-radius: $radius-xl;
-    padding: $space-lg;
+    border-radius: $radius-lg;
+    padding: $space-xs $space-sm; // 从 $space-sm 改为上下 $space-xs，左右 $space-sm
     box-shadow: $shadow-sm;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    min-height: 60px; // 从 80px 改为 60px，进一步减少高度
 
     &:hover {
       transform: translateY(-2px);
@@ -1811,8 +1918,8 @@ $space-2xl: 48px;
     .account-info {
       display: flex;
       align-items: center;
-      gap: $space-md;
-      margin-bottom: $space-lg;
+      gap: $space-xs;
+      margin-bottom: 0; // 保持为 0
 
       .avatar-container {
         position: relative;
@@ -1822,28 +1929,30 @@ $space-2xl: 48px;
           position: relative;
 
           :deep(.el-avatar) {
-            border: 3px solid #f1f5f9;
+            width: 36px !important; // 从 40px 改为 36px，进一步缩小
+            height: 36px !important;
+            border: 2px solid #f1f5f9;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
           }
         }
 
         .platform-logo {
           position: absolute;
-          bottom: -4px;
-          right: -4px;
-          width: 32px;
-          height: 32px;
+          bottom: -2px;
+          right: -2px;
+          width: 18px; // 从 20px 改为 18px
+          height: 18px;
           border-radius: 50%;
           background: white;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
           border: 1px solid white;
 
           img {
-            width: 28px;
-            height: 28px;
+            width: 14px; // 从 16px 改为 14px
+            height: 14px;
             border-radius: 50%;
             object-fit: cover;
           }
@@ -1851,10 +1960,10 @@ $space-2xl: 48px;
 
         .status-dot {
           position: absolute;
-          top: 2px;
-          right: 8px;
-          width: 12px;
-          height: 12px;
+          top: 0;
+          right: 2px; // 从 4px 调整
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
           border: 2px solid white;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -1871,42 +1980,57 @@ $space-2xl: 48px;
 
       .account-details {
         flex: 1;
-        min-width: 0; // 防止文字溢出
+        min-width: 0;
 
         .account-name {
-          font-size: 16px;
+          font-size: 13px;
           font-weight: 600;
           color: $text-primary;
-          margin: 0 0 $space-xs 0;
+          margin: 0 0 1px 0; // 从 2px 改为 1px，进一步紧凑
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          line-height: 1.1; // 从 1.2 改为 1.1
         }
 
         .account-meta {
           display: flex;
           align-items: center;
-          gap: $space-sm;
+          gap: 3px; // 从 4px 改为 3px
           flex-wrap: wrap;
 
           .platform-text {
-            font-size: 13px;
+            font-size: 11px;
             color: $text-secondary;
             background: $bg-gray;
-            padding: 2px 8px;
+            padding: 0 4px; // 从 1px 4px 改为 0 4px，减少垂直内边距
             border-radius: $radius-sm;
             font-weight: 500;
+            line-height: 1.3; // 减少行高
+            height: 14px; // 设置固定高度
+            display: flex;
+            align-items: center;
           }
 
-          // 新增：分组标签样式
           .group-tag {
-            font-size: 12px;
+            font-size: 10px;
             border: none;
+            height: 14px; // 从 16px 改为 14px
+            line-height: 1;
 
             :deep(.el-tag__content) {
               color: white;
               font-weight: 500;
+              line-height: 1;
+              padding: 0 4px; // 减少内边距
             }
+          }
+
+          :deep(.el-tag) {
+            height: 14px; // 从 16px 改为 14px
+            line-height: 12px;
+            font-size: 10px;
+            padding: 0 4px; // 减少内边距
           }
         }
       }
@@ -1914,51 +2038,78 @@ $space-2xl: 48px;
 
     .account-actions {
       position: absolute;
-      top: $space-md;
-      right: $space-md;
+      top: 4px; // 从 $space-xs 改为固定 4px
+      right: 4px; // 从 $space-xs 改为固定 4px
       display: flex;
-      gap: $space-xs;
+      flex-direction: column;
+      gap: 2px;
       opacity: 0;
       transform: translateY(-4px);
       transition: all 0.3s ease;
 
       .action-btn {
-        width: 28px;
-        height: 28px;
-        min-height: 28px;
+        width: 22px; // 从 24px 改为 22px
+        height: 22px;
+        min-height: 22px;
         padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        font-weight: 500;
-        transition: all 0.3s ease;
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(4px);
         border: 1px solid rgba(0, 0, 0, 0.1);
 
         .el-icon {
-          font-size: 14px;
+          font-size: 10px; // 从 11px 改为 10px
         }
 
         &:hover {
           transform: scale(1.1);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
+      }
 
-        &.danger {
-          &:hover {
-            background-color: $danger;
-            border-color: $danger;
-            color: white;
-          }
-        }
+      .recover-btn {
+        width: auto;
+        height: 18px; // 从 20px 改为 18px
+        min-height: 18px;
+        padding: 0 6px; // 从 8px 改为 6px
+        font-size: 9px; // 从 10px 改为 9px
+        border-radius: 9px; // 从 10px 改为 9px
+        font-weight: 500;
       }
     }
 
     &:hover .account-actions {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  .account-status {
+    display: flex;
+    align-items: center;
+    gap: $space-xs; // 从 $space-sm 改为 $space-xs
+
+    .status-dot {
+      width: 8px; // 从 10px 改为 8px
+      height: 8px;
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+
+      &.online {
+        background-color: $success;
+      }
+
+      &.offline {
+        background-color: $danger;
+      }
+    }
+
+    .status-text {
+      font-size: 12px; // 从 14px 改为 12px
+      color: $text-secondary;
     }
   }
 }
@@ -2126,7 +2277,52 @@ $space-2xl: 48px;
     transform: rotate(360deg);
   }
 }
+// 下拉菜单样式
+:deep(.el-dropdown-menu) {
+  .el-dropdown-menu__item {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    
+    .el-icon {
+      font-size: 14px;
+    }
+  }
 
+  .danger-item {
+    color: $danger;
+    
+    .el-icon {
+      color: $danger;
+    }
+    
+    &:hover {
+      background-color: rgba(239, 68, 68, 0.1);
+    }
+  }
+}
+
+// 分组设置对话框样式
+.group-set-dialog {
+  .group-set-content {
+    .account-info {
+      background: $bg-gray;
+      padding: $space-sm $space-md;
+      border-radius: $radius-md;
+      margin-bottom: $space-md;
+      color: $text-secondary;
+      font-size: 14px;
+      margin: 0 0 $space-lg 0;
+    }
+  }
+  
+  .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-sm;
+    padding-top: $space-md;
+  }
+}
 // 响应式
 @media (max-width: 768px) {
   .page-header .header-content {
