@@ -130,7 +130,7 @@
 
           <!-- 记录卡片内容 -->
           <div class="record-content" @click="showRecordDetail(record)">
-            <!-- 视频预览区域 - 使用封面截图或视频 -->
+            <!-- 视频预览区域 -->
             <div class="video-preview">
               <VideoPreview
                 :videos="formatVideosForPreview(record.video_files)"
@@ -144,42 +144,65 @@
             <div class="record-info">
               <div class="record-header">
                 <h3 class="record-title">{{ record.title || "未命名任务" }}</h3>
-                <el-tag :type="getStatusType(record.status)" size="small">
-                  {{ record.status_display }}
-                </el-tag>
+                <div class="header-actions">
+                  <!-- 发布状态 -->
+                  <el-tag :type="getStatusType(record.status)" size="small">
+                    {{ record.status_display }}
+                  </el-tag>
+                  
+                  <!-- 操作按钮 -->
+                  <el-dropdown
+                    v-if="!batchDeleteMode"
+                    @click.stop
+                    trigger="click"
+                    class="action-dropdown"
+                  >
+                    <el-button size="small" text class="more-btn" @click.stop>
+                      <el-icon><MoreFilled /></el-icon>
+                    </el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item @click.stop="deleteRecord(record.id)" class="delete-item">
+                          <el-icon><Delete /></el-icon>
+                          删除记录
+                        </el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
+                </div>
               </div>
 
+              <!-- 平台logo -->
               <div class="record-meta">
-                <div class="meta-item">
-                  <span class="meta-label">平台:</span>
-                  <span class="meta-value">{{ record.platform_display }}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">账号:</span>
-                  <span class="meta-value">{{ record.total_accounts }} 个</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">成功:</span>
-                  <span class="meta-value success">{{
-                    record.success_accounts
-                  }}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">失败:</span>
-                  <span class="meta-value failed">{{
-                    record.failed_accounts
-                  }}</span>
+                <div class="meta-item platforms">
+                  <div class="platform-logos">
+                    <div
+                      v-for="platform in getRecordPlatforms(record)"
+                      :key="platform"
+                      class="platform-logo-item"
+                      :title="platform"
+                    >
+                      <img
+                        v-if="getPlatformLogo(platform)"
+                        :src="getPlatformLogo(platform)"
+                        :alt="platform"
+                        @error="handlePlatformLogoError"
+                      />
+                      <div v-else class="platform-text">
+                        {{ platform.charAt(0) }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
+              <!-- 时间信息 -->
               <div class="record-footer">
                 <div class="time-info">
-                  <span class="created-time">{{
-                    formatTime(record.created_at)
-                  }}</span>
-                  <span class="duration"
-                    >耗时: {{ record.duration_display }}</span
-                  >
+                  <div class="publish-time">
+                    <span class="time-label">{{ getPublishTimeLabel(record) }}:</span>
+                    <span class="time-value">{{ getPublishTimeValue(record) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -225,6 +248,7 @@ import {
   Delete,
   VideoPlay,
   Loading,
+  MoreFilled,
 } from "@element-plus/icons-vue";
 import { publishApi } from "@/api/publish";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -254,6 +278,28 @@ const pagination = reactive({
   pageSize: 20,
   total: 0,
 });
+// 🔥 修改：删除单个记录的方法（去掉确认对话框）
+const deleteRecord = async (recordId, event) => {
+  // 阻止事件冒泡，防止触发卡片点击事件
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  
+  try {
+    const data = await publishApi.deletePublishRecords([recordId]);
+
+    if (data.code === 200) {
+      ElMessage.success("删除成功");
+      await loadRecords(); // 重新加载记录
+    } else {
+      ElMessage.error(data.msg || "删除失败");
+    }
+  } catch (error) {
+    console.error("删除记录失败:", error);
+    ElMessage.error("删除失败");
+  }
+};
 function formatVideosForPreview(videoFiles) {
   if (!Array.isArray(videoFiles)) {
     return [];
@@ -461,7 +507,71 @@ const handleCurrentChange = (newPage) => {
   pagination.currentPage = newPage;
   loadRecords();
 };
+// 获取发布时间标签
+const getPublishTimeLabel = (record) => {
+  // 如果有定时发布时间，显示"定时发布"
+  if (record.scheduled_time) {
+    return "定时发布";
+  }
+  // 否则显示"发布时间"
+  return "发布时间";
+};
 
+// 获取发布时间值
+const getPublishTimeValue = (record) => {
+  // 优先显示定时发布时间
+  if (record.scheduled_time) {
+    return formatTime(record.scheduled_time);
+  }
+  // 否则显示创建时间
+  return formatTime(record.created_at);
+};
+// 获取发布记录涉及的平台列表
+const getRecordPlatforms = (record) => {
+  // 如果记录中有账号状态信息，从中提取平台
+  if (record.account_statuses && record.account_statuses.length > 0) {
+    const platforms = [...new Set(record.account_statuses.map(status => status.platform))];
+    return platforms;
+  }
+  
+  // 否则使用记录的平台显示信息
+  if (record.platform_display) {
+    return [record.platform_display];
+  }
+  
+  // 默认返回空数组
+  return [];
+};
+
+// 获取平台logo路径
+const getPlatformLogo = (platform) => {
+  const logoMap = {
+    抖音: "/logos/douyin.png",
+    快手: "/logos/kuaishou.png",
+    视频号: "/logos/wechat_shipinghao.png",
+    微信视频号: "/logos/wechat_shipinghao.png",
+    小红书: "/logos/xiaohongshu.jpg",
+    wechat: "/logos/wechat_shipinghao.png", // 兼容英文平台名
+    douyin: "/logos/douyin.png",
+    kuaishou: "/logos/kuaishou.png",
+    xiaohongshu: "/logos/xiaohongshu.jpg",
+  };
+  return logoMap[platform] || null;
+};
+
+// 处理平台logo加载错误
+const handlePlatformLogoError = (e) => {
+  console.warn("平台logo加载失败:", e);
+  e.target.style.display = 'none';
+  // 显示备用的文字
+  const parent = e.target.parentElement;
+  if (parent && !parent.querySelector('.platform-text')) {
+    const textDiv = document.createElement('div');
+    textDiv.className = 'platform-text';
+    textDiv.textContent = parent.getAttribute('title')?.charAt(0) || 'P';
+    parent.appendChild(textDiv);
+  }
+};
 // 生命周期
 onMounted(() => {
   loadRecords();
@@ -774,7 +884,7 @@ $radius-xl: 16px;
     .records-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 20px;
+      gap: 14px;
       @media (max-width: 1200px) {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       }
@@ -786,7 +896,7 @@ $radius-xl: 16px;
         background: $bg-white;
         border: 1px solid $border-light;
         border-radius: $radius-lg;
-        padding: 16px; // 减少内边距
+        padding: 10px; // 减少内边距
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
         height: fit-content;
@@ -815,13 +925,13 @@ $radius-xl: 16px;
 
         .record-content {
           display: flex;
-          gap: 20px;
+          gap: 12px;
           align-items: flex-start;
         }
 
         .video-preview {
-          width: 90px;
-          height: 120px;
+          width: 80px;
+          height: 100px;
           border-radius: $radius-md;
           flex-shrink: 0;
           overflow: hidden;
@@ -868,14 +978,20 @@ $radius-xl: 16px;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 12px;
+            margin-bottom: 8px; // 🔥 减少间距 从12px改为8px
+            gap: 8px; // 🔥 新增间距
 
             .record-title {
-              font-size: 16px;
+              font-size: 15px;
               font-weight: 600;
               color: $text-primary;
               margin: 0;
-              line-height: 1.4;
+              line-height: 1.3;
+              flex: 1;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              min-width: 0; // 🔥 允许标题收缩
             }
 
             :deep(.el-tag) {
@@ -884,56 +1000,129 @@ $radius-xl: 16px;
               border: none;
             }
           }
-
-          .record-meta {
+          .header-actions {
             display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 12px;
+            align-items: flex-start;
+            gap: 4px;
+            margin-left: auto; // 🔥 自动推到最右边
+            flex-shrink: 0; // 🔥 防止收缩
+            :deep(.el-tag) {
+              border-radius: $radius-sm;
+              font-weight: 500;
+              border: none;
+              font-size: 10px; // 🔥 进一步减小字体
+              padding: 1px 4px; // 🔥 减少内边距
+              max-width: 70px; // 🔥 减少最大宽度
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
 
-            .meta-item {
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              font-size: 14px;
+            .action-dropdown {
+              .more-btn {
+                width: 20px;
+                height: 20px;
+                padding: 0;
+                color: $text-muted;
+                transition: all 0.2s ease;
 
-              .meta-label {
-                color: $text-secondary;
-                font-weight: 500;
-              }
-
-              .meta-value {
-                color: $text-primary;
-                font-weight: 600;
-
-                &.success {
-                  color: #10b981;
+                &:hover {
+                  color: $primary;
+                  background: rgba(99, 102, 241, 0.1);
                 }
 
-                &.failed {
-                  color: #ef4444;
+                .el-icon {
+                  font-size: 14px;
+                }
+              }
+
+              // 🔥 新增：删除按钮样式
+              :deep(.el-dropdown-menu) {
+                .delete-item {
+                  color: #ef4444; // 红色文字
+                  transition: all 0.2s ease;
+
+                  &:hover {
+                    background-color: rgba(239, 68, 68, 0.1); // 红色背景
+                    color: #dc2626; // 更深的红色
+                  }
+
+                  .el-icon {
+                    color: inherit;
+                  }
                 }
               }
             }
           }
+          
+          .record-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px; // 🔥 减少间距 从20px改为16px
+            margin-bottom: 8px; // 🔥 减少间距 从12px改为8px
 
+            .meta-item {
+              &.platforms {
+                .platform-logos {
+                  display: flex;
+                  gap: 3px; // 🔥 减少间距 从4px改为3px
+                  align-items: center;
+
+                  .platform-logo-item {
+                    width: 16px; // 🔥 减少尺寸 从18px改为16px
+                    height: 16px;
+                    border-radius: 50%;
+                    background: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                    border: 1px solid $border-light;
+
+                    img {
+                      width: 14px; // 🔥 减少尺寸 从16px改为14px
+                      height: 14px;
+                      border-radius: 50%;
+                      object-fit: cover;
+                    }
+
+                    .platform-text {
+                      font-size: 9px; // 🔥 减少字体 从10px改为9px
+                      font-weight: 600;
+                      color: $text-primary;
+                      line-height: 1;
+                    }
+
+                    &:hover {
+                      transform: scale(1.1);
+                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+                    }
+                  }
+                }
+              }
+            }
+          }
           .record-footer {
             .time-info {
               display: flex;
-              justify-content: space-between;
               align-items: center;
-              font-size: 13px;
+              font-size: 12px; // 🔥 减少字体 从13px改为12px
               color: $text-muted;
 
-              .created-time {
-                font-weight: 500;
-              }
+              .publish-time {
+                display: flex;
+                align-items: center;
+                gap: 4px; // 🔥 减少间距 从6px改为4px
 
-              .duration {
-                background: $border-lighter;
-                padding: 4px 8px;
-                border-radius: $radius-sm;
-                font-weight: 500;
+                .time-label {
+                  font-weight: 500;
+                  color: $text-secondary;
+                }
+
+                .time-value {
+                  font-weight: 600;
+                  color: $text-primary;
+                }
               }
             }
           }
@@ -966,7 +1155,18 @@ $radius-xl: 16px;
     }
   }
 }
-
+:deep(.el-dropdown-menu__item.delete-item) {
+  color: #ef4444 !important;
+  
+  &:hover {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    color: #dc2626 !important;
+  }
+  
+  .el-icon {
+    color: inherit !important;
+  }
+}
 // 🎨 动画效果
 @keyframes rotate {
   from {
