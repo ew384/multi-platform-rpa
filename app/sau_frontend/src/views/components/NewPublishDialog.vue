@@ -642,6 +642,16 @@ const extractTimeFromSchedule = (scheduleTime) => {
   if (!scheduleTime) return "10:00";
   
   try {
+    // 🔥 方案2：直接从字符串中提取时间部分
+    if (typeof scheduleTime === 'string') {
+      // 处理 "2025-08-11 13:00:00" 格式
+      const timeMatch = scheduleTime.match(/\s(\d{2}):(\d{2})/);
+      if (timeMatch) {
+        return `${timeMatch[1]}:${timeMatch[2]}`;
+      }
+    }
+    
+    // 回退到原方法
     const date = new Date(scheduleTime);
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
@@ -656,11 +666,35 @@ const calculateDaysFromNow = (scheduleTime) => {
   if (!scheduleTime) return 0;
   
   try {
+    // 🔥 方案2：直接从字符串中提取日期部分
+    if (typeof scheduleTime === 'string') {
+      const dateMatch = scheduleTime.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (dateMatch) {
+        const targetDateStr = dateMatch[1];
+        const today = new Date().toISOString().split('T')[0];
+        
+        const targetDate = new Date(targetDateStr + 'T00:00:00');
+        const todayDate = new Date(today + 'T00:00:00');
+        
+        const diffTime = targetDate - todayDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        console.log('🔧 calculateDaysFromNow 字符串方法:', {
+          targetDateStr,
+          today,
+          diffDays
+        });
+        
+        return Math.max(0, diffDays);
+      }
+    }
+    
+    // 回退到原方法
     const now = new Date();
     const target = new Date(scheduleTime);
     const diffTime = target - now;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays); // 确保不是负数
+    return Math.max(0, diffDays);
   } catch (error) {
     console.error('计算天数失败:', error);
     return 0;
