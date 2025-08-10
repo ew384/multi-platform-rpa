@@ -285,6 +285,9 @@
                         placeholder="选择发布时间"
                         format="YYYY-MM-DD HH:mm"
                         value-format="YYYY-MM-DD HH:mm:ss"
+                        :disabled-date="disabledDate"
+                        :disabled-hours="disabledHours"
+                        :disabled-minutes="disabledMinutes"
                       />
                     </div>
                   </div>
@@ -605,12 +608,92 @@ const handleRemoveAccount = (account) => {
     ElMessage.success(`已移除账号：${account.userName}`);
   }
 };
+// 禁用过去的日期
+const disabledDate = (time) => {
+  return time.getTime() < Date.now() - 24 * 60 * 60 * 1000; // 禁用昨天及之前
+};
+
+// 禁用过去的小时
+const disabledHours = () => {
+  const now = new Date();
+  const selectedDate = new Date(publishForm.scheduleTime);
+  
+  // 如果选择的是今天，禁用当前小时之前的小时
+  if (selectedDate.toDateString() === now.toDateString()) {
+    return Array.from({ length: now.getHours() }, (_, i) => i);
+  }
+  
+  return [];
+};
+
+// 禁用过去的分钟
+const disabledMinutes = (hour) => {
+  const now = new Date();
+  const selectedDate = new Date(publishForm.scheduleTime);
+  
+  // 如果选择的是今天的当前小时，禁用当前分钟之前的分钟
+  if (selectedDate.toDateString() === now.toDateString() && hour === now.getHours()) {
+    return Array.from({ length: now.getMinutes() + 1 }, (_, i) => i);
+  }
+  
+  return [];
+};
+const extractTimeFromSchedule = (scheduleTime) => {
+  if (!scheduleTime) return "10:00";
+  
+  try {
+    const date = new Date(scheduleTime);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  } catch (error) {
+    console.error('提取时间失败:', error);
+    return "10:00";
+  }
+};
+
+const calculateDaysFromNow = (scheduleTime) => {
+  if (!scheduleTime) return 0;
+  
+  try {
+    const now = new Date();
+    const target = new Date(scheduleTime);
+    const diffTime = target - now;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays); // 确保不是负数
+  } catch (error) {
+    console.error('计算天数失败:', error);
+    return 0;
+  }
+};
 const publishContent = async (mode = "background") => {
   if (!canPublish.value) {
     ElMessage.warning("请完善发布信息");
     return;
   }
-
+  // 🔥 新增：定时发布时间验证
+  if (publishForm.scheduleEnabled && publishForm.scheduleTime) {
+    const scheduleDate = new Date(publishForm.scheduleTime);
+    const now = new Date();
+    
+    if (scheduleDate <= now) {
+      ElMessage.error("定时发布时间不能早于当前时间，请重新选择");
+      return;
+    }
+    
+    // 检查是否太接近当前时间（至少5分钟后）
+    const minTime = new Date(now.getTime() + 5 * 60 * 1000);
+    if (scheduleDate < minTime) {
+      ElMessage.warning("定时发布时间建议设置在5分钟后，以确保发布成功");
+      // 不阻止发布，只是提醒
+    }
+    
+    console.log('🔧 时间验证通过:', {
+      current: now.toLocaleString('zh-CN'),
+      scheduled: scheduleDate.toLocaleString('zh-CN'),
+      valid: scheduleDate > now
+    });
+  }
   try {
     publishing.value = true;
     emit("published", { showDetail: true });
@@ -654,8 +737,10 @@ const publishContent = async (mode = "background") => {
           thumbnail: publishForm.cover,
           enableTimer: publishForm.scheduleEnabled ? 1 : 0,
           videosPerDay: 1,
-          dailyTimes: ["10:00"],
-          startDays: 0,
+          dailyTimes: publishForm.scheduleEnabled && publishForm.scheduleTime ? 
+            [extractTimeFromSchedule(publishForm.scheduleTime)] : ["10:00"],
+          startDays: publishForm.scheduleEnabled && publishForm.scheduleTime ? 
+            calculateDaysFromNow(publishForm.scheduleTime) : 0,
           category: 0,
           mode: mode,
           original: publishForm.wechat.original,
