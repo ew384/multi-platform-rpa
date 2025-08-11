@@ -12,13 +12,7 @@
           <span>更换封面</span>
         </div>
       </div>
-      
-      <div class="cover-info">
-        <div class="cover-title">视频封面</div>
-        <div class="cover-desc">
-          {{ currentCover ? '已设置封面' : '建议尺寸: 16:9 或 9:16' }}
-        </div>
-      </div>
+
     </div>
 
     <!-- 封面选择菜单 -->

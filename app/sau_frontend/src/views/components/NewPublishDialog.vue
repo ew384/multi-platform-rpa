@@ -142,29 +142,32 @@
       <!-- 步骤3: 编辑内容 -->
       <div v-show="currentStep === 'content'" class="step-panel">
         <div class="content-form">
-          <!-- 视频预览 -->
-          <div class="form-section">
-            <h5>视频</h5>
-            <VideoPreview
-              :videos="selectedVideos"
-              mode="preview"
-              size="medium"
-              :current-index="0"
-              @video-loaded="handleVideoLoaded"
-              @video-error="handleVideoError"
-            />
-          </div>
+          <!-- 🔥 修改：视频和封面并排显示 -->
+          <div class="media-section">
+            <!-- 视频预览 -->
+            <div class="form-section video-section">
+              <h5>视频</h5>
+              <VideoPreview
+                :videos="selectedVideos"
+                mode="preview"
+                size="medium"
+                :current-index="0"
+                @video-loaded="handleVideoLoaded"
+                @video-error="handleVideoError"
+              />
+            </div>
 
-          <!-- 封面选择 -->
-          <div class="form-section">
-            <h5>封面</h5>
-            <CoverSelector
-              ref="coverSelector"
-              v-model:cover="publishForm.cover"
-              :video-url="currentVideoUrl"
-              @cover-changed="handleCoverChanged"
-              @custom-cover-set="handleCustomCoverSet"
-            />
+            <!-- 封面选择 -->
+            <div class="form-section cover-section">
+              <h5>封面</h5>
+              <CoverSelector
+                ref="coverSelector"
+                v-model:cover="publishForm.cover"
+                :video-url="currentVideoUrl"
+                @cover-changed="handleCoverChanged"
+                @custom-cover-set="handleCustomCoverSet"
+              />
+            </div>
           </div>
 
           <!-- 选中的账号 -->
@@ -180,6 +183,7 @@
               />
             </div>
           </div>
+
 
           <!-- 表单内容 -->
           <div class="form-section">
@@ -524,13 +528,65 @@ const handleVideoUploadSuccess = async (response, file) => {
 
     selectedVideos.value.push(videoInfo);
     
-    // 🔥 检查是否需要生成默认封面
-    await handleCoverGeneration(file, videoInfo.url, filename);
+    // 🔥 如果是第一个视频且没有自定义封面，生成默认封面
+    if (selectedVideos.value.length === 1 && !customCoverSet.value) {
+      await generateAndSetDefaultCover(videoInfo.url);
+    }
     
     ElMessage.success("视频上传成功");
   } else {
     ElMessage.error(response.msg || "上传失败");
   }
+};
+// 🔥 新增：生成并设置默认封面
+const generateAndSetDefaultCover = async (videoUrl) => {
+  try {
+    console.log('📸 开始生成默认封面:', videoUrl);
+    
+    const defaultCover = await generateDefaultCoverDataURL(videoUrl);
+    if (defaultCover) {
+      publishForm.cover = defaultCover;
+      console.log('✅ 默认封面已设置');
+    }
+  } catch (error) {
+    console.error('❌ 生成默认封面失败:', error);
+  }
+};
+
+// 🔥 新增：生成默认封面 DataURL
+const generateDefaultCoverDataURL = (videoUrl) => {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    video.crossOrigin = 'anonymous';
+    video.preload = 'metadata';
+    
+    video.onloadedmetadata = () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      video.currentTime = 0.1; // 0.1秒处截图，避免黑屏
+    };
+    
+    video.onseeked = () => {
+      try {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(dataURL);
+      } catch (error) {
+        console.error('❌ 封面绘制失败:', error);
+        resolve(null);
+      }
+    };
+    
+    video.onerror = () => {
+      console.error('❌ 视频加载失败，无法生成封面');
+      resolve(null);
+    };
+    
+    video.src = videoUrl;
+  });
 };
 
 // 🔥 新增：封面处理逻辑
@@ -664,16 +720,24 @@ const addMoreVideos = () => {
   });
 };
 
-const handleMaterialSelected = (materials) => {
-  materials.forEach((material) => {
-    // 避免重复添加
+const handleMaterialSelected = async (materials) => {
+  const newMaterials = materials.filter(material => {
     const exists = selectedVideos.value.find((v) => v.path === material.path);
-    if (!exists) {
-      selectedVideos.value.push(material);
-    }
+    return !exists;
   });
+
+  if (newMaterials.length > 0) {
+    selectedVideos.value.push(...newMaterials);
+    
+    // 🔥 如果是第一次添加视频且没有自定义封面，生成默认封面
+    if (selectedVideos.value.length === newMaterials.length && !customCoverSet.value) {
+      await generateAndSetDefaultCover(newMaterials[0].url);
+    }
+    
+    ElMessage.success(`已添加 ${newMaterials.length} 个视频`);
+  }
+  
   materialSelectorVisible.value = false;
-  ElMessage.success(`已添加 ${materials.length} 个视频`);
 };
 
 const removeVideo = (index) => {
@@ -707,8 +771,12 @@ const handleVideoError = (error) => {
 // 封面相关处理方法
 const handleCoverChanged = (coverUrl) => {
   console.log("封面已更新:", coverUrl);
-  // 可以在这里处理封面更改后的逻辑
-  // 例如：预览更新、数据同步等
+  publishForm.cover = coverUrl;
+  
+  // 如果用户设置了封面，标记为自定义封面
+  if (coverUrl && coverUrl !== publishForm.cover) {
+    customCoverSet.value = true;
+  }
 };
 
 // 账号相关处理方法
@@ -980,12 +1048,13 @@ const dialogVisible = computed({
 // 2. 修复 resetForm 方法
 const resetForm = () => {
   currentStep.value = "video";
-  selectedVideos.value.length = 0; // 清空数组而不是重新赋值
+  selectedVideos.value.length = 0;
   selectedAccounts.value.length = 0;
 
   // 重置表单
   publishForm.title = "";
   publishForm.description = "";
+  publishForm.cover = ""; // 🔥 重置封面
   publishForm.scheduleEnabled = false;
   publishForm.scheduleTime = "";
   publishForm.douyin.statement = "无需声明";
@@ -993,9 +1062,10 @@ const resetForm = () => {
   publishForm.wechat.original = false;
   publishForm.wechat.location = "";
 
+  // 🔥 重置封面状态
+  customCoverSet.value = false;
   publishing.value = false;
 };
-
 // 3. 修复 handleDialogClose 方法
 const handleDialogClose = () => {
   if (publishing.value) {
@@ -1048,7 +1118,147 @@ $space-sm: 8px;
 $space-md: 16px;
 $space-lg: 24px;
 $space-xl: 32px;
+// 在 NewPublishDialog.vue 的 <style> 部分添加以下样式
 
+// 🔥 新增：媒体区域并排布局
+.media-section {
+  display: grid;
+  grid-template-columns: 200px 200px; // 🔥 固定宽度，每个占 300px
+  gap: 30px;
+  margin-bottom: 24px;
+  justify-content: center; // 🔥 居中显示
+
+  .video-section,
+  .cover-section {
+    margin-bottom: 0; // 覆盖默认的 margin-bottom
+  }
+  // 🔥 统一视频和封面的容器尺寸
+  .video-section,
+  .cover-section {
+    // 设置相同的宽高比容器
+    .video-container,
+    .cover-display {
+      aspect-ratio: 9 / 16;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+  }
+
+  // 🔥 修复封面选择器样式
+  .cover-section {
+    :deep(.cover-selector) {
+      .cover-display {
+        // 移除默认样式，重新设置
+        display: block;
+        align-items: unset;
+        gap: unset;
+        padding: 0;
+        background: transparent;
+        border-radius: 12px;
+        border: none; // 🔥 移除边框
+        aspect-ratio: 9 / 16;
+        
+        .cover-image {
+          width: 100%;
+          height: 100%;
+          border-radius: 12px;
+          overflow: hidden;
+          cursor: pointer;
+          position: relative;
+          
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+          }
+
+          .cover-placeholder {
+            width: 100%;
+            height: 100%;
+            background: #f1f5f9;
+            border: 2px dashed #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #94a3b8;
+            border-radius: 12px;
+
+            span {
+              font-size: 14px;
+            }
+          }
+
+          .cover-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            border-radius: 12px;
+
+            .el-icon {
+              font-size: 16px;
+            }
+
+            span {
+              font-size: 12px;
+            }
+          }
+
+          &:hover .cover-overlay {
+            opacity: 1;
+          }
+        }
+
+        // 🔥 隐藏封面信息部分，只保留图片显示
+        .cover-info {
+          display: none;
+        }
+      }
+    }
+  }
+
+  // 🔥 确保视频预览器尺寸一致
+  .video-section {
+    :deep(.video-preview) {
+      &.mode-preview {
+        display: block;
+        justify-content: unset;
+        
+        .video-container {
+          width: 100%;
+          max-width: none;
+          min-width: unset;
+          aspect-ratio: 9 / 16;
+          border-radius: 12px;
+          border: none;
+          
+          .video-player {
+            aspect-ratio: 9 / 16;
+            border-radius: 12px;
+            
+            video {
+              border-radius: 12px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
 // 🎨 紧凑版对话框
 .new-publish-dialog {
   :deep(.el-dialog) {
@@ -1817,8 +2027,21 @@ $space-xl: 32px;
   }
 }
 
+
 // 🔧 响应式设计优化
 @media (max-width: 768px) {
+  // 🔥 媒体区域响应式布局
+  .media-section {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    
+    .video-section,
+    .cover-section {
+      margin-bottom: 16px;
+    }
+  }
+
+  // 对话框响应式调整
   .new-publish-dialog {
     :deep(.el-dialog) {
       width: 95% !important;
