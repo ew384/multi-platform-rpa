@@ -112,24 +112,62 @@ export const useAccountStore = defineStore('account', () => {
       }
     }
   }
-
-  return {
-    // 原有的
-    accounts,
-    setAccounts,
-    addAccount,
-    updateAccount,
-    deleteAccount,
-    getAccountsByPlatform,
-
-    // 新增的分组相关
-    groups,
-    setGroups,
-    addGroup,
-    updateGroup,
-    deleteGroup,
-    getAccountsByGroup,
-    getGroupById,
-    updateAccountGroup
+// 新增：加载账号数据的方法
+const loadAccounts = async () => {
+  try {
+    // 动态导入避免循环依赖
+    const { accountApi } = await import('@/api/account')
+    
+    // 获取账号数据（带分组信息）
+    const res = await accountApi.getAccountsWithGroups()
+    if (res && res.code === 200 && res.data) {
+      setAccounts(res.data)
+    }
+    
+    // 获取分组数据
+    const groupsRes = await accountApi.getGroups()
+    if (groupsRes && groupsRes.code === 200 && groupsRes.data) {
+      setGroups(groupsRes.data)
+    }
+    
+    console.log('✅ 账号数据加载成功')
+  } catch (error) {
+    console.error('加载账号数据失败:', error)
+    // 如果带分组信息的API失败，降级使用普通API
+    try {
+      const { accountApi } = await import('@/api/account')
+      const fallbackRes = await accountApi.getValidAccounts()
+      if (fallbackRes && fallbackRes.code === 200 && fallbackRes.data) {
+        setAccounts(fallbackRes.data)
+        console.log('✅ 账号数据降级加载成功')
+      }
+    } catch (fallbackError) {
+      console.error('降级加载也失败:', fallbackError)
+      throw fallbackError
+    }
   }
+}
+
+return {
+  // 原有的
+  accounts,
+  setAccounts,
+  addAccount,
+  updateAccount,
+  deleteAccount,
+  getAccountsByPlatform,
+
+  // 新增的分组相关
+  groups,
+  setGroups,
+  addGroup,
+  updateGroup,
+  deleteGroup,
+  getAccountsByGroup,
+  getGroupById,
+  updateAccountGroup,
+  
+  // 新增：加载方法
+  loadAccounts
+}
 })

@@ -73,13 +73,15 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAccountStore } from '@/stores/account'
 import { 
   VideoCamera, HomeFilled, Upload, User, 
   Monitor, DataAnalysis, Fold, Expand,
   Bell, Setting
 } from '@element-plus/icons-vue'
-
+import { pathService } from '@/utils/pathService';
 const route = useRoute()
+const accountStore = useAccountStore() 
 const isCollapsed = ref(false)
 const showResizeHandle = ref(false)
 const isDragging = ref(false)
@@ -146,7 +148,21 @@ const stopDrag = () => {
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
 }
-
+onMounted(async () => {
+  try {
+    console.log('🚀 应用启动，初始化服务...');
+    
+    // 🔥 1. 先初始化路径服务
+    await pathService.initialize();
+    
+    // 🔥 2. 再加载账号数据
+    await accountStore.loadAccounts();
+    
+    console.log('✅ 应用初始化完成');
+  } catch (error) {
+    console.warn('启动时初始化失败:', error);
+  }
+});
 // 清理事件监听器
 onUnmounted(() => {
   if (isDragging.value) {

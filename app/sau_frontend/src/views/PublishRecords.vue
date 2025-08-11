@@ -133,7 +133,7 @@
             <!-- 视频预览区域 -->
             <div class="video-preview">
               <VideoPreview
-                :videos="formatVideosForPreview(record.video_files)"
+                :videos="record.formattedVideos || formatVideosForPreview(record.video_files)"
                 mode="record"
                 size="small"
                 class="record-video-preview"
@@ -240,7 +240,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted,onBeforeUnmount } from "vue";
 import {
   Plus,
   Refresh,
@@ -255,6 +255,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import PublishDetailSidebar from "./components/PublishDetailSidebar.vue";
 import NewPublishDialog from "./components/NewPublishDialog.vue";
 import VideoPreview from "./components/video/VideoPreview.vue";
+import { pathService } from '@/utils/pathService';
 // 响应式数据
 const loading = ref(false);
 const exporting = ref(false);
@@ -264,7 +265,57 @@ const selectedRecords = ref([]);
 const detailSidebarVisible = ref(false);
 const selectedRecordId = ref(null);
 const newPublishDialogVisible = ref(false);
+const refreshTimer = ref(null);
+const startAutoRefresh = () => {
+  refreshTimer.value = setInterval(async () => {
+    // 只更新状态，不重新加载视频数据
+    await updateRecordStatuses();
+  }, 10000); // 改为10秒，更及时
+};
 
+// 新增：只更新状态的方法
+const updateRecordStatuses = async () => {
+  try {
+    const data = await publishApi.getPublishRecords({
+      publisher: filters.publisher,
+      content_type: filters.contentType,
+      status: filters.status,
+      limit: pagination.pageSize,
+      offset: (pagination.currentPage - 1) * pagination.pageSize,
+      // 添加参数：只返回状态信息，不返回视频数据
+      status_only: true
+    });
+
+    if (data.code === 200 && data.data) {
+      // 智能合并：只更新状态，保留现有的视频数据
+      updateRecordsStatus(data.data);
+    }
+  } catch (error) {
+    console.warn("状态更新失败:", error);
+  }
+};
+
+// 智能状态合并
+const updateRecordsStatus = (newRecords) => {
+  newRecords.forEach(newRecord => {
+    const existingIndex = records.value.findIndex(r => r.id === newRecord.id);
+    if (existingIndex !== -1) {
+      // 只更新状态相关字段，保留视频数据
+      const existing = records.value[existingIndex];
+      existing.status = newRecord.status;
+      existing.status_display = newRecord.status_display;
+      existing.account_statuses = newRecord.account_statuses;
+      // 保留 video_files, cover_screenshots 等视频相关数据
+    }
+  });
+};
+
+const stopAutoRefresh = () => {
+  if (refreshTimer.value) {
+    clearInterval(refreshTimer.value);
+    refreshTimer.value = null;
+  }
+};
 // 筛选器
 const filters = reactive({
   publisher: "全部发布人",
@@ -300,29 +351,42 @@ const deleteRecord = async (recordId, event) => {
     ElMessage.error("删除失败");
   }
 };
-function formatVideosForPreview(videoFiles) {
+async function formatVideosForPreview(videoFiles) {
   if (!Array.isArray(videoFiles)) {
     return [];
   }
 
-  const result = videoFiles.map(function (filename) {
-    // 直接使用视频文件的URL，而不是封面截图
+  // 🔥 确保路径服务已初始化
+  await pathService.ensureInitialized();
+
+  const result = [];
+  
+  for (const filename of videoFiles) {
     const encodedFilename = encodeURIComponent(filename);
+    
+    // 🔥 使用异步方法获取本地路径
+    const localVideoUrl = await pathService.getVideoLocalUrl(filename);
+    const localCoverUrl = await pathService.getCoverLocalUrl(filename);
+    
+    // 🔥 API 路径作为备用
+    const apiVideoUrl = `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=${encodedFilename}`;
+    const apiCoverUrl = `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=covers/${encodeURIComponent(filename.replace(/\.[^/.]+$/, '_cover.jpg'))}`;
 
-    return {
+    result.push({
       name: filename,
-      //coverurl: `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=covers/${encodedCoverName}`,
-      url: `${
-        import.meta.env.VITE_API_BASE_URL
-      }/getFile?filename=${encodedFilename}`,
+      // 🔥 优先本地，备用 API
+      url: localVideoUrl || apiVideoUrl,
+      poster: localCoverUrl || apiCoverUrl,
+      // 🔥 备用路径
+      urlFallback: apiVideoUrl,
+      posterFallback: apiCoverUrl,
       path: filename,
-    };
-  });
+    });
+  }
 
-  console.log("📹 格式化视频预览数据:", result);
+  console.log("📹 格式化视频预览数据（本地路径优先）:", result);
   return result;
 }
-
 // 计算属性
 const filteredRecords = computed(() => {
   return records.value; // 筛选逻辑在后端处理
@@ -346,24 +410,23 @@ const loadRecords = async () => {
     });
 
     if (data.code === 200) {
-      records.value = data.data || [];
-      console.log("📊 发布记录数据:", records.value);
-      records.value.forEach((record, index) => {
-        console.log(`记录 ${index + 1}:`, {
-          title: record.title,
-          cover_screenshots: record.cover_screenshots,
-          video_files: record.video_files,
-        });
-      });
+      const rawRecords = data.data || [];
+      
+      // 🔥 处理每个记录的视频数据
+      for (const record of rawRecords) {
+        if (record.video_files) {
+          // 🔥 异步格式化视频预览数据
+          record.formattedVideos = await formatVideosForPreview(record.video_files);
+        }
+      }
+      
+      records.value = rawRecords;
       pagination.total = data.total || records.value.length;
-    } else {
-      console.warn("获取发布记录失败:", data.msg);
-      records.value = [];
-      pagination.total = 0;
+      
+      console.log("📊 发布记录数据加载完成:", records.value.length);
     }
   } catch (error) {
     console.error("获取发布记录失败:", error);
-    // 设置空数据
     records.value = [];
     pagination.total = 0;
   } finally {
@@ -465,14 +528,17 @@ const showNewPublishDialog = () => {
 
 const handlePublishSuccess = (publishData) => {
   newPublishDialogVisible.value = false;
-  loadRecords(); // 刷新列表
-  // 如果需要显示详情，自动打开最新记录的侧边栏
-  if (publishData?.showDetail && records.value.length > 0) {
-    // 获取最新的记录（第一条，因为记录按时间倒序排列）
-    const latestRecord = records.value[0];
-    selectedRecordId.value = latestRecord.id;
-    detailSidebarVisible.value = true;
-  }
+  // 延迟加载记录，确保后端任务已创建
+  setTimeout(async () => {
+    await loadRecords(); // 刷新列表
+    
+    // 如果需要显示详情，自动打开最新记录的侧边栏
+    if (publishData?.showDetail && records.value.length > 0) {
+      const latestRecord = records.value[0];
+      selectedRecordId.value = latestRecord.id;
+      detailSidebarVisible.value = true;
+    }
+  }, 1500); // 给后端1秒时间创建记录
 };
 
 const getStatusType = (status) => {
@@ -575,6 +641,10 @@ const handlePlatformLogoError = (e) => {
 // 生命周期
 onMounted(() => {
   loadRecords();
+  startAutoRefresh(); // 启动自动刷新  
+});
+onBeforeUnmount(() => {
+  stopAutoRefresh();
 });
 </script>
 

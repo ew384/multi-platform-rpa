@@ -221,12 +221,24 @@ const handleFileSelect = (event) => {
   // 清空input值，允许重复选择同一文件
   event.target.value = '';
 };
-
+const hasCustomCover = ref(false);
 const handleFrameCaptured = (frameData) => {
   currentCover.value = frameData;
+  hasCustomCover.value = true; // 🔥 标记用户已自定义封面
+  
+  // 🔥 通知父组件用户已设置自定义封面
+  emit('cover-changed', frameData);
+  emit('custom-cover-set', true); // 新增事件
   ElMessage.success('封面截取成功');
 };
-
+// 🔥 新增：获取是否有自定义封面的方法
+const hasCustomCoverSet = () => {
+  return hasCustomCover.value;
+};
+// 暴露方法给父组件
+defineExpose({
+  hasCustomCoverSet
+});
 const handleCoverCropped = (croppedData) => {
   currentCover.value = croppedData;
   ElMessage.success('封面裁剪完成');

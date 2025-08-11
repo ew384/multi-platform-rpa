@@ -881,9 +881,9 @@ const fetchAccounts = async (forceCheck = false) => {
       }
 
       if (forceCheck) {
-        ElMessage.success("账号数据刷新成功");
+        console.log("账号数据刷新成功");
       } else {
-        ElMessage.success("账号数据加载成功");
+        console.log("账号数据加载成功");
       }
       if (appStore.isFirstTimeAccountManagement) {
         appStore.setAccountManagementVisited();
@@ -919,9 +919,9 @@ const fetchAccounts = async (forceCheck = false) => {
           console.warn("获取分组信息失败:", groupError);
         }
 
-        ElMessage.success("账号数据加载成功");
+        console.log("✅ 账号数据加载成功");
       } else {
-        ElMessage.error("获取账号数据失败");
+        console.error("❌获取账号数据失败");
       }
     } catch (fallbackError) {
       console.error("降级API也失败:", fallbackError);
@@ -1017,7 +1017,7 @@ const handleDelete = (account) => {
 
         if (response.code === 200) {
           accountStore.deleteAccount(account.id);
-          ElMessage.success("删除成功");
+          console.log("✅ 删除成功");
         } else {
           ElMessage.error(response.msg || "删除失败");
         }
@@ -1183,7 +1183,7 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
       return;
     }
     console.error("SSE连接错误:", error);
-    ElMessage.error("连接服务器失败，请稍后再试");
+    ElMessage.error("❌连接服务器失败，请稍后再试");
     closeSSEConnection();
     sseConnecting.value = false;
   };
@@ -1355,7 +1355,6 @@ const handleDrop = async (groupId, event) => {
     if (res.code === 200) {
       const group = accountStore.getGroupById(groupId);
       accountStore.updateAccountGroup(draggedAccount.value.id, groupId, group);
-      ElMessage.success("账号分组更新成功");
       console.log("✅ 分组更新成功");
     } else {
       ElMessage.error(res.msg || "分组更新失败");
@@ -1363,7 +1362,6 @@ const handleDrop = async (groupId, event) => {
     }
   } catch (error) {
     console.error("❌ 更新账号分组失败:", error);
-    ElMessage.error("分组更新失败");
   } finally {
     draggedAccount.value = null;
     console.log("🧹 清理拖拽状态");
@@ -1417,7 +1415,7 @@ const moveAccountToGroup = async (accountId, groupId) => {
     if (res.code === 200) {
       const group = groupId ? accountStore.getGroupById(groupId) : null;
       accountStore.updateAccountGroup(accountId, groupId, group);
-      ElMessage.success(groupId ? "账号已移入分组" : "账号已移出分组");
+      console.log("✅", groupId ? "账号已移入分组" : "账号已移出分组");
 
       // 重要：重新获取最新数据，确保数据同步
       await fetchAccounts(false);
@@ -1426,7 +1424,6 @@ const moveAccountToGroup = async (accountId, groupId) => {
     }
   } catch (error) {
     console.error("移动账号失败:", error);
-    ElMessage.error("操作失败");
   }
 };
 // 添加分组
@@ -1465,7 +1462,7 @@ const handleDeleteGroup = (group) => {
         const res = await accountApi.deleteGroup(group.id);
         if (res.code === 200) {
           accountStore.deleteGroup(group.id);
-          ElMessage.success("分组删除成功");
+          console.log("✅ 分组删除成功");
 
           // 重要：重新获取账号和分组数据
           await fetchAccounts(false);
@@ -1478,7 +1475,7 @@ const handleDeleteGroup = (group) => {
         }
       } catch (error) {
         console.error("删除分组失败:", error);
-        ElMessage.error("删除失败");
+        console.error("❌删除失败");
       }
     })
     .catch(() => {});
@@ -1493,7 +1490,7 @@ const submitGroupForm = () => {
         if (groupDialogType.value === "add") {
           res = await accountApi.createGroup(groupForm);
           if (res.code === 200) {
-            ElMessage.success("分组创建成功");
+            console.log("✅ 分组创建成功");
             // 重新获取分组列表
             const groupsRes = await accountApi.getGroups();
             if (groupsRes.code === 200) {
@@ -1504,7 +1501,7 @@ const submitGroupForm = () => {
           res = await accountApi.updateGroup(groupForm);
           if (res.code === 200) {
             // 不只是更新 Store，也要重新获取最新数据
-            ElMessage.success("分组更新成功");
+            console.log("✅ 分组更新成功");
             const groupsRes = await accountApi.getGroups();
             if (groupsRes.code === 200) {
               accountStore.setGroups(groupsRes.data);
@@ -1521,7 +1518,7 @@ const submitGroupForm = () => {
         }
       } catch (error) {
         console.error("分组操作失败:", error);
-        ElMessage.error("操作失败");
+        console.error("❌操作失败");
       }
     }
   });
@@ -1535,14 +1532,14 @@ const submitEdit = async () => {
     });
 
     if (res.code === 200) {
-      ElMessage.success("更新成功");
+      console.log("✅ 更新成功");
       dialogVisible.value = false;
       fetchAccounts(); // 刷新列表
     } else {
-      ElMessage.error(res.msg || "更新失败");
+      console.error("❌ 更新失败:", res.msg || "未知错误");
     }
   } catch (error) {
-    ElMessage.error("更新失败");
+    console.error("❌更新失败");
   }
 };
 // 生命周期

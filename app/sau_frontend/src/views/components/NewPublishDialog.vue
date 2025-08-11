@@ -159,9 +159,11 @@
           <div class="form-section">
             <h5>封面</h5>
             <CoverSelector
+              ref="coverSelector"
               v-model:cover="publishForm.cover"
               :video-url="currentVideoUrl"
               @cover-changed="handleCoverChanged"
+              @custom-cover-set="handleCustomCoverSet"
             />
           </div>
 
@@ -504,7 +506,10 @@ const previousStep = () => {
   }
 };
 
-const handleVideoUploadSuccess = (response, file) => {
+const customCoverSet = ref(false);
+
+// 🔥 修改现有的 handleVideoUploadSuccess 方法
+const handleVideoUploadSuccess = async (response, file) => {
   if (response.code === 200) {
     const filePath = response.data.path || response.data;
     const filename = filePath.split("/").pop();
@@ -518,10 +523,116 @@ const handleVideoUploadSuccess = (response, file) => {
     };
 
     selectedVideos.value.push(videoInfo);
+    
+    // 🔥 检查是否需要生成默认封面
+    await handleCoverGeneration(file, videoInfo.url, filename);
+    
     ElMessage.success("视频上传成功");
   } else {
     ElMessage.error(response.msg || "上传失败");
   }
+};
+
+// 🔥 新增：封面处理逻辑
+const handleCoverGeneration = async (videoFile, videoUrl, filename) => {
+  if (customCoverSet.value && publishForm.cover) {
+    console.log('🎨 用户已设置自定义封面，保存自定义封面到本地');
+    await saveCustomCoverToLocal(publishForm.cover, filename);
+  } else {
+    console.log('📸 用户未设置封面，生成默认首帧封面');
+    await generateDefaultPoster(videoFile, videoUrl, filename);
+  }
+};
+
+// 🔥 生成默认首帧封面（仅本地）
+const generateDefaultPoster = async (videoFile, videoUrl, filename) => {
+  try {
+    console.log('📸 开始生成默认封面:', filename);
+    
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      video.crossOrigin = 'anonymous';
+      video.preload = 'metadata';
+      
+      video.onloadedmetadata = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        video.currentTime = 0.1; // 0.1秒处截图，避免黑屏
+      };
+      
+      video.onseeked = () => {
+        try {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          canvas.toBlob(async (blob) => {
+            if (blob) {
+              const posterFilename = filename.replace(/\.[^/.]+$/, '_poster.png');
+              await saveToLocalCovers(blob, posterFilename);
+              console.log('✅ 默认封面生成完成:', posterFilename);
+            }
+            resolve();
+          }, 'image/png', 0.8);
+        } catch (error) {
+          console.error('❌ 封面绘制失败:', error);
+          resolve();
+        }
+      };
+      
+      video.onerror = () => {
+        console.error('❌ 视频加载失败，无法生成封面');
+        resolve();
+      };
+      
+      video.src = videoUrl;
+    });
+  } catch (error) {
+    console.error('❌ 默认封面生成失败:', error);
+  }
+};
+
+// 🔥 保存自定义封面到本地
+const saveCustomCoverToLocal = async (frameData, videoFilename) => {
+  try {
+    const response = await fetch(frameData);
+    const blob = await response.blob();
+    const posterFilename = videoFilename.replace(/\.[^/.]+$/, '_poster.png');
+    
+    await saveToLocalCovers(blob, posterFilename);
+    console.log('✅ 自定义封面保存完成:', posterFilename);
+  } catch (error) {
+    console.error('保存自定义封面失败:', error);
+  }
+};
+
+// 🔥 本地保存方法（简化版）
+const saveToLocalCovers = async (blob, filename) => {
+  try {
+    console.log('💾 准备保存封面到本地:', filename);
+    
+    // 创建下载链接，让用户手动保存到 videoFiles/covers 文件夹
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log('📥 封面已下载，请保存到 videoFiles/covers 文件夹:', filename);
+  } catch (error) {
+    console.warn('❌ 本地保存失败:', error);
+  }
+};
+
+// 🔥 监听封面组件的事件
+const handleCustomCoverSet = (isCustom) => {
+  customCoverSet.value = isCustom;
+  console.log('🎨 用户自定义封面状态:', isCustom);
 };
 
 const handleVideoUploadError = (error) => {

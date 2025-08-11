@@ -18,11 +18,13 @@
         <video
           ref="videoElement"
           :src="currentVideo?.url"
+          :poster="currentVideo?.poster"
           :controls="enableControls"
           :muted="!enableControls"
           preload="metadata"
           @loadedmetadata="handleVideoLoaded"
           @error="handleVideoError"
+          @posterror="handlePosterError"
           @click.stop="handleVideoClick"
         >
           您的浏览器不支持视频播放
@@ -58,6 +60,22 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import { Loading, VideoCamera, VideoPlay } from "@element-plus/icons-vue";
+// 🔥 添加视频缓存机制（全局缓存，所有组件实例共享）
+const videoCache = new Map();
+const posterCache = new Map();
+
+// 🔥 添加缓存相关的辅助函数
+const getCachedVideoUrl = (videoPath) => {
+  if (!videoPath) return null;
+  
+  if (videoCache.has(videoPath)) {
+    return videoCache.get(videoPath);
+  }
+  
+  const url = `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=${encodeURIComponent(videoPath)}`;
+  videoCache.set(videoPath, url);
+  return url;
+};
 
 // Props
 const props = defineProps({
@@ -103,7 +121,24 @@ const isPlaying = ref(false);
 
 // 计算属性
 const currentVideo = computed(() => {
-  return props.videos[currentVideoIndex.value] || null;
+  const video = props.videos[currentVideoIndex.value] || null;
+  console.log('🔍 currentVideo 计算:', {
+    hasVideo: !!video,
+    videoName: video?.name,
+    videoUrl: video?.url,
+    index: currentVideoIndex.value,
+    totalVideos: props.videos.length
+  });
+  if (!video) return null;
+  
+  // 🔥 使用缓存的URL
+  const result = {
+    ...video,
+    url: getCachedVideoUrl(video.path || video.name)
+  };
+  
+  console.log('✅ currentVideo 结果:', result);
+  return result;
 });
 
 // 是否启用视频控制栏
@@ -126,7 +161,26 @@ watch(currentVideo, async (newVideo) => {
     await loadVideo();
   }
 });
-
+watch(currentVideo, async (newVideo, oldVideo) => {
+  console.log('👀 currentVideo watch 触发:', {
+    newVideo: newVideo?.name,
+    oldVideo: oldVideo?.name,
+    timestamp: Date.now()
+  });
+  
+  if (newVideo) {
+    console.log('🚀 准备调用 loadVideo');
+    await loadVideo();
+  }
+});
+watch(() => props.videos, (newVideos, oldVideos) => {
+  console.log('📊 props.videos 变化:', {
+    newCount: newVideos?.length,
+    oldCount: oldVideos?.length,
+    timestamp: Date.now(),
+    newVideos: newVideos?.map(v => v.name)
+  });
+}, { immediate: true, deep: true });
 // 方法
 const switchVideo = (index) => {
   if (index >= 0 && index < props.videos.length) {
@@ -136,7 +190,19 @@ const switchVideo = (index) => {
 };
 
 const loadVideo = async () => {
+  console.log('🎯 loadVideo 开始执行:', {
+    currentVideo: currentVideo.value?.name,
+    hasVideoElement: !!videoElement.value,
+    timestamp: Date.now()
+  });
+    
   if (!currentVideo.value) return;
+
+  // 🔥 检查视频是否已缓存，如果已缓存则快速加载
+  const cachedUrl = currentVideo.value.url;
+  if (videoCache.has(currentVideo.value.path || currentVideo.value.name)) {
+    console.log("🎯 使用缓存视频:", currentVideo.value.name);
+  }
 
   // 确保 video 元素存在
   if (!videoElement.value) {
@@ -161,6 +227,8 @@ const loadVideo = async () => {
       const onLoaded = () => {
         video.removeEventListener("loadedmetadata", onLoaded);
         video.removeEventListener("error", onError);
+        // 🔥 记录成功加载的视频
+        console.log("✅ 视频加载成功:", currentVideo.value.name);
         resolve();
       };
 
@@ -199,11 +267,20 @@ const handleVideoLoaded = () => {
 };
 
 const handleVideoError = (event) => {
-  const errorMsg = "视频播放出错";
-  error.value = errorMsg;
-  console.error("视频播放错误:", event);
-  emit("video-error", new Error(errorMsg));
+  console.warn("本地视频加载失败，尝试 API 路径");
+  
+  if (currentVideo.value?.urlFallback && 
+      event.target.src !== currentVideo.value.urlFallback) {
+    console.log("🔄 切换到 API 路径:", currentVideo.value.urlFallback);
+    event.target.src = currentVideo.value.urlFallback;
+  } else {
+    const errorMsg = "视频播放出错";
+    error.value = errorMsg;
+    console.error("视频播放错误:", event);
+    emit("video-error", new Error(errorMsg));
+  }
 };
+
 
 const handleVideoClick = () => {
   if (props.clickable) {
@@ -221,6 +298,24 @@ const handlePlayClick = () => {
       isPlaying.value = true;
     }
   }
+};
+const handlePosterError = (event) => {
+  console.warn("本地封面加载失败，尝试 API 路径");
+  
+  if (currentVideo.value?.posterFallback && 
+      event.target.poster !== currentVideo.value.posterFallback) {
+    console.log("🔄 切换到 API 封面路径:", currentVideo.value.posterFallback);
+    event.target.poster = currentVideo.value.posterFallback;
+  } else {
+    console.log("📺 移除封面，使用视频首帧");
+    event.target.removeAttribute('poster');
+  }
+};
+// 🔥 在组件最后添加缓存管理
+const clearVideoCache = () => {
+  videoCache.clear();
+  posterCache.clear();
+  console.log("🧹 视频缓存已清空");
 };
 
 // 监听视频播放状态
@@ -256,6 +351,12 @@ defineExpose({
 
     return canvas.toDataURL("image/jpeg", 0.8);
   },
+  // 🔥 新增缓存管理方法
+  clearCache: clearVideoCache,
+  getCacheSize: () => ({
+    videos: videoCache.size,
+    posters: posterCache.size
+  })
 });
 </script>
 
