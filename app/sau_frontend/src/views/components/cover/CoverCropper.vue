@@ -1,123 +1,70 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    title="剪裁封面"
-    width="720px"
+    title="剪切封面"
+    width="520px"
     :close-on-click-modal="false"
     class="cover-cropper-dialog"
   >
     <div class="cropper-content">
-      <!-- 图片预览区域 -->
-      <div class="image-section">
-        <div class="image-container">
-          <img
-            ref="imageElement"
-            :src="imageUrl"
-            @load="handleImageLoad"
-            @error="handleImageError"
-          />
-          
-          <!-- 裁剪框覆盖层 -->
-          <div
-            v-if="showCropBox"
-            class="crop-overlay"
-            :style="cropOverlayStyle"
-          >
-            <div class="crop-box" :style="cropBoxStyle">
-              <!-- 裁剪框边框 -->
-              <div class="crop-border"></div>
-              <!-- 网格线 -->
-              <div class="crop-grid">
-                <div class="grid-line grid-line-v"></div>
-                <div class="grid-line grid-line-v"></div>
-                <div class="grid-line grid-line-h"></div>
-                <div class="grid-line grid-line-h"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 加载状态 -->
+      <!-- 封面展示区域 -->
+      <div class="cover-display-section">
+        <div class="cover-container">
           <div v-if="loading" class="image-loading">
             <el-icon class="rotating"><Loading /></el-icon>
             <span>图片加载中...</span>
           </div>
 
-          <!-- 错误状态 -->
-          <div v-if="error" class="image-error">
+          <div v-else-if="error" class="image-error">
             <el-icon><Picture /></el-icon>
             <span>{{ error }}</span>
+          </div>
+
+          <div v-else class="image-wrapper">
+            <img
+              ref="imageElement"
+              :src="imageUrl"
+              @load="handleImageLoad"
+              @error="handleImageError"
+              class="cover-image"
+            />
+            
+            <!-- 裁剪框覆盖层 -->
+            <div
+              v-if="showCropBox"
+              class="crop-overlay"
+              :style="cropOverlayStyle"
+            >
+              <div class="crop-box" :style="cropBoxStyle">
+                <!-- 裁剪框边框 -->
+                <div class="crop-border"></div>
+                <!-- 网格线 -->
+                <div class="crop-grid">
+                  <div class="grid-line grid-line-v"></div>
+                  <div class="grid-line grid-line-v"></div>
+                  <div class="grid-line grid-line-h"></div>
+                  <div class="grid-line grid-line-h"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 控制面板 -->
-      <div class="controls-section">
-        <div class="aspect-ratios">
-          <div class="section-title">裁剪比例</div>
-          <div class="ratio-buttons">
-            <el-button
-              v-for="ratio in aspectRatios"
-              :key="ratio.key"
-              :type="selectedRatio === ratio.key ? 'primary' : 'default'"
-              size="small"
-              @click="selectRatio(ratio.key)"
-            >
-              {{ ratio.label }}
-            </el-button>
-          </div>
-        </div>
-
-        <!-- 预览区域 -->
-        <div class="preview-section">
-          <div class="section-title">裁剪预览</div>
-          <div class="preview-container">
-            <canvas
-              ref="previewCanvas"
-              class="preview-canvas"
-              :width="previewSize.width"
-              :height="previewSize.height"
-            ></canvas>
-          </div>
-          
-          <div class="preview-info">
-            <div class="info-row">
-              <span class="label">尺寸:</span>
-              <span class="value">{{ previewSize.width }} × {{ previewSize.height }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">比例:</span>
-              <span class="value">{{ getCurrentRatioLabel() }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 调整控制 -->
-        <div class="adjustment-section">
-          <div class="section-title">位置调整</div>
-          <div class="adjustment-controls">
-            <div class="control-group">
-              <label class="control-label">X 位置</label>
-              <el-slider
-                v-model="cropPosition.x"
-                :min="0"
-                :max="maxPosition.x"
-                :step="1"
-                size="small"
-                @input="updateCropPreview"
-              />
-            </div>
-            <div class="control-group">
-              <label class="control-label">Y 位置</label>
-              <el-slider
-                v-model="cropPosition.y"
-                :min="0"
-                :max="maxPosition.y"
-                :step="1"
-                size="small"
-                @input="updateCropPreview"
-              />
-            </div>
-          </div>
+      <div class="control-panel">
+        <div class="section-title">选择比例</div>
+        <div class="ratio-buttons">
+          <el-button
+            v-for="ratio in aspectRatios"
+            :key="ratio.key"
+            :type="selectedRatio === ratio.key ? 'primary' : 'default'"
+            size="default"
+            @click="selectRatio(ratio.key)"
+            class="ratio-btn"
+          >
+            {{ ratio.label }}
+          </el-button>
         </div>
       </div>
     </div>
@@ -125,9 +72,8 @@
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="handleCancel">取消</el-button>
-        <el-button @click="handleReset">重置</el-button>
         <el-button type="primary" @click="handleCrop" :disabled="!canCrop">
-          确认裁剪
+          确定
         </el-button>
       </div>
     </template>
@@ -156,11 +102,10 @@ const emit = defineEmits(['update:visible', 'cropped']);
 
 // 响应式数据
 const imageElement = ref(null);
-const previewCanvas = ref(null);
 const loading = ref(false);
 const error = ref('');
 const showCropBox = ref(false);
-const selectedRatio = ref('original');
+const selectedRatio = ref('原始比例');
 
 // 图片信息
 const imageInfo = reactive({
@@ -179,10 +124,10 @@ const cropPosition = reactive({
 
 // 长宽比选项
 const aspectRatios = [
-  { key: 'original', label: '原始比例', ratio: null },
+  { key: '原始比例', label: '原始比例', ratio: null },
   { key: '3:2', label: '3:2', ratio: 3/2 },
-  { key: '16:9', label: '16:9', ratio: 16/9 },
-  { key: '4:3', label: '4:3', ratio: 4/3 },
+  { key: '9:16', label: '9:16', ratio: 9/16 },
+  { key: '3:4', label: '3:4', ratio: 3/4 },
   { key: '1:1', label: '1:1', ratio: 1 }
 ];
 
@@ -251,27 +196,6 @@ const cropBoxStyle = computed(() => ({
   height: `${cropDimensions.value.height}px`
 }));
 
-const previewSize = computed(() => {
-  const maxSize = 200;
-  const { width, height } = cropDimensions.value;
-  
-  if (!width || !height) return { width: 0, height: 0 };
-  
-  const ratio = width / height;
-  
-  if (width > height) {
-    return {
-      width: maxSize,
-      height: Math.round(maxSize / ratio)
-    };
-  } else {
-    return {
-      width: Math.round(maxSize * ratio),
-      height: maxSize
-    };
-  }
-});
-
 // 监听器
 watch(() => props.visible, async (visible) => {
   if (visible && props.imageUrl) {
@@ -287,7 +211,6 @@ watch(() => props.imageUrl, async (newUrl) => {
 
 watch(selectedRatio, () => {
   resetCropPosition();
-  updateCropPreview();
 });
 
 // 方法
@@ -345,14 +268,9 @@ const handleImageLoad = () => {
   imageInfo.scale = imageInfo.naturalWidth / imageInfo.displayWidth;
 
   // 重置裁剪设置
-  selectedRatio.value = 'original';
+  selectedRatio.value = '原始比例';
   resetCropPosition();
   showCropBox.value = true;
-  
-  // 更新预览
-  nextTick(() => {
-    updateCropPreview();
-  });
 };
 
 const handleImageError = () => {
@@ -368,38 +286,9 @@ const resetCropPosition = () => {
   cropPosition.y = Math.round(maxPosition.value.y / 2);
 };
 
-const updateCropPreview = async () => {
-  await nextTick();
-  
-  const canvas = previewCanvas.value;
-  const img = imageElement.value;
-  
-  if (!canvas || !img || !showCropBox.value) return;
-
-  const ctx = canvas.getContext('2d');
-  
-  // 计算实际裁剪区域（相对于原始图片）
-  const scale = imageInfo.scale;
-  const sourceX = cropPosition.x * scale;
-  const sourceY = cropPosition.y * scale;
-  const sourceWidth = cropDimensions.value.width * scale;
-  const sourceHeight = cropDimensions.value.height * scale;
-
-  // 清空画布
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  // 绘制裁剪后的图片
-  ctx.drawImage(
-    img,
-    sourceX, sourceY, sourceWidth, sourceHeight,
-    0, 0, canvas.width, canvas.height
-  );
-};
-
 const handleCrop = async () => {
-  const canvas = previewCanvas.value;
-  if (!canvas) {
-    ElMessage.error('预览画布未准备好');
+  if (!imageElement.value) {
+    ElMessage.error('图片未准备好');
     return;
   }
 
@@ -440,24 +329,14 @@ const handleCrop = async () => {
   }
 };
 
-const handleReset = () => {
-  selectedRatio.value = 'original';
-  resetCropPosition();
-  updateCropPreview();
-};
-
 const handleCancel = () => {
   dialogVisible.value = false;
-};
-
-const getCurrentRatioLabel = () => {
-  const ratio = aspectRatios.find(r => r.key === selectedRatio.value);
-  return ratio?.label || '未知';
 };
 </script>
 
 <style lang="scss" scoped>
 $primary: #6366f1;
+$primary-dark: #4f46e5;
 $success: #10b981;
 $danger: #ef4444;
 $bg-white: #ffffff;
@@ -469,7 +348,6 @@ $text-muted: #94a3b8;
 $border-light: #e2e8f0;
 $radius-md: 8px;
 $radius-lg: 12px;
-$space-xs: 4px;
 $space-sm: 8px;
 $space-md: 16px;
 $space-lg: 24px;
@@ -479,86 +357,44 @@ $space-lg: 24px;
     border-radius: $radius-lg;
   }
 
+  :deep(.el-dialog__header) {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid $border-light;
+
+    .el-dialog__title {
+      font-size: 16px;
+      font-weight: 600;
+      color: $text-primary;
+    }
+  }
+
   :deep(.el-dialog__body) {
     padding: $space-lg;
   }
 
-  .cropper-content {
-    display: grid;
-    grid-template-columns: 1fr 280px;
-    gap: $space-lg;
-    min-height: 400px;
+  :deep(.el-dialog__footer) {
+    padding: 16px 24px 20px;
+    border-top: 1px solid $border-light;
+  }
 
-    .image-section {
-      .image-container {
+  .cropper-content {
+    display: flex;
+    flex-direction: column;
+    gap: $space-lg;
+
+    // 封面展示区域
+    .cover-display-section {
+      display: flex;
+      justify-content: center;
+
+      .cover-container {
+        width: 200px;
+        aspect-ratio: 9 / 16;
+        border-radius: $radius-lg;
+        overflow: hidden;
+        background: $bg-gray;
         position: relative;
         border: 1px solid $border-light;
-        border-radius: $radius-md;
-        overflow: hidden;
-        background: $bg-light;
-        min-height: 300px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        img {
-          max-width: 100%;
-          max-height: 400px;
-          object-fit: contain;
-        }
-
-        .crop-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          background: rgba(0, 0, 0, 0.5);
-        }
-
-        .crop-box {
-          position: absolute;
-          border: 2px solid $primary;
-          box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
-
-          .crop-border {
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            border: 2px solid $primary;
-            pointer-events: none;
-          }
-
-          .crop-grid {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            opacity: 0.3;
-
-            .grid-line {
-              position: absolute;
-              background: white;
-
-              &.grid-line-v {
-                width: 1px;
-                height: 100%;
-                
-                &:nth-child(1) { left: 33.33%; }
-                &:nth-child(2) { left: 66.66%; }
-              }
-
-              &.grid-line-h {
-                width: 100%;
-                height: 1px;
-                
-                &:nth-child(3) { top: 33.33%; }
-                &:nth-child(4) { top: 66.66%; }
-              }
-            }
-          }
-        }
 
         .image-loading,
         .image-error {
@@ -588,113 +424,123 @@ $space-lg: 24px;
         .image-error {
           color: $danger;
         }
+
+        .image-wrapper {
+          width: 100%;
+          height: 100%;
+          position: relative;
+
+          .cover-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+          }
+
+          .crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.5);
+
+            .crop-box {
+              position: absolute;
+              border: 2px solid $primary;
+              box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
+
+              .crop-border {
+                position: absolute;
+                top: -2px;
+                left: -2px;
+                right: -2px;
+                bottom: -2px;
+                border: 2px solid $primary;
+                pointer-events: none;
+              }
+
+              .crop-grid {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                opacity: 0.3;
+
+                .grid-line {
+                  position: absolute;
+                  background: white;
+
+                  &.grid-line-v {
+                    width: 1px;
+                    height: 100%;
+                    
+                    &:nth-child(1) { left: 33.33%; }
+                    &:nth-child(2) { left: 66.66%; }
+                  }
+
+                  &.grid-line-h {
+                    width: 100%;
+                    height: 1px;
+                    
+                    &:nth-child(3) { top: 33.33%; }
+                    &:nth-child(4) { top: 66.66%; }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
 
-    .controls-section {
-      display: flex;
-      flex-direction: column;
-      gap: $space-lg;
-
+    // 控制面板
+    .control-panel {
       .section-title {
         font-size: 14px;
         font-weight: 600;
         color: $text-primary;
-        margin-bottom: $space-sm;
+        margin-bottom: $space-md;
+        text-align: center;
       }
 
-      .aspect-ratios {
-        .ratio-buttons {
-          display: flex;
-          flex-wrap: wrap;
-          gap: $space-xs;
+      .ratio-buttons {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 10px;
+        justify-content: center;
 
-          .el-button {
-            flex: 1;
-            min-width: auto;
-            font-size: 12px;
-            padding: 6px 8px;
-          }
-        }
-      }
-
-      .preview-section {
-        .preview-container {
-          border: 1px solid $border-light;
+        .ratio-btn {
+          min-width: 60px;
+          padding: 6px 12px;
           border-radius: $radius-md;
-          padding: $space-md;
-          background: $bg-light;
-          margin-bottom: $space-sm;
-          display: flex;
-          justify-content: center;
-          min-height: 120px;
-          align-items: center;
+          font-size: 13px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
 
-          .preview-canvas {
-            border-radius: $radius-md;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            max-width: 100%;
-            max-height: 200px;
+          &:hover {
+            transform: translateY(-1px);
           }
-        }
 
-        .preview-info {
-          .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-            
-            &:not(:last-child) {
-              border-bottom: 1px solid $border-light;
-              margin-bottom: 4px;
-              padding-bottom: 8px;
-            }
+          &.el-button--primary {
+            background-color: $primary;
+            border-color: $primary;
+            color: white;
 
-            .label {
-              font-size: 12px;
-              color: $text-secondary;
-            }
-
-            .value {
-              font-size: 12px;
-              color: $text-primary;
-              font-weight: 500;
+            &:hover {
+              background-color: $primary-dark;
+              border-color: $primary-dark;
             }
           }
-        }
-      }
 
-      .adjustment-section {
-        .adjustment-controls {
-          .control-group {
-            margin-bottom: $space-md;
+          &.el-button--default {
+            background-color: $bg-white;
+            border-color: $border-light;
+            color: $text-secondary;
 
-            &:last-child {
-              margin-bottom: 0;
-            }
-
-            .control-label {
-              display: block;
-              font-size: 12px;
-              color: $text-secondary;
-              margin-bottom: 6px;
-            }
-
-            :deep(.el-slider) {
-              .el-slider__runway {
-                height: 4px;
-                background-color: $bg-gray;
-              }
-
-              .el-slider__bar {
-                background-color: $primary;
-              }
-
-              .el-slider__button {
-                width: 14px;
-                height: 14px;
-                border: 2px solid $primary;
-              }
+            &:hover {
+              border-color: $primary;
+              color: $primary;
             }
           }
         }
@@ -704,8 +550,15 @@ $space-lg: 24px;
 
   .dialog-footer {
     display: flex;
-    justify-content: flex-end;
-    gap: $space-sm;
+    justify-content: center;
+    gap: $space-md;
+
+    .el-button {
+      min-width: 80px;
+      padding: 8px 24px;
+      border-radius: $radius-md;
+      font-weight: 500;
+    }
   }
 }
 
@@ -715,18 +568,22 @@ $space-lg: 24px;
 }
 
 // 响应式设计
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   .cover-cropper-dialog {
+    :deep(.el-dialog) {
+      width: 95% !important;
+    }
+
     .cropper-content {
-      grid-template-columns: 1fr;
-      
-      .controls-section {
-        order: -1;
-        
-        .aspect-ratios .ratio-buttons {
-          .el-button {
-            flex: 0 0 calc(50% - 4px);
-          }
+      .cover-display-section .cover-container {
+        width: 160px;
+      }
+
+      .control-panel .ratio-buttons {
+        .ratio-btn {
+          min-width: 55px;
+          font-size: 12px;
+          padding: 5px 10px;
         }
       }
     }
