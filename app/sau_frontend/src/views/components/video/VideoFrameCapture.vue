@@ -36,11 +36,6 @@
             <span>{{ error }}</span>
           </div>
         </div>
-
-        <!-- 当前时间显示 -->
-        <div class="time-display">
-          {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
-        </div>
       </div>
 
       <!-- 隐藏的画布用于截图 -->

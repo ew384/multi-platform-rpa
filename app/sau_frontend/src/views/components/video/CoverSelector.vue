@@ -229,7 +229,7 @@ const handleFrameCaptured = (frameData) => {
   // 🔥 通知父组件用户已设置自定义封面
   emit('cover-changed', frameData);
   emit('custom-cover-set', true); // 新增事件
-  ElMessage.success('封面截取成功');
+  //ElMessage.success('封面截取成功');
 };
 // 🔥 新增：获取是否有自定义封面的方法
 const hasCustomCoverSet = () => {
