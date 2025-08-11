@@ -116,15 +116,6 @@
             </div>
 
             <div class="filter-right">
-              <el-button
-                @click="fetchAccounts"
-                :loading="appStore.isAccountRefreshing"
-                class="refresh-btn"
-              >
-                <el-icon :class="{ rotating: appStore.isAccountRefreshing }"
-                  ><Refresh
-                /></el-icon>
-              </el-button>
               <el-dropdown>
                 <el-button class="more-btn">
                   <el-icon><More /></el-icon>
@@ -1545,12 +1536,10 @@ const submitEdit = async () => {
 // 生命周期
 onMounted(() => {
   if (appStore.isFirstTimeAccountManagement) {
-    fetchAccounts(false); // 首次加载不强制验证
+    fetchAccounts(true); // 首次加载强制验证
   }
 });
-const handleRefresh = () => {
-  fetchAccounts(true); // 手动刷新时强制验证
-};
+
 onBeforeUnmount(() => {
   closeSSEConnection();
 });
