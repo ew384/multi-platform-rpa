@@ -355,14 +355,24 @@ const disconnectSSE = () => {
 // 🔥 新增：更新单个进度
 const updateSingleProgress = (progressData) => {
   if (!recordDetail.value?.account_statuses) return;
-
-  console.log(`🔄 更新进度: ${progressData.accountName} -> ${progressData.upload_status || progressData.status}`);
-
+  console.log(`🔄 前端收到进度更新:`, {
+    accountName: progressData.accountName,
+    upload_status: progressData.upload_status,
+    push_status: progressData.push_status,
+    review_status: progressData.review_status,
+    status: progressData.status
+  });
   const accountStatus = recordDetail.value.account_statuses.find(
     status => status.account_name === progressData.accountName
   );
   
   if (accountStatus) {
+    // 🔥 详细日志：更新前后的状态对比
+    console.log(`📝 状态更新前:`, {
+      upload_status: accountStatus.upload_status,
+      push_status: accountStatus.push_status, 
+      review_status: accountStatus.review_status
+    });
     // 🔥 保存当前滚动位置（防止页面跳动）
     const scrollTop = sidebarContentRef.value?.scrollTop || 0;
     
@@ -374,7 +384,11 @@ const updateSingleProgress = (progressData) => {
       review_status: progressData.review_status || accountStatus.review_status,
       error_message: progressData.error_message || accountStatus.error_message
     });
-
+    console.log(`📝 状态更新后:`, {
+      upload_status: accountStatus.upload_status,
+      push_status: accountStatus.push_status,
+      review_status: accountStatus.review_status
+    });
     // 🔥 恢复滚动位置
     nextTick(() => {
       if (sidebarContentRef.value) {
