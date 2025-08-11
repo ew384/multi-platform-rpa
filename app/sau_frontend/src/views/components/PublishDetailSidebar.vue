@@ -188,8 +188,9 @@ const props = defineProps({
 
 // Emits
 const emit = defineEmits(['update:visible', 'close']);
-
-const refreshInterval = ref(null);
+// 新增：SSE连接管理
+const sseConnection = ref(null);
+//const refreshInterval = ref(null);
 // 响应式数据
 const loading = ref(false);
 const recordDetail = ref(null);
@@ -262,14 +263,15 @@ const loadRecordDetail = async () => {
     const data = await publishApi.getPublishRecordDetail(props.recordId);
 
     if (data.code === 200) {
-      // 🔥 使用智能更新而不是直接替换
-      updateRecordDetailSmartly(data.data);
+      // 🔥 直接设置详情数据（已包含实时进度）
+      recordDetail.value = data.data;
       
-      // 根据状态决定是否继续轮询
+      // 🔥 关键：根据状态决定是否需要SSE
       if (data.data.status === 'pending') {
-        startAutoRefresh();
+        connectToProgressSSE();
       } else {
-        stopAutoRefresh();
+        // 完成的任务不需要SSE
+        disconnectSSE();
       }
     } else {
       error.value = data.msg || '获取发布详情失败';
@@ -284,22 +286,115 @@ const loadRecordDetail = async () => {
     loading.value = false;
   }
 };
-const startAutoRefresh = () => {
-  if (refreshInterval.value) return; // 避免重复启动
-  
-  refreshInterval.value = setInterval(() => {
-    if (props.visible && props.recordId) {
-      loadRecordDetail();
+
+// 🔥 新增：建立SSE连接
+const connectToProgressSSE = () => {
+  // 先断开现有连接
+  disconnectSSE();
+
+  console.log(`📡 建立SSE连接: recordId=${props.recordId}`);
+
+  const eventSource = new EventSource(
+    `${import.meta.env.VITE_API_BASE_URL}/api/upload-progress/${props.recordId}`
+  );
+
+  eventSource.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      console.log('📨 收到SSE消息:', message.type);
+      
+      if (message.type === 'initial') {
+        // 初始状态（通常不需要处理，因为loadRecordDetail已经获取了最新数据）
+        console.log('📨 收到初始进度数据:', message.data.length, '条记录');
+      } else if (message.type === 'progress') {
+        // 🔥 实时进度更新
+        updateSingleProgress(message.data);
+      } else if (message.type === 'heartbeat') {
+        // 心跳消息，保持连接
+        console.log('💓 SSE心跳');
+      } else if (message.type === 'server_shutdown') {
+        // 服务器关闭
+        console.log('🛑 服务器关闭，断开SSE连接');
+        disconnectSSE();
+      }
+    } catch (error) {
+      console.error('❌ 解析SSE消息失败:', error, '原始数据:', event.data);
     }
-  }, 3000); // 每秒刷新一次
+  };
+
+  eventSource.onopen = () => {
+    console.log('✅ SSE连接已建立');
+  };
+
+  eventSource.onerror = (error) => {
+    console.warn('❌ SSE连接错误:', error);
+    
+    // 🔥 智能重连：只有在任务还在进行中时才重连
+    if (recordDetail.value?.status === 'pending') {
+      console.log('🔄 3秒后尝试重连SSE...');
+      setTimeout(() => {
+        if (props.visible && recordDetail.value?.status === 'pending') {
+          connectToProgressSSE();
+        }
+      }, 3000);
+    }
+  };
+
+  sseConnection.value = eventSource;
 };
 
-const stopAutoRefresh = () => {
-  if (refreshInterval.value) {
-    clearInterval(refreshInterval.value);
-    refreshInterval.value = null;
+// 🔥 新增：断开SSE连接
+const disconnectSSE = () => {
+  if (sseConnection.value) {
+    console.log('📡 断开SSE连接');
+    sseConnection.value.close();
+    sseConnection.value = null;
   }
 };
+
+// 🔥 新增：更新单个进度
+const updateSingleProgress = (progressData) => {
+  if (!recordDetail.value?.account_statuses) return;
+
+  console.log(`🔄 更新进度: ${progressData.accountName} -> ${progressData.upload_status || progressData.status}`);
+
+  const accountStatus = recordDetail.value.account_statuses.find(
+    status => status.account_name === progressData.accountName
+  );
+  
+  if (accountStatus) {
+    // 🔥 保存当前滚动位置（防止页面跳动）
+    const scrollTop = sidebarContentRef.value?.scrollTop || 0;
+    
+    // 更新状态
+    Object.assign(accountStatus, {
+      status: progressData.status || accountStatus.status,
+      upload_status: progressData.upload_status || accountStatus.upload_status,
+      push_status: progressData.push_status || accountStatus.push_status,
+      review_status: progressData.review_status || accountStatus.review_status,
+      error_message: progressData.error_message || accountStatus.error_message
+    });
+
+    // 🔥 恢复滚动位置
+    nextTick(() => {
+      if (sidebarContentRef.value) {
+        sidebarContentRef.value.scrollTop = scrollTop;
+      }
+    });
+  }
+
+  // 🔥 检查是否所有任务都完成了
+  const allCompleted = recordDetail.value.account_statuses.every(
+    status => status.status === 'success' || status.status === 'failed'
+  );
+  
+  if (allCompleted) {
+    console.log('✅ 所有任务已完成，断开SSE连接');
+    disconnectSSE();
+    recordDetail.value.status = 'completed';
+  }
+};
+
 const getOverallStatusType = (status) => {
   const typeMap = {
     'pending': 'warning',
@@ -395,8 +490,8 @@ watch(() => props.visible, (newVisible) => {
   if (newVisible && props.recordId) {
     loadRecordDetail();
   } else if (!newVisible) {
-    // 🔥 新增：侧边栏关闭时停止刷新
-    stopAutoRefresh();
+    // 🔥 关闭SSE连接
+    disconnectSSE();
   }
 });
 
@@ -406,7 +501,7 @@ watch(() => props.recordId, (newRecordId) => {
   }
 });
 onUnmounted(() => {
-  stopAutoRefresh();
+  disconnectSSE();
 });
 </script>
 
