@@ -7,7 +7,9 @@ export const useAccountStore = defineStore('account', () => {
 
   // 新增：存储所有分组信息
   const groups = ref([])
-
+  // 🔥 新增：防重复刷新控制
+  const isRefreshing = ref(false)
+  const lastRefreshTime = ref(0)
   // 平台类型映射
   const platformTypes = {
     1: '小红书',
@@ -147,7 +149,34 @@ const loadAccounts = async () => {
     }
   }
 }
+const smartRefresh = async (forceCheck = false) => {
+  const now = Date.now();
+  const minInterval = 2000; // 最小刷新间隔2秒
+  
+  // 防止频繁刷新
+  if (isRefreshing.value || (now - lastRefreshTime.value < minInterval && !forceCheck)) {
+    console.log('⏭️ 跳过重复刷新');
+    return;
+  }
+  
+  isRefreshing.value = true;
+  lastRefreshTime.value = now;
+  
+  try {
+    await loadAccounts(); // 使用现有的 loadAccounts 方法
+  } finally {
+    isRefreshing.value = false;
+  }
+};
 
+// 🔥 新增：立即更新单个账号状态
+const updateAccountStatusImmediately = (accountId, newStatus) => {
+  const account = accounts.value.find(acc => acc.id == accountId);
+  if (account) {
+    account.status = newStatus;
+    console.log(`✅ 账号状态已更新: ${account.userName} -> ${newStatus}`);
+  }
+};
 return {
   // 原有的
   accounts,
@@ -168,6 +197,10 @@ return {
   updateAccountGroup,
   
   // 新增：加载方法
-  loadAccounts
+  loadAccounts,
+    // 🔥 新增：智能刷新相关
+  isRefreshing,
+  smartRefresh,
+  updateAccountStatusImmediately
 }
 })
