@@ -145,7 +145,7 @@
                       <el-avatar
                         :size="56"
                         :src="getAvatarUrl(account)"
-                        @error="handleAvatarError"
+                        @error="(e) => handleAvatarError(e, account)"
                       />
                     </div>
                     <div class="platform-logo">
@@ -827,21 +827,112 @@ const getPlatformColor = (platform) => {
   };
   return colorMap[platform] || "#6b7280";
 };
-// 获取头像URL
+
+// 🔥 智能头像URL获取（基于确认的路径格式）
 const getAvatarUrl = (account) => {
+  // 1. 优先使用数据库中的 local_avatar 字段
+  if (account.local_avatar && account.local_avatar !== "/default-avatar.png") {
+    // 如果是相对路径，添加 API 前缀
+    if (account.local_avatar.startsWith("assets/avatar/")) {
+      return `http://localhost:3409/${account.local_avatar}`;
+    }
+    return account.local_avatar;
+  }
+
+  // 2. 备用：使用 avatar_url 字段（远程头像）
+  if (account.avatar_url && account.avatar_url !== "/default-avatar.png") {
+    return account.avatar_url;
+  }
+
+  // 3. 兼容：旧的 avatar 字段
   if (account.avatar && account.avatar !== "/default-avatar.png") {
-    // 如果是本地头像路径，添加 API 前缀
     if (account.avatar.startsWith("assets/avatar/")) {
       return `http://localhost:3409/${account.avatar}`;
     }
     return account.avatar;
   }
+
+  // 4. 最终回退：构造可能的本地路径（基于账号信息）
+  if (account.userName && account.platform) {
+    const platformMap = {
+      抖音: "douyin",
+      快手: "kuaishou",
+      视频号: "wechat",
+      微信视频号: "wechat",
+      小红书: "xiaohongshu",
+    };
+
+    const platformKey =
+      platformMap[account.platform] || account.platform.toLowerCase();
+    const possiblePath = `assets/avatar/${platformKey}/${account.userName}/avatar.jpg`;
+    return `http://localhost:3409/${possiblePath}`;
+  }
+
+  // 5. 默认头像
   return "/default-avatar.png";
 };
 
-// 头像加载失败处理
-const handleAvatarError = (e) => {
-  console.warn("头像加载失败:", e);
+// 🔥 增强的头像错误处理（多级回退）
+const handleAvatarError = (e, account) => {
+  console.warn("头像加载失败，尝试回退:", e.target.src);
+
+  // 当前尝试的URL
+  const currentSrc = e.target.src;
+
+  // 回退策略1：如果当前是本地路径，尝试API路径
+  if (
+    currentSrc.includes("http://localhost:3409/assets/avatar/") &&
+    !currentSrc.includes("getFile")
+  ) {
+    const fileName = currentSrc.split("/").pop();
+    const pathPart = currentSrc.split("assets/avatar/")[1];
+    const apiUrl = `http://localhost:3409/getFile?filename=assets/avatar/${pathPart}`;
+    console.log("🔄 切换到API路径:", apiUrl);
+    e.target.src = apiUrl;
+    return;
+  }
+
+  // 回退策略2：尝试远程头像URL
+  if (account.avatar_url && currentSrc !== account.avatar_url) {
+    console.log("🔄 切换到远程头像:", account.avatar_url);
+    e.target.src = account.avatar_url;
+    return;
+  }
+
+  // 回退策略3：尝试构造可能的路径变体
+  if (
+    account.userName &&
+    account.platform &&
+    !currentSrc.includes("/default-avatar.png")
+  ) {
+    const platformMap = {
+      抖音: "douyin",
+      快手: "kuaishou",
+      视频号: "wechat",
+      微信视频号: "wechat",
+      小红书: "xiaohongshu",
+    };
+
+    const platformKey =
+      platformMap[account.platform] || account.platform.toLowerCase();
+
+    // 尝试不同的文件名
+    const fileNames = ["avatar.jpg", "avatar.png", "profile.jpg"];
+    const currentFileName = currentSrc.split("/").pop();
+
+    for (const fileName of fileNames) {
+      if (fileName !== currentFileName) {
+        const fallbackPath = `assets/avatar/${platformKey}/${account.userName}/${fileName}`;
+        const fallbackUrl = `http://localhost:3409/${fallbackPath}`;
+        console.log("🔄 尝试文件名变体:", fallbackUrl);
+        e.target.src = fallbackUrl;
+        return;
+      }
+    }
+  }
+
+  // 最终回退：默认头像
+  console.log("📷 使用默认头像");
   e.target.src = "/default-avatar.png";
 };
 const fetchAccounts = async (forceCheck = false) => {
@@ -1136,7 +1227,10 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
             dialogVisible.value = false;
             sseConnecting.value = false;
             ElMessage.success("账号添加成功");
-            fetchAccounts();
+            fetchAccounts(false);
+
+            // 🔥 启动轮询检查账号状态更新
+            startAccountUpdatePolling();
           }, 1000);
         }, 1000);
       } else {
@@ -1149,7 +1243,35 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
       }
     }
   };
+  // 🔥 轮询检查账号更新
+  const startAccountUpdatePolling = () => {
+    let pollCount = 0;
+    const maxPolls = 10; // 最多轮询10次
 
+    const pollInterval = setInterval(async () => {
+      pollCount++;
+
+      try {
+        await fetchAccounts(false); // 静默更新
+
+        // 检查是否有状态从异常变为正常的账号
+        const hasUpdated = accountStore.accounts.some(
+          (account) =>
+            account.status === "正常" &&
+            account.platform === accountForm.platform
+        );
+
+        if (hasUpdated || pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+          if (hasUpdated) {
+            ElMessage.success("账号状态已更新");
+          }
+        }
+      } catch (error) {
+        console.warn("轮询更新失败:", error);
+      }
+    }, 2000); // 每2秒检查一次
+  };
   eventSource.onerror = (error) => {
     if (loginStatus.value === "200" || loginStatus.value === "500") {
       console.log("SSE连接正常结束");
