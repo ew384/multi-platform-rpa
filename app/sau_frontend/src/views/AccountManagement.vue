@@ -1545,9 +1545,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  stopAutoRefresh();
+  //stopAutoRefresh();
   // 🔥 清理头像重试计数
-  avatarRetryCount.clear();
+  //avatarRetryCount.clear();
   closeSSEConnection();
 });
 </script>
