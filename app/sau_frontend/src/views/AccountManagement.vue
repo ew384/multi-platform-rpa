@@ -1044,7 +1044,29 @@ const getPlatformClass = (platform) => {
   };
   return classMap[platform] || "default";
 };
+const handleRetryLogin = () => {
+  console.log("🔄 重新生成二维码");
 
+  // 重置状态
+  sseConnecting.value = true;
+  qrCodeData.value = "";
+  loginStatus.value = "";
+
+  // 重新调用connectSSE
+  if (dialogType.value === "recover" && accountForm.id) {
+    // 恢复账号模式
+    connectSSE(
+      accountForm.platform,
+      accountForm.userName,
+      true,
+      accountForm.id
+    );
+  } else {
+    // 新增账号模式
+    const tempUserName = `用户_${Date.now()}`;
+    connectSSE(accountForm.platform, tempUserName);
+  }
+};
 // SSE连接相关
 let eventSource = null;
 
