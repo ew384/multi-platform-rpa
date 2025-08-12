@@ -1150,14 +1150,15 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
       if (data === "200") {
         setTimeout(() => {
           closeSSEConnection();
-          setTimeout(() => {
+          setTimeout(async () => {
             dialogVisible.value = false;
             sseConnecting.value = false;
             ElMessage.success("账号添加成功");
-            fetchAccounts(false);
 
-            // 🔥 启动轮询检查账号状态更新
-            startAccountUpdatePolling();
+            // 🔥 简化：延迟刷新一次即可
+            setTimeout(async () => {
+              await fetchAccounts(false);
+            }, 3000); // 给后端足够时间完成处理
           }, 1000);
         }, 1000);
       } else {
@@ -1170,35 +1171,7 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
       }
     }
   };
-  // 🔥 轮询检查账号更新
-  const startAccountUpdatePolling = () => {
-    let pollCount = 0;
-    const maxPolls = 10; // 最多轮询10次
 
-    const pollInterval = setInterval(async () => {
-      pollCount++;
-
-      try {
-        await fetchAccounts(false); // 静默更新
-
-        // 检查是否有状态从异常变为正常的账号
-        const hasUpdated = accountStore.accounts.some(
-          (account) =>
-            account.status === "正常" &&
-            account.platform === accountForm.platform
-        );
-
-        if (hasUpdated || pollCount >= maxPolls) {
-          clearInterval(pollInterval);
-          if (hasUpdated) {
-            ElMessage.success("账号状态已更新");
-          }
-        }
-      } catch (error) {
-        console.warn("轮询更新失败:", error);
-      }
-    }, 2000); // 每2秒检查一次
-  };
   eventSource.onerror = (error) => {
     if (loginStatus.value === "200" || loginStatus.value === "500") {
       console.log("SSE连接正常结束");
