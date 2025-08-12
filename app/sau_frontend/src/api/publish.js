@@ -38,16 +38,6 @@ export const publishApi = {
     return http.post('/postVideoBatch', dataList)
   },
 
-  // 手动验证账号
-  validateAccount(accountId) {
-    return http.post('/validateAccount', { accountId })
-  },
-
-  // 批量验证账号
-  validateAccountsBatch(accountIds) {
-    return http.post('/validateAccountsBatch', { accountIds })
-  },
-
   // 获取最近上传的视频文件
   getRecentUploads() {
     return http.get('/getRecentUploads')

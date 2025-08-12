@@ -2,14 +2,10 @@ import { http } from '@/utils/request'
 
 // 账号管理相关API
 export const accountApi = {
-  // 🔥 恢复使用http封装
   getValidAccounts(forceCheck = false) {
-    const params = forceCheck ? '?force=true' : '';
-    console.log('🔍 发起请求:', `/getValidAccounts${params}`);
-    return http.get(`/getValidAccounts${params}`);
+    return this.getAccountsWithGroups(forceCheck);
   },
 
-  // 其他方法保持不变
   getAccountsWithGroups(forceCheck = false) {
     const params = forceCheck ? '?force=true' : '';
     return http.get(`/getAccountsWithGroups${params}`)

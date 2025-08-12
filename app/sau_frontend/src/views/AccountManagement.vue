@@ -200,14 +200,17 @@
                           <el-icon><Collection /></el-icon>
                           分组
                         </el-dropdown-item>
-                        <el-dropdown-item :command="`delete-${account.id}`" class="danger-item">
+                        <el-dropdown-item
+                          :command="`delete-${account.id}`"
+                          class="danger-item"
+                        >
                           <el-icon><Delete /></el-icon>
                           删除
                         </el-dropdown-item>
                       </el-dropdown-menu>
                     </template>
                   </el-dropdown>
-                  
+
                   <!-- 恢复按钮 - 仅异常账号显示 -->
                   <el-button
                     v-if="account.status === '异常'"
@@ -251,8 +254,6 @@
 
         <!-- 分组管理内容 -->
         <div v-show="activeTab === 'groups'" class="groups-content">
-
-
           <!-- 自定义分组展示 -->
           <div class="custom-groups-section">
             <!-- 🔥 添加这个 groups-list 容器 -->
@@ -632,9 +633,7 @@
       class="group-set-dialog"
     >
       <div class="group-set-content">
-        <p class="account-info">
-          账号：{{ currentAccount?.userName }}
-        </p>
+        <p class="account-info">账号：{{ currentAccount?.userName }}</p>
         <el-form :model="groupSetForm" label-width="80px">
           <el-form-item label="选择分组">
             <el-select
@@ -661,7 +660,7 @@
           <el-button type="primary" @click="submitGroupSet">确定</el-button>
         </div>
       </template>
-    </el-dialog>    
+    </el-dialog>
   </div>
 </template>
 
@@ -853,7 +852,6 @@ const fetchAccounts = async (forceCheck = false) => {
   try {
     console.log("🔍 开始获取账号数据，forceCheck:", forceCheck);
 
-    // 🔥 修改：使用带分组信息的API
     const res = await accountApi.getAccountsWithGroups(forceCheck);
     console.log("✅ 账号API响应:", res);
 
@@ -870,12 +868,6 @@ const fetchAccounts = async (forceCheck = false) => {
       } catch (error) {
         console.warn("获取分组信息失败:", error);
       }
-
-      if (forceCheck) {
-        console.log("账号数据刷新成功");
-      } else {
-        console.log("账号数据加载成功");
-      }
       if (appStore.isFirstTimeAccountManagement) {
         appStore.setAccountManagementVisited();
       }
@@ -885,41 +877,7 @@ const fetchAccounts = async (forceCheck = false) => {
     }
   } catch (error) {
     console.error("获取账号数据失败:", error);
-    // 🔥 如果带分组信息的API失败，降级使用普通API
-    console.log("🔄 降级使用普通账号API");
-    try {
-      const fallbackRes = await accountApi.getValidAccounts(forceCheck);
-      console.log("✅ 降级API响应:", fallbackRes);
-
-      if (fallbackRes && fallbackRes.code === 200 && fallbackRes.data) {
-        accountStore.setAccounts(fallbackRes.data);
-
-        // 获取分组信息
-        try {
-          const groupsRes = await accountApi.getGroups();
-          console.log("✅ 分组API响应:", groupsRes);
-          console.log(
-            "🔍 分组详细数据:",
-            JSON.stringify(groupsRes.data, null, 2)
-          ); // 添加这行调试
-
-          if (groupsRes && groupsRes.code === 200 && groupsRes.data) {
-            accountStore.setGroups(groupsRes.data);
-          }
-        } catch (groupError) {
-          console.warn("获取分组信息失败:", groupError);
-        }
-
-        console.log("✅ 账号数据加载成功");
-      } else {
-        console.error("❌获取账号数据失败");
-      }
-    } catch (fallbackError) {
-      console.error("降级API也失败:", fallbackError);
-      ElMessage.error(
-        `获取账号数据失败: ${fallbackError.message || "网络错误"}`
-      );
-    }
+    ElMessage.error(`获取账号数据失败: ${error.message || "网络错误"}`);
   } finally {
     appStore.setAccountRefreshing(false);
   }
@@ -928,7 +886,7 @@ const fetchAccounts = async (forceCheck = false) => {
 const groupSetDialogVisible = ref(false);
 const currentAccount = ref(null);
 const groupSetForm = reactive({
-  groupId: null
+  groupId: null,
 });
 const getPlatformLogo = (platform) => {
   const logoMap = {
@@ -1021,16 +979,16 @@ const handleDelete = (account) => {
 };
 // 处理下拉菜单命令
 const handleActionCommand = (command) => {
-  const [action, accountId] = command.split('-');
-  const account = accountStore.accounts.find(acc => acc.id == accountId);
-  
+  const [action, accountId] = command.split("-");
+  const account = accountStore.accounts.find((acc) => acc.id == accountId);
+
   if (!account) return;
-  
+
   switch (action) {
-    case 'group':
+    case "group":
       handleSetGroup(account);
       break;
-    case 'delete':
+    case "delete":
       handleDelete(account);
       break;
   }
@@ -1046,33 +1004,33 @@ const handleSetGroup = (account) => {
 // 提交分组设置
 const submitGroupSet = async () => {
   if (!currentAccount.value) return;
-  
+
   try {
     await moveAccountToGroup(currentAccount.value.id, groupSetForm.groupId);
     groupSetDialogVisible.value = false;
     currentAccount.value = null;
   } catch (error) {
-    console.error('设置分组失败:', error);
+    console.error("设置分组失败:", error);
   }
 };
 
 // 恢复账号
 const handleRecover = (account) => {
   // 复用现有的添加账号流程
-  console.log('🔄 开始恢复账号:', account); 
-  dialogType.value = 'recover';
+  console.log("🔄 开始恢复账号:", account);
+  dialogType.value = "recover";
   accountForm.platform = account.platform;
   accountForm.userName = account.userName;
   accountForm.id = account.id;
-  
+
   // 直接跳到二维码步骤
   dialogStep.value = 2;
   dialogVisible.value = true;
-  console.log('🔄 调用 connectSSE:', {
+  console.log("🔄 调用 connectSSE:", {
     platform: account.platform,
     userName: account.userName,
     isRecover: true,
-    accountId: account.id
+    accountId: account.id,
   }); // 调试日志
   // 开始 SSE 连接
   connectSSE(account.platform, account.userName, true, account.id);
@@ -1115,7 +1073,9 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
   let url;
   if (isRecover && accountId) {
-    url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}&mode=recover&accountId=${accountId}`;
+    url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(
+      name
+    )}&mode=recover&accountId=${accountId}`;
   } else {
     url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}`;
   }
@@ -1892,7 +1852,10 @@ $space-2xl: 48px;
 .accounts-section {
   .accounts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); // 从 240px 改为 200px
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(200px, 1fr)
+    ); // 从 240px 改为 200px
     gap: $space-sm; // 从 $space-md 改为 $space-sm
   }
 
@@ -2279,7 +2242,7 @@ $space-2xl: 48px;
     display: flex;
     align-items: center;
     gap: $space-sm;
-    
+
     .el-icon {
       font-size: 14px;
     }
@@ -2287,11 +2250,11 @@ $space-2xl: 48px;
 
   .danger-item {
     color: $danger;
-    
+
     .el-icon {
       color: $danger;
     }
-    
+
     &:hover {
       background-color: rgba(239, 68, 68, 0.1);
     }
@@ -2311,7 +2274,7 @@ $space-2xl: 48px;
       margin: 0 0 $space-lg 0;
     }
   }
-  
+
   .dialog-footer {
     display: flex;
     justify-content: flex-end;
