@@ -142,11 +142,7 @@
                 <div class="account-info">
                   <div class="avatar-container">
                     <div class="account-avatar">
-                      <el-avatar
-                        :size="56"
-                        :src="getAvatarUrl(account)"
-                        @error="(e) => handleAvatarError(e, account)"
-                      />
+                      <el-avatar :size="56" :src="getAvatarUrl(account)" />
                     </div>
                     <div class="platform-logo">
                       <img
@@ -828,93 +824,43 @@ const getPlatformColor = (platform) => {
   return colorMap[platform] || "#6b7280";
 };
 
+// 🔥 简化的头像URL获取逻辑
 const getAvatarUrl = (account) => {
-  // 🔥 先检查是否是临时用户名，直接返回默认头像
-  if (account.userName && account.userName.startsWith("用户_")) {
-    console.log("🔍 检测到临时用户名，使用默认头像:", account.userName);
-    return "/default-avatar.png";
-  }
-
-  // 1. 优先使用 local_avatar
+  // 1. 优先使用数据库中的头像字段
   if (account.local_avatar && account.local_avatar !== "/default-avatar.png") {
-    if (account.local_avatar.startsWith("assets/avatar/")) {
-      return `http://localhost:3409/${account.local_avatar}`;
-    }
-    return account.local_avatar;
+    return account.local_avatar.startsWith("assets/avatar/")
+      ? `http://localhost:3409/${account.local_avatar}`
+      : account.local_avatar;
   }
 
-  // 2. 备用：avatar_url
   if (account.avatar_url && account.avatar_url !== "/default-avatar.png") {
     return account.avatar_url;
   }
 
-  // 3. 兼容：avatar字段
   if (account.avatar && account.avatar !== "/default-avatar.png") {
-    if (account.avatar.startsWith("assets/avatar/")) {
-      return `http://localhost:3409/${account.avatar}`;
+    return account.avatar.startsWith("assets/avatar/")
+      ? `http://localhost:3409/${account.avatar}`
+      : account.avatar;
+  }
+
+  // 🔥 2. 当头像字段为空但账号正常时，构造可能的本地路径
+  if (account.userName && account.platform && account.status === "正常") {
+    const platformMap = {
+      抖音: "douyin",
+      快手: "kuaishou",
+      视频号: "wechat",
+      微信视频号: "wechat",
+      小红书: "xiaohongshu",
+    };
+
+    const platformKey = platformMap[account.platform];
+    if (platformKey) {
+      return `http://localhost:3409/assets/avatar/${platformKey}/${account.userName}/avatar.jpg`;
     }
-    return account.avatar;
   }
 
-  // 4. 默认头像
+  // 3. 默认头像
   return "/default-avatar.png";
-};
-
-// 🔥 为每个账号添加重试计数，防止无限循环
-const avatarRetryCount = new Map();
-
-const handleAvatarError = (e, account) => {
-  const accountKey = `${account.id}-${account.userName}`;
-  const currentRetryCount = avatarRetryCount.get(accountKey) || 0;
-
-  // 🔥 限制最大重试次数
-  if (currentRetryCount >= 3) {
-    console.log("📷 头像重试次数达到上限，使用默认头像");
-    e.target.src = "/default-avatar.png";
-    avatarRetryCount.delete(accountKey);
-    return;
-  }
-
-  avatarRetryCount.set(accountKey, currentRetryCount + 1);
-
-  console.warn(
-    `头像加载失败 (第${currentRetryCount + 1}次重试):`,
-    e.target.src
-  );
-
-  const currentSrc = e.target.src;
-
-  // 回退策略1：本地路径 -> API路径
-  if (
-    currentSrc.includes("http://localhost:3409/assets/avatar/") &&
-    !currentSrc.includes("getFile")
-  ) {
-    const pathPart = currentSrc.split("assets/avatar/")[1];
-    const apiUrl = `http://localhost:3409/getFile?filename=assets/avatar/${pathPart}`;
-    console.log("🔄 切换到API路径:", apiUrl);
-    e.target.src = apiUrl;
-    return;
-  }
-
-  // 回退策略2：jpg -> png
-  if (currentSrc.includes("avatar.jpg")) {
-    const pngUrl = currentSrc.replace("avatar.jpg", "avatar.png");
-    console.log("🔄 尝试PNG格式:", pngUrl);
-    e.target.src = pngUrl;
-    return;
-  }
-
-  // 回退策略3：远程头像
-  if (account.avatar_url && currentSrc !== account.avatar_url) {
-    console.log("🔄 切换到远程头像:", account.avatar_url);
-    e.target.src = account.avatar_url;
-    return;
-  }
-
-  // 最终回退：默认头像
-  console.log("📷 使用默认头像");
-  e.target.src = "/default-avatar.png";
-  avatarRetryCount.delete(accountKey);
 };
 const fetchAccounts = async (forceCheck = false) => {
   if (appStore.isAccountRefreshing) return;
