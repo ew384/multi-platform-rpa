@@ -1181,25 +1181,46 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
     sseConnecting.value = false;
   };
 };
-// 🔥 新增：登录成功处理方法
 const handleLoginSuccess = async () => {
   try {
-    // 阶段1：立即更新账号状态（如果是恢复模式）
+    // 立即更新UI状态
     if (dialogType.value === "recover" && accountForm.id) {
       accountStore.updateAccountStatusImmediately(accountForm.id, "正常");
     }
 
-    // 阶段2：延时刷新完整账号列表
-    setTimeout(async () => {
-      console.log("🔄 延时刷新账号列表...");
-      await accountStore.smartRefresh(false);
-    }, 3000); // 3秒后刷新，给后端足够时间处理
+    // 改进：轮询检查后端状态，而不是固定延时
+    let retryCount = 0;
+    const maxRetries = 10; // 最多重试10次
+
+    const checkBackendStatus = async () => {
+      retryCount++;
+      console.log(`🔄 第${retryCount}次检查后端状态...`);
+
+      try {
+        await accountStore.smartRefresh(false);
+
+        // 检查是否还是异常状态
+        const account = accountStore.accounts.find(
+          (acc) => acc.id === accountForm.id
+        );
+        if (account && account.status === "异常" && retryCount < maxRetries) {
+          // 如果仍然异常且未达到最大重试次数，继续轮询
+          setTimeout(checkBackendStatus, 2000); // 2秒后再检查
+        } else {
+          console.log(`✅ 状态检查完成，最终状态：${account?.status}`);
+        }
+      } catch (error) {
+        console.error("❌ 状态检查失败:", error);
+        if (retryCount < maxRetries) {
+          setTimeout(checkBackendStatus, 2000);
+        }
+      }
+    };
+
+    // 延迟开始轮询，给后端处理时间
+    setTimeout(checkBackendStatus, 5000); // 5秒后开始第一次检查
   } catch (error) {
     console.error("❌ 登录成功处理失败:", error);
-    // 即使出错也要刷新列表
-    setTimeout(async () => {
-      await accountStore.smartRefresh(false);
-    }, 5000);
   }
 };
 // 新增：分组管理相关方法和数据

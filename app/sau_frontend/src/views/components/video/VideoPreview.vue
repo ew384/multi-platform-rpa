@@ -67,12 +67,14 @@ const posterCache = new Map();
 // 🔥 添加缓存相关的辅助函数
 const getCachedVideoUrl = (videoPath) => {
   if (!videoPath) return null;
-  
+
   if (videoCache.has(videoPath)) {
     return videoCache.get(videoPath);
   }
-  
-  const url = `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=${encodeURIComponent(videoPath)}`;
+
+  const url = `${
+    import.meta.env.VITE_API_BASE_URL
+  }/getFile?filename=${encodeURIComponent(videoPath)}`;
   videoCache.set(videoPath, url);
   return url;
 };
@@ -122,22 +124,22 @@ const isPlaying = ref(false);
 // 计算属性
 const currentVideo = computed(() => {
   const video = props.videos[currentVideoIndex.value] || null;
-  console.log('🔍 currentVideo 计算:', {
+  console.log("🔍 currentVideo 计算:", {
     hasVideo: !!video,
     videoName: video?.name,
     videoUrl: video?.url,
     index: currentVideoIndex.value,
-    totalVideos: props.videos.length
+    totalVideos: props.videos.length,
   });
   if (!video) return null;
-  
+
   // 🔥 使用缓存的URL
   const result = {
     ...video,
-    url: getCachedVideoUrl(video.path || video.name)
+    url: getCachedVideoUrl(video.path || video.name),
   };
-  
-  console.log('✅ currentVideo 结果:', result);
+
+  console.log("✅ currentVideo 结果:", result);
   return result;
 });
 
@@ -162,25 +164,29 @@ watch(currentVideo, async (newVideo) => {
   }
 });
 watch(currentVideo, async (newVideo, oldVideo) => {
-  console.log('👀 currentVideo watch 触发:', {
+  console.log("👀 currentVideo watch 触发:", {
     newVideo: newVideo?.name,
     oldVideo: oldVideo?.name,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
-  
+
   if (newVideo) {
-    console.log('🚀 准备调用 loadVideo');
+    console.log("🚀 准备调用 loadVideo");
     await loadVideo();
   }
 });
-watch(() => props.videos, (newVideos, oldVideos) => {
-  console.log('📊 props.videos 变化:', {
-    newCount: newVideos?.length,
-    oldCount: oldVideos?.length,
-    timestamp: Date.now(),
-    newVideos: newVideos?.map(v => v.name)
-  });
-}, { immediate: true, deep: true });
+watch(
+  () => props.videos,
+  (newVideos, oldVideos) => {
+    console.log("📊 props.videos 变化:", {
+      newCount: newVideos?.length,
+      oldCount: oldVideos?.length,
+      timestamp: Date.now(),
+      newVideos: newVideos?.map((v) => v.name),
+    });
+  },
+  { immediate: true, deep: true }
+);
 // 方法
 const switchVideo = (index) => {
   if (index >= 0 && index < props.videos.length) {
@@ -190,12 +196,12 @@ const switchVideo = (index) => {
 };
 
 const loadVideo = async () => {
-  console.log('🎯 loadVideo 开始执行:', {
+  console.log("🎯 loadVideo 开始执行:", {
     currentVideo: currentVideo.value?.name,
     hasVideoElement: !!videoElement.value,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
-    
+
   if (!currentVideo.value) return;
 
   // 🔥 检查视频是否已缓存，如果已缓存则快速加载
@@ -218,12 +224,17 @@ const loadVideo = async () => {
     await nextTick();
 
     // 重置视频元素
-    videoElement.value.currentTime = 0;
+    if (videoElement.value) {
+      videoElement.value.currentTime = 0;
+    }
 
     // 等待视频加载
     await new Promise((resolve, reject) => {
       const video = videoElement.value;
-
+      if (!video) {
+        reject(new Error("视频元素已被销毁"));
+        return;
+      }
       const onLoaded = () => {
         video.removeEventListener("loadedmetadata", onLoaded);
         video.removeEventListener("error", onError);
@@ -268,9 +279,11 @@ const handleVideoLoaded = () => {
 
 const handleVideoError = (event) => {
   console.warn("本地视频加载失败，尝试 API 路径");
-  
-  if (currentVideo.value?.urlFallback && 
-      event.target.src !== currentVideo.value.urlFallback) {
+
+  if (
+    currentVideo.value?.urlFallback &&
+    event.target.src !== currentVideo.value.urlFallback
+  ) {
     console.log("🔄 切换到 API 路径:", currentVideo.value.urlFallback);
     event.target.src = currentVideo.value.urlFallback;
   } else {
@@ -280,7 +293,6 @@ const handleVideoError = (event) => {
     emit("video-error", new Error(errorMsg));
   }
 };
-
 
 const handleVideoClick = () => {
   if (props.clickable) {
@@ -301,14 +313,16 @@ const handlePlayClick = () => {
 };
 const handlePosterError = (event) => {
   console.warn("本地封面加载失败，尝试 API 路径");
-  
-  if (currentVideo.value?.posterFallback && 
-      event.target.poster !== currentVideo.value.posterFallback) {
+
+  if (
+    currentVideo.value?.posterFallback &&
+    event.target.poster !== currentVideo.value.posterFallback
+  ) {
     console.log("🔄 切换到 API 封面路径:", currentVideo.value.posterFallback);
     event.target.poster = currentVideo.value.posterFallback;
   } else {
     console.log("📺 移除封面，使用视频首帧");
-    event.target.removeAttribute('poster');
+    event.target.removeAttribute("poster");
   }
 };
 // 🔥 在组件最后添加缓存管理
@@ -355,8 +369,8 @@ defineExpose({
   clearCache: clearVideoCache,
   getCacheSize: () => ({
     videos: videoCache.size,
-    posters: posterCache.size
-  })
+    posters: posterCache.size,
+  }),
 });
 </script>
 
