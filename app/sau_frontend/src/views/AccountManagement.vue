@@ -843,8 +843,8 @@ const getAvatarUrl = (account) => {
       : account.avatar;
   }
 
-  // 🔥 2. 当头像字段为空但账号正常时，构造可能的本地路径
-  if (account.userName && account.platform && account.status === "正常") {
+  // 🔥 2. 当头像字段为空，构造可能的本地路径
+  if (account.userName && account.platform) {
     const platformMap = {
       抖音: "douyin",
       快手: "kuaishou",
@@ -1183,25 +1183,24 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
 };
 // 🔥 新增：登录成功处理方法
 const handleLoginSuccess = async () => {
-    try {
-        // 阶段1：立即更新账号状态（如果是恢复模式）
-        if (dialogType.value === 'recover' && accountForm.id) {
-            accountStore.updateAccountStatusImmediately(accountForm.id, '正常');
-        }
-        
-        // 阶段2：延时刷新完整账号列表
-        setTimeout(async () => {
-            console.log('🔄 延时刷新账号列表...');
-            await accountStore.smartRefresh(false);
-        }, 3000); // 3秒后刷新，给后端足够时间处理
-        
-    } catch (error) {
-        console.error('❌ 登录成功处理失败:', error);
-        // 即使出错也要刷新列表
-        setTimeout(async () => {
-            await accountStore.smartRefresh(false);
-        }, 5000);
+  try {
+    // 阶段1：立即更新账号状态（如果是恢复模式）
+    if (dialogType.value === "recover" && accountForm.id) {
+      accountStore.updateAccountStatusImmediately(accountForm.id, "正常");
     }
+
+    // 阶段2：延时刷新完整账号列表
+    setTimeout(async () => {
+      console.log("🔄 延时刷新账号列表...");
+      await accountStore.smartRefresh(false);
+    }, 3000); // 3秒后刷新，给后端足够时间处理
+  } catch (error) {
+    console.error("❌ 登录成功处理失败:", error);
+    // 即使出错也要刷新列表
+    setTimeout(async () => {
+      await accountStore.smartRefresh(false);
+    }, 5000);
+  }
 };
 // 新增：分组管理相关方法和数据
 const groupDialogVisible = ref(false);
@@ -1256,7 +1255,6 @@ const getGroupIcon = (iconName) => {
   };
   return iconMap[iconName] || "User";
 };
-
 
 // 拖拽开始 - 添加详细调试
 const handleDragStart = (account, event) => {
