@@ -184,7 +184,6 @@
             </div>
           </div>
 
-
           <!-- 表单内容 -->
           <div class="form-section">
             <el-form
@@ -527,12 +526,12 @@ const handleVideoUploadSuccess = async (response, file) => {
     };
 
     selectedVideos.value.push(videoInfo);
-    
+
     // 🔥 如果是第一个视频且没有自定义封面，生成默认封面
     if (selectedVideos.value.length === 1 && !customCoverSet.value) {
       await generateAndSetDefaultCover(videoInfo.url);
     }
-    
+
     ElMessage.success("视频上传成功");
   } else {
     ElMessage.error(response.msg || "上传失败");
@@ -541,50 +540,50 @@ const handleVideoUploadSuccess = async (response, file) => {
 // 🔥 新增：生成并设置默认封面
 const generateAndSetDefaultCover = async (videoUrl) => {
   try {
-    console.log('📸 开始生成默认封面:', videoUrl);
-    
+    console.log("📸 开始生成默认封面:", videoUrl);
+
     const defaultCover = await generateDefaultCoverDataURL(videoUrl);
     if (defaultCover) {
       publishForm.cover = defaultCover;
-      console.log('✅ 默认封面已设置');
+      console.log("✅ 默认封面已设置");
     }
   } catch (error) {
-    console.error('❌ 生成默认封面失败:', error);
+    console.error("❌ 生成默认封面失败:", error);
   }
 };
 
 // 🔥 新增：生成默认封面 DataURL
 const generateDefaultCoverDataURL = (videoUrl) => {
   return new Promise((resolve) => {
-    const video = document.createElement('video');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    video.crossOrigin = 'anonymous';
-    video.preload = 'metadata';
-    
+    const video = document.createElement("video");
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    video.crossOrigin = "anonymous";
+    video.preload = "metadata";
+
     video.onloadedmetadata = () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       video.currentTime = 0.1; // 0.1秒处截图，避免黑屏
     };
-    
+
     video.onseeked = () => {
       try {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+        const dataURL = canvas.toDataURL("image/jpeg", 0.8);
         resolve(dataURL);
       } catch (error) {
-        console.error('❌ 封面绘制失败:', error);
+        console.error("❌ 封面绘制失败:", error);
         resolve(null);
       }
     };
-    
+
     video.onerror = () => {
-      console.error('❌ 视频加载失败，无法生成封面');
+      console.error("❌ 视频加载失败，无法生成封面");
       resolve(null);
     };
-    
+
     video.src = videoUrl;
   });
 };
@@ -592,10 +591,10 @@ const generateDefaultCoverDataURL = (videoUrl) => {
 // 🔥 新增：封面处理逻辑
 const handleCoverGeneration = async (videoFile, videoUrl, filename) => {
   if (customCoverSet.value && publishForm.cover) {
-    console.log('🎨 用户已设置自定义封面，保存自定义封面到本地');
+    console.log("🎨 用户已设置自定义封面，保存自定义封面到本地");
     await saveCustomCoverToLocal(publishForm.cover, filename);
   } else {
-    console.log('📸 用户未设置封面，生成默认首帧封面');
+    console.log("📸 用户未设置封面，生成默认首帧封面");
     await generateDefaultPoster(videoFile, videoUrl, filename);
   }
 };
@@ -603,49 +602,56 @@ const handleCoverGeneration = async (videoFile, videoUrl, filename) => {
 // 🔥 生成默认首帧封面（仅本地）
 const generateDefaultPoster = async (videoFile, videoUrl, filename) => {
   try {
-    console.log('📸 开始生成默认封面:', filename);
-    
+    console.log("📸 开始生成默认封面:", filename);
+
     return new Promise((resolve) => {
-      const video = document.createElement('video');
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      video.crossOrigin = 'anonymous';
-      video.preload = 'metadata';
-      
+      const video = document.createElement("video");
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      video.crossOrigin = "anonymous";
+      video.preload = "metadata";
+
       video.onloadedmetadata = () => {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         video.currentTime = 0.1; // 0.1秒处截图，避免黑屏
       };
-      
+
       video.onseeked = () => {
         try {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          
-          canvas.toBlob(async (blob) => {
-            if (blob) {
-              const posterFilename = filename.replace(/\.[^/.]+$/, '_poster.png');
-              await saveToLocalCovers(blob, posterFilename);
-              console.log('✅ 默认封面生成完成:', posterFilename);
-            }
-            resolve();
-          }, 'image/png', 0.8);
+
+          canvas.toBlob(
+            async (blob) => {
+              if (blob) {
+                const posterFilename = filename.replace(
+                  /\.[^/.]+$/,
+                  "_poster.png"
+                );
+                await saveToLocalCovers(blob, posterFilename);
+                console.log("✅ 默认封面生成完成:", posterFilename);
+              }
+              resolve();
+            },
+            "image/png",
+            0.8
+          );
         } catch (error) {
-          console.error('❌ 封面绘制失败:', error);
+          console.error("❌ 封面绘制失败:", error);
           resolve();
         }
       };
-      
+
       video.onerror = () => {
-        console.error('❌ 视频加载失败，无法生成封面');
+        console.error("❌ 视频加载失败，无法生成封面");
         resolve();
       };
-      
+
       video.src = videoUrl;
     });
   } catch (error) {
-    console.error('❌ 默认封面生成失败:', error);
+    console.error("❌ 默认封面生成失败:", error);
   }
 };
 
@@ -654,41 +660,41 @@ const saveCustomCoverToLocal = async (frameData, videoFilename) => {
   try {
     const response = await fetch(frameData);
     const blob = await response.blob();
-    const posterFilename = videoFilename.replace(/\.[^/.]+$/, '_poster.png');
-    
+    const posterFilename = videoFilename.replace(/\.[^/.]+$/, "_poster.png");
+
     await saveToLocalCovers(blob, posterFilename);
-    console.log('✅ 自定义封面保存完成:', posterFilename);
+    console.log("✅ 自定义封面保存完成:", posterFilename);
   } catch (error) {
-    console.error('保存自定义封面失败:', error);
+    console.error("保存自定义封面失败:", error);
   }
 };
 
 // 🔥 本地保存方法（简化版）
 const saveToLocalCovers = async (blob, filename) => {
   try {
-    console.log('💾 准备保存封面到本地:', filename);
-    
+    console.log("💾 准备保存封面到本地:", filename);
+
     // 创建下载链接，让用户手动保存到 videoFiles/covers 文件夹
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = filename;
-    a.style.display = 'none';
+    a.style.display = "none";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
-    console.log('📥 封面已下载，请保存到 videoFiles/covers 文件夹:', filename);
+
+    console.log("📥 封面已下载，请保存到 videoFiles/covers 文件夹:", filename);
   } catch (error) {
-    console.warn('❌ 本地保存失败:', error);
+    console.warn("❌ 本地保存失败:", error);
   }
 };
 
 // 🔥 监听封面组件的事件
 const handleCustomCoverSet = (isCustom) => {
   customCoverSet.value = isCustom;
-  console.log('🎨 用户自定义封面状态:', isCustom);
+  console.log("🎨 用户自定义封面状态:", isCustom);
 };
 
 const handleVideoUploadError = (error) => {
@@ -721,22 +727,25 @@ const addMoreVideos = () => {
 };
 
 const handleMaterialSelected = async (materials) => {
-  const newMaterials = materials.filter(material => {
+  const newMaterials = materials.filter((material) => {
     const exists = selectedVideos.value.find((v) => v.path === material.path);
     return !exists;
   });
 
   if (newMaterials.length > 0) {
     selectedVideos.value.push(...newMaterials);
-    
+
     // 🔥 如果是第一次添加视频且没有自定义封面，生成默认封面
-    if (selectedVideos.value.length === newMaterials.length && !customCoverSet.value) {
+    if (
+      selectedVideos.value.length === newMaterials.length &&
+      !customCoverSet.value
+    ) {
       await generateAndSetDefaultCover(newMaterials[0].url);
     }
-    
+
     ElMessage.success(`已添加 ${newMaterials.length} 个视频`);
   }
-  
+
   materialSelectorVisible.value = false;
 };
 
@@ -772,7 +781,7 @@ const handleVideoError = (error) => {
 const handleCoverChanged = (coverUrl) => {
   console.log("封面已更新:", coverUrl);
   publishForm.cover = coverUrl;
-  
+
   // 如果用户设置了封面，标记为自定义封面
   if (coverUrl && coverUrl !== publishForm.cover) {
     customCoverSet.value = true;
@@ -796,12 +805,12 @@ const disabledDate = (time) => {
 const disabledHours = () => {
   const now = new Date();
   const selectedDate = new Date(publishForm.scheduleTime);
-  
+
   // 如果选择的是今天，禁用当前小时之前的小时
   if (selectedDate.toDateString() === now.toDateString()) {
     return Array.from({ length: now.getHours() }, (_, i) => i);
   }
-  
+
   return [];
 };
 
@@ -809,65 +818,68 @@ const disabledHours = () => {
 const disabledMinutes = (hour) => {
   const now = new Date();
   const selectedDate = new Date(publishForm.scheduleTime);
-  
+
   // 如果选择的是今天的当前小时，禁用当前分钟之前的分钟
-  if (selectedDate.toDateString() === now.toDateString() && hour === now.getHours()) {
+  if (
+    selectedDate.toDateString() === now.toDateString() &&
+    hour === now.getHours()
+  ) {
     return Array.from({ length: now.getMinutes() + 1 }, (_, i) => i);
   }
-  
+
   return [];
 };
 const extractTimeFromSchedule = (scheduleTime) => {
   if (!scheduleTime) return "10:00";
-  
+
   try {
     // 🔥 方案2：直接从字符串中提取时间部分
-    if (typeof scheduleTime === 'string') {
+    if (typeof scheduleTime === "string") {
       // 处理 "2025-08-11 13:00:00" 格式
       const timeMatch = scheduleTime.match(/\s(\d{2}):(\d{2})/);
       if (timeMatch) {
         return `${timeMatch[1]}:${timeMatch[2]}`;
       }
     }
-    
+
     // 回退到原方法
     const date = new Date(scheduleTime);
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
     return `${hours}:${minutes}`;
   } catch (error) {
-    console.error('提取时间失败:', error);
+    console.error("提取时间失败:", error);
     return "10:00";
   }
 };
 
 const calculateDaysFromNow = (scheduleTime) => {
   if (!scheduleTime) return 0;
-  
+
   try {
     // 🔥 方案2：直接从字符串中提取日期部分
-    if (typeof scheduleTime === 'string') {
+    if (typeof scheduleTime === "string") {
       const dateMatch = scheduleTime.match(/^(\d{4}-\d{2}-\d{2})/);
       if (dateMatch) {
         const targetDateStr = dateMatch[1];
-        const today = new Date().toISOString().split('T')[0];
-        
-        const targetDate = new Date(targetDateStr + 'T00:00:00');
-        const todayDate = new Date(today + 'T00:00:00');
-        
+        const today = new Date().toISOString().split("T")[0];
+
+        const targetDate = new Date(targetDateStr + "T00:00:00");
+        const todayDate = new Date(today + "T00:00:00");
+
         const diffTime = targetDate - todayDate;
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        
-        console.log('🔧 calculateDaysFromNow 字符串方法:', {
+
+        console.log("🔧 calculateDaysFromNow 字符串方法:", {
           targetDateStr,
           today,
-          diffDays
+          diffDays,
         });
-        
+
         return Math.max(0, diffDays);
       }
     }
-    
+
     // 回退到原方法
     const now = new Date();
     const target = new Date(scheduleTime);
@@ -875,9 +887,19 @@ const calculateDaysFromNow = (scheduleTime) => {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
   } catch (error) {
-    console.error('计算天数失败:', error);
+    console.error("计算天数失败:", error);
     return 0;
   }
+};
+const getLocationForPlatform = (platformType) => {
+  if (platformType === 3) {
+    // 抖音
+    return publishForm.douyin.location || "";
+  } else if (platformType === 2) {
+    // 视频号
+    return publishForm.wechat.location || "";
+  }
+  return "";
 };
 const publishContent = async (mode = "background") => {
   if (!canPublish.value) {
@@ -888,23 +910,23 @@ const publishContent = async (mode = "background") => {
   if (publishForm.scheduleEnabled && publishForm.scheduleTime) {
     const scheduleDate = new Date(publishForm.scheduleTime);
     const now = new Date();
-    
+
     if (scheduleDate <= now) {
       ElMessage.error("定时发布时间不能早于当前时间，请重新选择");
       return;
     }
-    
+
     // 检查是否太接近当前时间（至少5分钟后）
     const minTime = new Date(now.getTime() + 5 * 60 * 1000);
     if (scheduleDate < minTime) {
       ElMessage.warning("定时发布时间建议设置在5分钟后，以确保发布成功");
       // 不阻止发布，只是提醒
     }
-    
-    console.log('🔧 时间验证通过:', {
-      current: now.toLocaleString('zh-CN'),
-      scheduled: scheduleDate.toLocaleString('zh-CN'),
-      valid: scheduleDate > now
+
+    console.log("🔧 时间验证通过:", {
+      current: now.toLocaleString("zh-CN"),
+      scheduled: scheduleDate.toLocaleString("zh-CN"),
+      valid: scheduleDate > now,
     });
   }
   try {
@@ -948,12 +970,17 @@ const publishContent = async (mode = "background") => {
             videosCount: account.videosCount,
           })),
           thumbnail: publishForm.cover,
+          location: getLocationForPlatform(parseInt(platformType)),
           enableTimer: publishForm.scheduleEnabled ? 1 : 0,
           videosPerDay: 1,
-          dailyTimes: publishForm.scheduleEnabled && publishForm.scheduleTime ? 
-            [extractTimeFromSchedule(publishForm.scheduleTime)] : ["10:00"],
-          startDays: publishForm.scheduleEnabled && publishForm.scheduleTime ? 
-            calculateDaysFromNow(publishForm.scheduleTime) : 0,
+          dailyTimes:
+            publishForm.scheduleEnabled && publishForm.scheduleTime
+              ? [extractTimeFromSchedule(publishForm.scheduleTime)]
+              : ["10:00"],
+          startDays:
+            publishForm.scheduleEnabled && publishForm.scheduleTime
+              ? calculateDaysFromNow(publishForm.scheduleTime)
+              : 0,
           category: 0,
           mode: mode,
           original: publishForm.wechat.original,
@@ -983,12 +1010,10 @@ const publishContent = async (mode = "background") => {
       ElMessage.success(
         `发布成功！共发布到 ${Object.keys(accountsByPlatform).length} 个平台`
       );
-      
     } else if (successCount > 0) {
       ElMessage.warning(
         `部分发布成功：${successCount}/${results.length} 个平台成功`
       );
-
     } else {
       ElMessage.error("发布失败，请检查网络连接和账号状态");
     }
@@ -1158,7 +1183,7 @@ $space-xl: 32px;
         border-radius: 12px;
         border: none; // 🔥 移除边框
         aspect-ratio: 9 / 16;
-        
+
         .cover-image {
           width: 100%;
           height: 100%;
@@ -1166,7 +1191,7 @@ $space-xl: 32px;
           overflow: hidden;
           cursor: pointer;
           position: relative;
-          
+
           img {
             width: 100%;
             height: 100%;
@@ -1237,7 +1262,7 @@ $space-xl: 32px;
       &.mode-preview {
         display: block;
         justify-content: unset;
-        
+
         .video-container {
           width: 100%;
           max-width: none;
@@ -1245,11 +1270,11 @@ $space-xl: 32px;
           aspect-ratio: 9 / 16;
           border-radius: 12px;
           border: none;
-          
+
           .video-player {
             aspect-ratio: 9 / 16;
             border-radius: 12px;
-            
+
             video {
               border-radius: 12px;
             }
@@ -2027,14 +2052,13 @@ $space-xl: 32px;
   }
 }
 
-
 // 🔧 响应式设计优化
 @media (max-width: 768px) {
   // 🔥 媒体区域响应式布局
   .media-section {
     grid-template-columns: 1fr;
     gap: 16px;
-    
+
     .video-section,
     .cover-section {
       margin-bottom: 16px;
