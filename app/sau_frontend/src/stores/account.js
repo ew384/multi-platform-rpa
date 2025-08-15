@@ -177,8 +177,18 @@ const updateAccountStatusImmediately = (accountId, newStatus) => {
     console.log(`✅ 账号状态已更新: ${account.userName} -> ${newStatus}`);
   }
 };
+// 🔥 新增：更新单个账号状态（用于SSE实时更新）
+const updateAccountStatus = (accountId, statusUpdate) => {
+  const account = accounts.value.find(acc => acc.id === accountId);
+  if (account) {
+    Object.assign(account, statusUpdate);
+    console.log(`✅ Store中账号状态已更新: ${account.userName}`, statusUpdate);
+  } else {
+    console.warn(`⚠️ 未找到账号ID: ${accountId}`);
+  }
+};
+
 return {
-  // 原有的
   accounts,
   setAccounts,
   addAccount,
@@ -186,7 +196,7 @@ return {
   deleteAccount,
   getAccountsByPlatform,
 
-  // 新增的分组相关
+  // 分组相关
   groups,
   setGroups,
   addGroup,
@@ -196,11 +206,11 @@ return {
   getGroupById,
   updateAccountGroup,
   
-  // 新增：加载方法
+  // 加载方法
   loadAccounts,
-    // 🔥 新增：智能刷新相关
   isRefreshing,
   smartRefresh,
-  updateAccountStatusImmediately
+  updateAccountStatusImmediately,
+  updateAccountStatus
 }
 })
