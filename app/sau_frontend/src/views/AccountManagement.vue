@@ -713,108 +713,8 @@ const sseConnecting = ref(false);
 const qrCodeData = ref("");
 const loginStatus = ref("");
 const dialogStep = ref(1); // 1: 平台选择, 2: 二维码扫描
-// 🔥 新增：账号状态SSE连接管理
-const accountStatusSSE = ref(null);
 
-// 🔥 新增：建立账号状态SSE连接
-const connectAccountStatusSSE = () => {
-  // 先断开现有连接
-  disconnectAccountStatusSSE();
-  
-  console.log('📡 建立账号状态SSE连接');
-  
-  const eventSource = new EventSource(
-    `${import.meta.env.VITE_API_BASE_URL}/api/account-status-stream`
-  );
-  
-  eventSource.onmessage = (event) => {
-    try {
-      console.log('📨 收到SSE原始消息:', event.data);
-      const message = JSON.parse(event.data);
-      
-      if (message.type === 'account_status_change') {
-        console.log('🔄 开始处理账号状态变化');
-        handleAccountStatusChange(message.data);
-      } else if (message.type === 'heartbeat') {
-        console.log('💓 账号状态SSE心跳');
-      } else if (message.type === 'server_shutdown') {
-        console.log('🛑 服务器关闭，断开SSE连接');
-        disconnectAccountStatusSSE();
-      }
-    } catch (error) {
-      console.error('❌ 解析账号状态SSE消息失败:', error);
-    }
-  };
-  
-  eventSource.onopen = () => {
-    console.log('✅ 账号状态SSE连接已建立');
-  };
-  
-  eventSource.onerror = (error) => {
-    console.warn('❌ 账号状态SSE连接错误:', error);
-    // 3秒后重连
-    setTimeout(() => {
-      if (!accountStatusSSE.value) {
-        connectAccountStatusSSE();
-      }
-    }, 3000);
-  };
-  
-  accountStatusSSE.value = eventSource;
-};
 
-// 🔥 新增：断开SSE连接
-const disconnectAccountStatusSSE = () => {
-  if (accountStatusSSE.value) {
-    console.log('📡 断开账号状态SSE连接');
-    accountStatusSSE.value.close();
-    accountStatusSSE.value = null;
-  }
-};
-
-// 🔥 新增：处理账号状态变化
-const handleAccountStatusChange = (accountData) => {
-  console.log('📨 收到账号状态变化:', accountData);
-  console.log('🔍 推送的status值:', accountData.status);
-  try {
-    // 🔥 添加调试：检查当前账号列表
-    console.log('🔍 当前账号列表:', accountStore.accounts.map(acc => ({
-      id: acc.id,
-      userName: acc.userName,
-      platform: acc.platform,
-      status: acc.status
-    })));
-    
-    // 查找对应的账号并更新状态
-    const account = accountStore.accounts.find(acc => 
-      acc.userName === accountData.accountName && 
-      acc.platform === accountData.platform
-    );
-    
-    console.log('🔍 查找结果:', account ? `找到账号: ${account.userName}` : '未找到匹配账号');
-    
-    if (account) {
-      // 更新账号状态
-      accountStore.updateAccountStatus(account.id, {
-        status: accountData.status,
-        isValid: accountData.isValid,
-        lastCheckTime: accountData.lastCheckTime
-      });
-      
-      console.log(`✅ 账号状态已更新: ${accountData.accountName} -> ${accountData.status}`);
-      
-      // 显示通知
-      ElMessage.warning(
-        `账号 ${accountData.accountName} (${accountData.platform}) 状态已更新为：${accountData.status}`
-      );
-    } else {
-      console.warn('⚠️ 未找到对应账号，刷新账号列表');
-      fetchAccounts(false);
-    }
-  } catch (error) {
-    console.error('❌ 处理账号状态变化失败:', error);
-  }
-};
 // 支持的平台配置（带logo）
 const supportedPlatforms = [
   { name: "抖音", logo: "/logos/douyin.png", class: "douyin" },
@@ -1678,16 +1578,11 @@ const submitEdit = async () => {
 };
 // 生命周期
 onMounted(() => {
-  if (appStore.isFirstTimeAccountManagement) {
-    fetchAccounts(true); // 首次加载强制验证
-  }
-  // 🔥 建立账号状态SSE连接
-  connectAccountStatusSSE();
+  //if (appStore.isFirstTimeAccountManagement) {
+  fetchAccounts(true);
 });
 
 onBeforeUnmount(() => {
-  // 🔥 断开SSE连接
-  disconnectAccountStatusSSE();
   closeSSEConnection();
 });
 </script>

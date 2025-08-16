@@ -465,12 +465,6 @@ const getProcessSteps = (accountStatus) => {
       status: getStepStatus(accountStatus.push_status),
       statusText: accountStatus.push_status || '待处理'
     },
-    //{
-    //  key: 'transcode',
-    //  label: '转码状态',
-    //  status: getStepStatus(accountStatus.transcode_status),
-    //  statusText: accountStatus.transcode_status || '待处理'
-    //},
     {
       key: 'review',
       label: '审核状态',
@@ -486,6 +480,12 @@ const getStepStatus = (statusText) => {
   if (!statusText || statusText === '待处理' || statusText === '待推送' || statusText === '待审核' || statusText === '待开始') {
     return 'pending';
   }
+  
+  // 🔥 添加账号失效的特殊处理
+  if (statusText.includes('账号已失效') || statusText.includes('Cookie已失效')) {
+    return 'failed';
+  }
+  
   if (statusText.includes('成功') || statusText === '发布成功') {
     return 'success';
   }

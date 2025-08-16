@@ -169,24 +169,7 @@ const smartRefresh = async (forceCheck = false) => {
   }
 };
 
-// 🔥 新增：立即更新单个账号状态
-const updateAccountStatusImmediately = (accountId, newStatus) => {
-  const account = accounts.value.find(acc => acc.id == accountId);
-  if (account) {
-    account.status = newStatus;
-    console.log(`✅ 账号状态已更新: ${account.userName} -> ${newStatus}`);
-  }
-};
-// 🔥 新增：更新单个账号状态（用于SSE实时更新）
-const updateAccountStatus = (accountId, statusUpdate) => {
-  const account = accounts.value.find(acc => acc.id === accountId);
-  if (account) {
-    Object.assign(account, statusUpdate);
-    console.log(`✅ Store中账号状态已更新: ${account.userName}`, statusUpdate);
-  } else {
-    console.warn(`⚠️ 未找到账号ID: ${accountId}`);
-  }
-};
+
 
 return {
   accounts,
@@ -209,8 +192,6 @@ return {
   // 加载方法
   loadAccounts,
   isRefreshing,
-  smartRefresh,
-  updateAccountStatusImmediately,
-  updateAccountStatus
+  smartRefresh
 }
 })
