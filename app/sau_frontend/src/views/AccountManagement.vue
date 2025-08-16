@@ -775,7 +775,7 @@ const disconnectAccountStatusSSE = () => {
 // 🔥 新增：处理账号状态变化
 const handleAccountStatusChange = (accountData) => {
   console.log('📨 收到账号状态变化:', accountData);
-  
+  console.log('🔍 推送的status值:', accountData.status);
   try {
     // 🔥 添加调试：检查当前账号列表
     console.log('🔍 当前账号列表:', accountStore.accounts.map(acc => ({
