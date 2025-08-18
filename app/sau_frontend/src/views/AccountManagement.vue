@@ -950,20 +950,33 @@ const handlePlatformSelect = async (platform) => {
 const waitingForBackendProcessing = ref(false);
 // 新增：处理对话框关闭
 const handleDialogClose = () => {
+    console.log("🔄 handleDialogClose 被调用");
+    console.log("🔍 waitingForBackendProcessing:", waitingForBackendProcessing.value);
+    console.log("🔍 当前 processingMessage:", processingMessage);
     dialogStep.value = 1;
     sseConnecting.value = false;
     qrCodeData.value = "";
     loginStatus.value = "";
     // 🔥 只有在不等待后台处理时才关闭SSE连接
     if (!waitingForBackendProcessing.value) {
+        console.log("🔄 不在等待后台处理，关闭SSE连接");
         closeSSEConnection();
-    }
-    // 🔥 关闭处理中的消息
-    if (processingMessage) {
-        processingMessage.close();
-        processingMessage = null;
+    } else {
+        console.log("✅ 正在等待后台处理，保持SSE连接");
     }
     
+    // 🔥 检查是否意外关闭了处理消息
+    if (processingMessage) {
+        //console.log("⚠️ handleDialogClose 中发现 processingMessage，是否应该关闭？");
+        //console.log("🔍 waitingForBackendProcessing:", waitingForBackendProcessing.value);
+        
+        // 只有在不等待后台处理时才关闭处理消息
+        if (!waitingForBackendProcessing.value) {
+            //console.log("🔄 关闭处理中消息 (在 handleDialogClose 中)");
+            processingMessage.close();
+            processingMessage = null;
+        }
+    }
 };
 
 const handleEdit = (account) => {
@@ -1173,14 +1186,19 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
             // 关闭对话框
             dialogVisible.value = false;
             loginStatus.value = "";
-            
+            console.log("🔄 正在显示处理中消息...");
             // 显示处理中消息
-            processingMessage = ElMessage({
-                type: 'info',
-                message: '扫码成功！正在处理账号信息...',
-                duration: 0,
-                showClose: false
-            });
+            try {
+                processingMessage = ElMessage({
+                    type: 'info',
+                    message: '扫码成功！正在处理账号信息...',
+                    duration: 0,
+                    showClose: false
+                });
+                console.log("✅ 处理中消息已显示:", processingMessage);
+            } catch (error) {
+                console.error("❌ 显示处理中消息失败:", error);
+            }
         }, 1500);
         
         console.log("✅ 保持SSE连接，等待后台处理完成");
@@ -1188,28 +1206,32 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
     // 🔥 后台处理完成状态
     else if (data === "200") {
         console.log("📡 收到后台处理完成状态");
+        console.log("🔍 当前 processingMessage:", processingMessage);
         
-        // 🔥 清除等待状态
         waitingForBackendProcessing.value = false;
-        
-        // 关闭SSE连接
         closeSSEConnection();
         
-        // 关闭处理中消息
+        // 🔥 添加调试信息
         if (processingMessage) {
-            processingMessage.close();
-            processingMessage = null;
+            console.log("🔄 正在关闭处理中消息...");
+            try {
+                processingMessage.close();
+                processingMessage = null;
+                console.log("✅ 处理中消息已关闭");
+            } catch (error) {
+                console.error("❌ 关闭处理中消息失败:", error);
+            }
+        } else {
+            console.warn("⚠️ processingMessage 为空，可能没有正确显示");
         }
         
+        console.log("🔄 显示成功消息...");
         ElMessage.success("账号添加成功！");
         
-        // 刷新账号列表
         setTimeout(async () => {
-            console.log("🔄 开始强制刷新账号列表");
             await accountStore.smartRefresh(true);
-            console.log("✅ 账号列表刷新完成");
         }, 500);
-    } 
+    }
     // 🔥 处理失败状态
     else if (data === "500") {
         console.log("📡 收到失败状态");
