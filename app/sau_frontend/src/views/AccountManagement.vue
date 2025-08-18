@@ -950,10 +950,19 @@ const handlePlatformSelect = async (platform) => {
 
 // 新增：处理对话框关闭
 const handleDialogClose = () => {
-  dialogStep.value = 1;
-  sseConnecting.value = false;
-  qrCodeData.value = "";
-  loginStatus.value = "";
+    dialogStep.value = 1;
+    sseConnecting.value = false;
+    qrCodeData.value = "";
+    loginStatus.value = "";
+    
+    // 🔥 关闭处理中的消息
+    if (processingMessage) {
+        processingMessage.close();
+        processingMessage = null;
+    }
+    
+    // 🔥 确保关闭SSE连接
+    closeSSEConnection();
 };
 
 const handleEdit = (account) => {
@@ -1053,15 +1062,7 @@ const handleRecover = (account) => {
   // 开始 SSE 连接
   connectSSE(account.platform, account.userName, true, account.id);
 };
-const getPlatformClass = (platform) => {
-  const classMap = {
-    抖音: "douyin",
-    快手: "kuaishou",
-    视频号: "wechat",
-    小红书: "xiaohongshu",
-  };
-  return classMap[platform] || "default";
-};
+
 const handleRetryLogin = () => {
   console.log("🔄 重新生成二维码");
 
@@ -1089,10 +1090,16 @@ const handleRetryLogin = () => {
 let eventSource = null;
 
 const closeSSEConnection = () => {
-  if (eventSource) {
-    eventSource.close();
-    eventSource = null;
-  }
+    if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+    }
+    
+    // 🔥 关闭连接时也要清理处理中的消息
+    if (processingMessage) {
+        processingMessage.close();
+        processingMessage = null;
+    }
 };
 
 const connectSSE = (platform, name, isRecover = false, accountId = null) => {
@@ -1120,94 +1127,109 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
     url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}`;
   }
   eventSource = new EventSource(url);
-
+  let processingMessage = null;
   eventSource.onmessage = (event) => {
     const data = event.data;
     //console.log("🔍 SSE消息:", data);
-    console.log("🔍 消息长度:", data.length);
-    console.log("🔍 消息类型:", typeof data);
+    //console.log("🔍 消息长度:", data.length);
+    //console.log("🔍 消息类型:", typeof data);
 
     if (!qrCodeData.value && data.length > 100) {
-      try {
-        if (data.startsWith("data:image")) {
-          qrCodeData.value = data;
-          console.log("✅ 直接设置 data:image 格式二维码");
-        } else if (data.startsWith("http")) {
-          qrCodeData.value = data;
-          console.log("✅ 设置 HTTP URL 格式二维码");
-        } else {
-          qrCodeData.value = `data:image/png;base64,${data}`;
-          console.log("✅ 转换为 base64 格式二维码");
+        // 处理二维码数据（保持原有逻辑）
+        try {
+            if (data.startsWith("data:image")) {
+                qrCodeData.value = data;
+                console.log("✅ 直接设置 data:image 格式二维码");
+            } else if (data.startsWith("http")) {
+                qrCodeData.value = data;
+                console.log("✅ 设置 HTTP URL 格式二维码");
+            } else {
+                qrCodeData.value = `data:image/png;base64,${data}`;
+                console.log("✅ 转换为 base64 格式二维码");
+            }
+        } catch (error) {
+            console.error("❌ 处理二维码数据出错:", error);
         }
+    } 
+    // 🔥 URL跳转成功 - 立即关闭二维码框
+    else if (data === "url_changed") {
+        console.log("📡 收到URL跳转状态，关闭二维码框");
+        
+        // 🔥 立即关闭二维码展示框
+        dialogVisible.value = false;
+        sseConnecting.value = false;
+        
+        // 🔥 清理状态
+        qrCodeData.value = "";
+        loginStatus.value = "";
+        
 
-        //console.log("🔍 最终二维码数据:",qrCodeData.value.substring(0, 50) + "...");
-      } catch (error) {
-        console.error("❌ 处理二维码数据出错:", error);
-      }
-    } else if (data === "200" || data === "500") {
-      loginStatus.value = data;
-
-      if (data === "200") {
-        setTimeout(() => {
-          closeSSEConnection();
-          setTimeout(async () => {
-            dialogVisible.value = false;
-            sseConnecting.value = false;
-            // 🔥 根据操作类型显示不同的处理中消息
-            const processingMessage =
-              dialogType.value === "recover"
-                ? "正在恢复账号，请稍候..."
-                : "正在处理账号信息，请稍候...";
-            ElMessage.info(processingMessage);
-            await handleLoginSuccess();
-          }, 1000);
-        }, 1000);
-      } else {
-        closeSSEConnection();
-        setTimeout(() => {
-          sseConnecting.value = false;
-          qrCodeData.value = "";
-          loginStatus.value = "";
-        }, 2000);
-      }
+        // 🔥 显示持久的处理中消息（duration: 0 表示不自动关闭）
+        processingMessage = ElMessage({
+            type: 'info',
+            message: '扫码成功！正在处理账号信息...',
+            duration: 0,  // 🔥 设置为0，不自动关闭
+            showClose: false  // 🔥 不显示关闭按钮
+        });
+        
+        // 🔥 注意：不关闭SSE连接，继续等待处理完成
     }
-  };
+    // 🔥 完成状态 - 刷新账号列表
+    else if (data === "200") {
+        console.log("📡 收到完成状态");
+        
+        closeSSEConnection();
+                // 🔥 先关闭处理中的消息
+        if (processingMessage) {
+            processingMessage.close();
+            processingMessage = null;
+        }
+        ElMessage.success("账号处理完成！");
+        
+        // 🔥 刷新账号列表
+        setTimeout(async () => {
+            await accountStore.smartRefresh(true);
+        }, 500);
+    } 
+    // 🔥 失败状态
+    else if (data === "500") {
+        closeSSEConnection();
+        // 🔥 先关闭处理中的消息
+        if (processingMessage) {
+            processingMessage.close();
+            processingMessage = null;
+        }
+        ElMessage.error("登录处理失败，请重试");
+        
+        // 重置状态，允许用户重新尝试
+        sseConnecting.value = false;
+        qrCodeData.value = "";
+        loginStatus.value = "";
+    }
+};
 
   eventSource.onerror = (error) => {
-    if (loginStatus.value === "200" || loginStatus.value === "500") {
-      console.log("SSE连接正常结束");
-      return;
-    }
-    console.error("SSE连接错误:", error);
-    ElMessage.error("❌连接服务器失败，请稍后再试");
-    closeSSEConnection();
-    sseConnecting.value = false;
-  };
-};
-const handleLoginSuccess = async () => {
-  console.log("🔄 开始检查后端数据...");
-
-  const checkData = async () => {
-    try {
-      // 🔥 使用 smartRefresh，它有防重复机制
-      await accountStore.smartRefresh(true);
-
-      console.log("📊 账号数量:", accountStore.accounts.length);
-
-      if (accountStore.accounts.length > 0) {
-        ElMessage.success("操作成功！");
-        return;
+      console.error("SSE连接错误:", error);
+      
+      // 🔥 如果有处理中的消息，先关闭
+      if (processingMessage) {
+          processingMessage.close();
+          processingMessage = null;
       }
-
-      setTimeout(checkData, 2000);
-    } catch (error) {
-      console.error("检查失败:", error);
-      setTimeout(checkData, 2000);
-    }
+      
+      // 🔥 如果二维码框还在显示，说明是连接问题
+      if (dialogVisible.value && qrCodeData.value) {
+          ElMessage.error("连接服务器失败，请稍后再试");
+          closeSSEConnection();
+          sseConnecting.value = false;
+      }
+      // 🔥 如果二维码框已关闭，说明在处理中断开，显示处理中断消息
+      else if (!dialogVisible.value) {
+          ElMessage.warning("连接中断，请稍后手动刷新查看结果");
+      }
   };
-
-  setTimeout(checkData, 3000);
 };
+
 // 新增：分组管理相关方法和数据
 const groupDialogVisible = ref(false);
 const groupDialogType = ref("add");
