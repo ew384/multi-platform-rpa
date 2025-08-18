@@ -947,22 +947,23 @@ const handlePlatformSelect = async (platform) => {
   const tempUserName = `用户_${Date.now()}`;
   await connectSSE(platform, tempUserName);
 };
-
+const waitingForBackendProcessing = ref(false);
 // 新增：处理对话框关闭
 const handleDialogClose = () => {
     dialogStep.value = 1;
     sseConnecting.value = false;
     qrCodeData.value = "";
     loginStatus.value = "";
-    
+    // 🔥 只有在不等待后台处理时才关闭SSE连接
+    if (!waitingForBackendProcessing.value) {
+        closeSSEConnection();
+    }
     // 🔥 关闭处理中的消息
     if (processingMessage) {
         processingMessage.close();
         processingMessage = null;
     }
     
-    // 🔥 确保关闭SSE连接
-    closeSSEConnection();
 };
 
 const handleEdit = (account) => {
@@ -1091,8 +1092,10 @@ let eventSource = null;
 
 const closeSSEConnection = () => {
     if (eventSource) {
+        console.log("🔌 正在关闭SSE连接...");
         eventSource.close();
         eventSource = null;
+        console.log("✅ SSE连接已关闭");
     }
     
     // 🔥 关闭连接时也要清理处理中的消息
@@ -1154,7 +1157,7 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
     // 🔥 URL跳转成功 - 立即关闭二维码框
     else if (data === "url_changed") {
         console.log("📡 收到URL跳转状态，关闭二维码框");
-        
+        waitingForBackendProcessing.value = true;
         // 🔥 立即关闭二维码展示框
         dialogVisible.value = false;
         sseConnecting.value = false;
@@ -1173,18 +1176,19 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
         });
         
         // 🔥 注意：不关闭SSE连接，继续等待处理完成
+        console.log("✅ 保持SSE连接，等待后台处理完成");
     }
     // 🔥 完成状态 - 刷新账号列表
     else if (data === "200") {
         console.log("📡 收到完成状态");
-        
+        waitingForBackendProcessing.value = false;
         closeSSEConnection();
                 // 🔥 先关闭处理中的消息
         if (processingMessage) {
             processingMessage.close();
             processingMessage = null;
         }
-        ElMessage.success("账号处理完成！");
+        ElMessage.success("账号添加成功！");
         
         // 🔥 刷新账号列表
         setTimeout(async () => {
@@ -1193,24 +1197,25 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
     } 
     // 🔥 失败状态
     else if (data === "500") {
-        closeSSEConnection();
-        // 🔥 先关闭处理中的消息
-        if (processingMessage) {
-            processingMessage.close();
-            processingMessage = null;
-        }
-        ElMessage.error("登录处理失败，请重试");
-        
-        // 重置状态，允许用户重新尝试
-        sseConnecting.value = false;
-        qrCodeData.value = "";
-        loginStatus.value = "";
+      waitingForBackendProcessing.value = false;
+      closeSSEConnection();
+      // 🔥 先关闭处理中的消息
+      if (processingMessage) {
+          processingMessage.close();
+          processingMessage = null;
+      }
+      ElMessage.error("登录处理失败，请重试");
+      
+      // 重置状态，允许用户重新尝试
+      sseConnecting.value = false;
+      qrCodeData.value = "";
+      loginStatus.value = "";
     }
 };
 
   eventSource.onerror = (error) => {
       console.error("SSE连接错误:", error);
-      
+      waitingForBackendProcessing.value = false;
       // 🔥 如果有处理中的消息，先关闭
       if (processingMessage) {
           processingMessage.close();
@@ -1223,10 +1228,23 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
           closeSSEConnection();
           sseConnecting.value = false;
       }
-      // 🔥 如果二维码框已关闭，说明在处理中断开，显示处理中断消息
+      // 🔥 如果二维码框已关闭，说明在处理中断开
       else if (!dialogVisible.value) {
-          ElMessage.warning("连接中断，请稍后手动刷新查看结果");
+          ElMessage.warning("连接中断，正在尝试刷新账号列表...");
+          
+          // 🔥 连接中断时也尝试刷新账号列表
+          setTimeout(async () => {
+              try {
+                  await accountStore.smartRefresh(true);
+                  console.log("✅ 异常情况下账号列表刷新完成");
+              } catch (refreshError) {
+                  console.error("❌ 刷新账号列表失败:", refreshError);
+                  ElMessage.error("请手动刷新页面查看最新账号");
+              }
+          }, 2000);
       }
+      
+      closeSSEConnection();
   };
 };
 
@@ -1590,6 +1608,11 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   closeSSEConnection();
+  // 清理任何未完成的消息
+  if (processingMessage) {
+      processingMessage.close();
+      processingMessage = null;
+  }
 });
 </script>
 
