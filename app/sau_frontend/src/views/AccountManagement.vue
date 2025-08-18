@@ -1154,64 +1154,85 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
             console.error("❌ 处理二维码数据出错:", error);
         }
     } 
-    // 🔥 URL跳转成功 - 立即关闭二维码框
+    // 🔥 URL跳转成功 - 显示登录成功状态后再关闭对话框
     else if (data === "url_changed") {
-        console.log("📡 收到URL跳转状态，关闭二维码框");
+        console.log("📡 收到URL跳转状态，显示登录成功");
+        
+        // 🔥 设置等待后台处理状态
         waitingForBackendProcessing.value = true;
-        // 🔥 立即关闭二维码展示框
-        dialogVisible.value = false;
+        
+        // 🔥 第一步：显示登录成功状态
+        loginStatus.value = "200";
         sseConnecting.value = false;
-        
-        // 🔥 清理状态
         qrCodeData.value = "";
-        loginStatus.value = "";
         
-
-        // 🔥 显示持久的处理中消息（duration: 0 表示不自动关闭）
-        processingMessage = ElMessage({
-            type: 'info',
-            message: '扫码成功！正在处理账号信息...',
-            duration: 0,  // 🔥 设置为0，不自动关闭
-            showClose: false  // 🔥 不显示关闭按钮
-        });
+        // 🔥 第二步：让用户看到登录成功状态（延迟1.5秒）
+        setTimeout(() => {
+            console.log("✅ 登录成功状态显示完毕，关闭对话框");
+            
+            // 关闭对话框
+            dialogVisible.value = false;
+            loginStatus.value = "";
+            
+            // 显示处理中消息
+            processingMessage = ElMessage({
+                type: 'info',
+                message: '扫码成功！正在处理账号信息...',
+                duration: 0,
+                showClose: false
+            });
+        }, 1500);
         
-        // 🔥 注意：不关闭SSE连接，继续等待处理完成
         console.log("✅ 保持SSE连接，等待后台处理完成");
     }
-    // 🔥 完成状态 - 刷新账号列表
+    // 🔥 后台处理完成状态
     else if (data === "200") {
-        console.log("📡 收到完成状态");
+        console.log("📡 收到后台处理完成状态");
+        
+        // 🔥 清除等待状态
         waitingForBackendProcessing.value = false;
+        
+        // 关闭SSE连接
         closeSSEConnection();
-                // 🔥 先关闭处理中的消息
+        
+        // 关闭处理中消息
         if (processingMessage) {
             processingMessage.close();
             processingMessage = null;
         }
+        
         ElMessage.success("账号添加成功！");
         
-        // 🔥 刷新账号列表
+        // 刷新账号列表
         setTimeout(async () => {
+            console.log("🔄 开始强制刷新账号列表");
             await accountStore.smartRefresh(true);
+            console.log("✅ 账号列表刷新完成");
         }, 500);
     } 
-    // 🔥 失败状态
+    // 🔥 处理失败状态
     else if (data === "500") {
-      waitingForBackendProcessing.value = false;
-      closeSSEConnection();
-      // 🔥 先关闭处理中的消息
-      if (processingMessage) {
-          processingMessage.close();
-          processingMessage = null;
-      }
-      ElMessage.error("登录处理失败，请重试");
-      
-      // 重置状态，允许用户重新尝试
-      sseConnecting.value = false;
-      qrCodeData.value = "";
-      loginStatus.value = "";
+        console.log("📡 收到失败状态");
+        
+        // 🔥 清除等待状态
+        waitingForBackendProcessing.value = false;
+        
+        closeSSEConnection();
+        
+        // 关闭处理中消息
+        if (processingMessage) {
+            processingMessage.close();
+            processingMessage = null;
+        }
+        
+        ElMessage.error("登录处理失败，请重试");
+        
+        // 重置状态，允许用户重新尝试
+        sseConnecting.value = false;
+        qrCodeData.value = "";
+        loginStatus.value = "";
     }
-};
+  };
 
   eventSource.onerror = (error) => {
       console.error("SSE连接错误:", error);
