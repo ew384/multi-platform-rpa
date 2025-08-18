@@ -714,7 +714,6 @@ const qrCodeData = ref("");
 const loginStatus = ref("");
 const dialogStep = ref(1); // 1: 平台选择, 2: 二维码扫描
 
-
 // 支持的平台配置（带logo）
 const supportedPlatforms = [
   { name: "抖音", logo: "/logos/douyin.png", class: "douyin" },
@@ -1154,9 +1153,12 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
           setTimeout(async () => {
             dialogVisible.value = false;
             sseConnecting.value = false;
-            ElMessage.success("账号添加成功");
-
-            // 🔥 简化：延迟刷新一次即可
+            // 🔥 根据操作类型显示不同的处理中消息
+            const processingMessage =
+              dialogType.value === "recover"
+                ? "正在恢复账号，请稍候..."
+                : "正在处理账号信息，请稍候...";
+            ElMessage.info(processingMessage);
             await handleLoginSuccess();
           }, 1000);
         }, 1000);
@@ -1183,46 +1185,28 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
   };
 };
 const handleLoginSuccess = async () => {
-  try {
-    // 立即更新UI状态
-    if (dialogType.value === "recover" && accountForm.id) {
-      accountStore.updateAccountStatusImmediately(accountForm.id, "正常");
-    }
+  console.log("🔄 开始检查后端数据...");
 
-    // 改进：轮询检查后端状态，而不是固定延时
-    let retryCount = 0;
-    const maxRetries = 10; // 最多重试10次
+  const checkData = async () => {
+    try {
+      // 🔥 使用 smartRefresh，它有防重复机制
+      await accountStore.smartRefresh(true);
 
-    const checkBackendStatus = async () => {
-      retryCount++;
-      console.log(`🔄 第${retryCount}次检查后端状态...`);
+      console.log("📊 账号数量:", accountStore.accounts.length);
 
-      try {
-        await accountStore.smartRefresh(false);
-
-        // 检查是否还是异常状态
-        const account = accountStore.accounts.find(
-          (acc) => acc.id === accountForm.id
-        );
-        if (account && account.status === "异常" && retryCount < maxRetries) {
-          // 如果仍然异常且未达到最大重试次数，继续轮询
-          setTimeout(checkBackendStatus, 2000); // 2秒后再检查
-        } else {
-          console.log(`✅ 状态检查完成，最终状态：${account?.status}`);
-        }
-      } catch (error) {
-        console.error("❌ 状态检查失败:", error);
-        if (retryCount < maxRetries) {
-          setTimeout(checkBackendStatus, 2000);
-        }
+      if (accountStore.accounts.length > 0) {
+        ElMessage.success("操作成功！");
+        return;
       }
-    };
 
-    // 延迟开始轮询，给后端处理时间
-    setTimeout(checkBackendStatus, 5000); // 5秒后开始第一次检查
-  } catch (error) {
-    console.error("❌ 登录成功处理失败:", error);
-  }
+      setTimeout(checkData, 2000);
+    } catch (error) {
+      console.error("检查失败:", error);
+      setTimeout(checkData, 2000);
+    }
+  };
+
+  setTimeout(checkData, 3000);
 };
 // 新增：分组管理相关方法和数据
 const groupDialogVisible = ref(false);
