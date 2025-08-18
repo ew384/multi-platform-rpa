@@ -691,7 +691,7 @@ import { useAppStore } from "@/stores/app";
 // 状态管理
 const accountStore = useAccountStore();
 const appStore = useAppStore();
-
+let processingMessage = null;
 // 筛选和搜索
 const filterStatus = ref("");
 const filterPlatform = ref("");
@@ -1127,7 +1127,7 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
     url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(name)}`;
   }
   eventSource = new EventSource(url);
-  let processingMessage = null;
+
   eventSource.onmessage = (event) => {
     const data = event.data;
     //console.log("🔍 SSE消息:", data);
