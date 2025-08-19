@@ -528,9 +528,9 @@ const handleVideoUploadSuccess = async (response, file) => {
     selectedVideos.value.push(videoInfo);
 
     // 🔥 如果是第一个视频且没有自定义封面，生成默认封面
-    if (selectedVideos.value.length === 1 && !customCoverSet.value) {
-      await generateAndSetDefaultCover(videoInfo.url);
-    }
+    //if (selectedVideos.value.length === 1 && !customCoverSet.value) {
+    //  await generateAndSetDefaultCover(videoInfo.url);
+    //}
 
     ElMessage.success("视频上传成功");
   } else {
@@ -736,12 +736,12 @@ const handleMaterialSelected = async (materials) => {
     selectedVideos.value.push(...newMaterials);
 
     // 🔥 如果是第一次添加视频且没有自定义封面，生成默认封面
-    if (
-      selectedVideos.value.length === newMaterials.length &&
-      !customCoverSet.value
-    ) {
-      await generateAndSetDefaultCover(newMaterials[0].url);
-    }
+    //if (
+    //  selectedVideos.value.length === newMaterials.length &&
+    //  !customCoverSet.value
+    //) {
+    //  await generateAndSetDefaultCover(newMaterials[0].url);
+    //}
 
     ElMessage.success(`已添加 ${newMaterials.length} 个视频`);
   }
