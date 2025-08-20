@@ -8,12 +8,12 @@ export const messageApi = {
     if (platform) params.append('platform', platform)
     if (accountId) params.append('accountId', accountId)
     
-    return http.get(`/message-automation/unread-count?${params.toString()}`)
+    return http.get(`/api/message-automation/unread-count?${params.toString()}`)
   },
 
   // 获取监听状态
   getMonitoringStatus() {
-    return http.get('/message-automation/monitoring/status')
+    return http.get('/api/message-automation/monitoring/status')
   },
 
   // 获取私信会话列表
@@ -22,22 +22,22 @@ export const messageApi = {
     if (platform) params.append('platform', platform)
     if (accountId) params.append('accountId', accountId)
     
-    return http.get(`/message-automation/threads?${params.toString()}`)
+    return http.get(`/api/message-automation/threads?${params.toString()}`)
   },
 
   // 获取会话消息（分页）
   getThreadMessages(threadId, limit = 50, offset = 0) {
-    return http.get(`/message-automation/threads/${threadId}/messages?limit=${limit}&offset=${offset}`)
+    return http.get(`/api/message-automation/threads/${threadId}/messages?limit=${limit}&offset=${offset}`)
   },
 
   // 发送消息
   sendMessage(data) {
-    return http.post('/message-automation/send', data)
+    return http.post('/api/message-automation/send', data)
   },
 
   // 标记消息已读
   markMessagesAsRead(data) {
-    return http.post('/message-automation/messages/mark-read', data)
+    return http.post('/api/message-automation/messages/mark-read', data)
   },
 
   // 搜索消息
@@ -48,41 +48,41 @@ export const messageApi = {
     if (keyword) params.append('keyword', keyword)
     if (limit) params.append('limit', limit.toString())
     
-    return http.get(`/message-automation/search?${params.toString()}`)
+    return http.get(`/api/message-automation/search?${params.toString()}`)
   },
 
   // 获取消息统计
   getMessageStatistics() {
-    return http.get('/message-automation/statistics')
+    return http.get('/api/message-automation/statistics')
   },
 
   // 获取引擎状态
   getEngineStatus() {
-    return http.get('/message-automation/engine/status')
+    return http.get('/api/message-automation/engine/status')
   },
 
   // 获取支持的平台
   getSupportedPlatforms() {
-    return http.get('/message-automation/platforms')
+    return http.get('/api/message-automation/platforms')
   },
 
   // 启动监听
   startMonitoring(data) {
-    return http.post('/message-automation/monitoring/start', data)
+    return http.post('/api/message-automation/monitoring/start', data)
   },
 
   // 停止监听
   stopMonitoring(data) {
-    return http.post('/message-automation/monitoring/stop', data)
+    return http.post('/api/message-automation/monitoring/stop', data)
   },
 
   // 批量启动监听
   startBatchMonitoring(data) {
-    return http.post('/message-automation/monitoring/batch-start', data)
+    return http.post('/api/message-automation/monitoring/batch-start', data)
   },
 
   // 停止所有监听
   stopAllMonitoring() {
-    return http.post('/message-automation/monitoring/stop-all')
+    return http.post('/api/message-automation/monitoring/stop-all')
   }
 }
