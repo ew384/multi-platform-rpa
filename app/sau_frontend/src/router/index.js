@@ -4,7 +4,7 @@ import AccountManagement from '../views/AccountManagement.vue'
 import MaterialManagement from '../views/MaterialManagement.vue'
 import PublishRecords from '../views/PublishRecords.vue'  // 👈 新增导入
 import About from '../views/About.vue'
-
+import PrivateMessage from '@/views/private-message/PrivateMessage.vue'
 const routes = [
   {
     path: '/',
@@ -31,6 +31,15 @@ const routes = [
     path: '/about',
     name: 'About',
     component: About
+  },
+  {
+    path: '/private-message',
+    name: 'PrivateMessage',
+    component: PrivateMessage,
+    meta: {
+      title: '私信管理',
+      requiresAuth: true
+    }
   }
 ]
 
