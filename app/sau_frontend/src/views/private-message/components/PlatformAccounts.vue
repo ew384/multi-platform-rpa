@@ -42,6 +42,8 @@
               :src="getPlatformLogo(platformGroup.platform)"
               :alt="platformGroup.platform"
               class="platform-logo"
+              @error="handleLogoError"
+              @load="handleLogoLoad"
             />
             <span class="platform-name">{{ platformGroup.platform }}</span>
             <span class="account-count"
@@ -90,7 +92,12 @@
                 :class="['status-dot', getAccountStatus(account)]"
                 :title="getAccountStatusText(account)"
               ></div>
-              <!-- 未读数红点 -->
+              <div class="platform-logo">
+                <img
+                  :src="getPlatformLogo(account.platform)"
+                  :alt="account.platform"
+                />
+              </div>
               <div
                 v-if="getAccountUnreadCount(account.platform, account.id) > 0"
                 class="unread-badge"
@@ -106,11 +113,6 @@
             <!-- 账号信息 -->
             <div class="account-info">
               <div class="account-name">{{ account.userName }}</div>
-              <div class="account-status">
-                <span :class="['status-text', getAccountStatus(account)]">
-                  {{ getAccountStatusText(account) }}
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -169,6 +171,7 @@ const platformGroups = computed(() => {
 
   accountStore.accounts.forEach((account) => {
     const platform = account.platform;
+    console.log('🔍 账号平台:', platform, '对应logo:', getPlatformLogo(platform));
     if (!groups[platform]) {
       groups[platform] = {
         platform,
@@ -180,7 +183,20 @@ const platformGroups = computed(() => {
 
   return Object.values(groups);
 });
+const handleLogoError = (e) => {
+  console.error('❌ 平台logo加载失败:', {
+    src: e.target.src,
+    platform: e.target.alt,
+    error: e
+  });
+};
 
+const handleLogoLoad = (e) => {
+  console.log('✅ 平台logo加载成功:', {
+    src: e.target.src,
+    platform: e.target.alt
+  });
+};
 const totalAccountsCount = computed(() => {
   return accountStore.accounts.length;
 });
@@ -515,10 +531,31 @@ $space-lg: 24px;
             border: 2px solid #f1f5f9;
             box-shadow: $shadow-sm;
           }
+          // 🔥 添加平台logo样式
+          .platform-logo {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+            border: 1px solid white;
 
+            img {
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              object-fit: cover;
+            }
+          }
           .status-dot {
             position: absolute;
-            bottom: 0;
+            top: 0;
             right: 0;
             width: 10px;
             height: 10px;

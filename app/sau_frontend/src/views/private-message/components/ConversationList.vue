@@ -146,7 +146,7 @@
 import { ref, computed, watch } from "vue";
 import { Search, Loading, ChatDotRound } from "@element-plus/icons-vue";
 import { useMessageStore } from "@/stores/message";
-
+import { getPlatformLogo } from "@/utils/platform";
 // 状态管理
 const messageStore = useMessageStore();
 
@@ -206,17 +206,6 @@ const showLoadMore = computed(() => {
   return false;
 });
 
-// 获取平台Logo
-const getPlatformLogo = (platform) => {
-  const logoMap = {
-    抖音: "/logos/douyin.png",
-    快手: "/logos/kuaishou.png",
-    视频号: "/logos/wechat_shipinghao.png",
-    微信视频号: "/logos/wechat_shipinghao.png",
-    小红书: "/logos/xiaohongshu.jpg",
-  };
-  return logoMap[platform] || "/logos/default.png";
-};
 
 // 格式化消息时间
 const formatMessageTime = (timestamp) => {
