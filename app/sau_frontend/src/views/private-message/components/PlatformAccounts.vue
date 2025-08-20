@@ -20,7 +20,7 @@
           <div class="stat-number">
             {{ messageStore.activeMonitoringCount }}/{{ totalAccountsCount }}
           </div>
-          <div class="stat-label">监听中</div>
+          <div class="stat-label">在线</div>
         </div>
       </div>
     </div>
@@ -133,6 +133,8 @@
   </div>
 </template>
 
+// PlatformAccounts.vue 使用全局工具函数的版本
+
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import {
@@ -144,6 +146,13 @@ import {
 import { ElMessage } from "element-plus";
 import { useAccountStore } from "@/stores/account";
 import { useMessageStore } from "@/stores/message";
+// 🔥 导入平台工具函数
+import { 
+  getPlatformKey, 
+  getAccountKey, 
+  getPlatformLogo,
+  isPlatformSupportMessage 
+} from "@/utils/platform";
 
 // 状态管理
 const accountStore = useAccountStore();
@@ -176,18 +185,6 @@ const totalAccountsCount = computed(() => {
   return accountStore.accounts.length;
 });
 
-// 获取平台Logo
-const getPlatformLogo = (platform) => {
-  const logoMap = {
-    抖音: "/logos/douyin.png",
-    快手: "/logos/kuaishou.png",
-    视频号: "/logos/wechat_shipinghao.png",
-    微信视频号: "/logos/wechat_shipinghao.png",
-    小红书: "/logos/xiaohongshu.jpg",
-  };
-  return logoMap[platform] || "/logos/default.png";
-};
-
 // 获取头像URL（复用AccountManagement的逻辑）
 const getAvatarUrl = (account) => {
   // 优先使用数据库中的头像字段
@@ -209,16 +206,8 @@ const getAvatarUrl = (account) => {
 
   // 当头像字段为空，构造可能的本地路径
   if (account.userName && account.platform) {
-    const platformMap = {
-      抖音: "douyin",
-      快手: "kuaishou",
-      视频号: "wechat",
-      微信视频号: "wechat",
-      小红书: "xiaohongshu",
-    };
-
-    const platformKey = platformMap[account.platform];
-    if (platformKey) {
+    const platformKey = getPlatformKey(account.platform);
+    if (platformKey !== account.platform.toLowerCase()) {
       return `http://localhost:3409/assets/avatar/${platformKey}/${account.userName}/avatar.jpg`;
     }
   }
@@ -226,11 +215,18 @@ const getAvatarUrl = (account) => {
   return "/default-avatar.png";
 };
 
-// 账号状态相关
+// 🔥 简化后的账号状态相关方法
 const getAccountStatus = (account) => {
-  // 检查监听状态
-  const accountKey = `${account.platform}_${account.id}`;
+  const accountKey = getAccountKey(account.platform, account.userName);
   const isMonitoring = messageStore.monitoringStatus[accountKey];
+
+  console.log(`🔍 检查账号状态: ${account.userName}`, {
+    platform: account.platform,
+    platformKey: getPlatformKey(account.platform),
+    accountKey: accountKey,
+    isMonitoring: isMonitoring,
+    allMonitoringStatus: messageStore.monitoringStatus
+  });
 
   if (account.status === "异常") return "error";
   if (isMonitoring) return "monitoring";
@@ -248,21 +244,22 @@ const getAccountStatusText = (account) => {
 };
 
 const isAccountMonitoring = (platform, accountId) => {
-  const accountKey = `${platform}_${accountId}`;
+  const accountKey = getAccountKey(platform, accountId);
   return messageStore.monitoringStatus[accountKey] || false;
 };
 
 const isAccountSelected = (platform, accountId, userName) => {
+  const platformKey = getPlatformKey(platform);
+  
   return (
     messageStore.selectedAccount &&
-    messageStore.selectedAccount.platform === platform &&
-    messageStore.selectedAccount.accountId === accountId &&
-    messageStore.selectedAccount.userName === userName
+    messageStore.selectedAccount.platform === platformKey &&
+    messageStore.selectedAccount.accountId === userName
   );
 };
 
 const getAccountUnreadCount = (platform, accountId) => {
-  const accountKey = `${platform}_${accountId}`;
+  const accountKey = getAccountKey(platform, accountId);
   return messageStore.unreadCounts[accountKey] || 0;
 };
 
@@ -279,14 +276,17 @@ const togglePlatform = (platform) => {
 const handleSelectAccount = async (account) => {
   try {
     console.log("🔄 选择账号:", account.userName);
+    
+    const platformKey = getPlatformKey(account.platform);
+    
     await messageStore.selectAccount(
-      account.platform,
-      account.id,
+      platformKey,        // 🔥 使用工具函数
+      account.userName,   
       account.userName
     );
 
     // 刷新该账号的未读数
-    await messageStore.refreshUnreadCount(account.platform, account.id);
+    await messageStore.refreshUnreadCount(platformKey, account.userName);
   } catch (error) {
     console.error("选择账号失败:", error);
     ElMessage.error("加载账号会话失败");

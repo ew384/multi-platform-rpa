@@ -45,7 +45,10 @@ export const useMessageStore = defineStore('message', () => {
       selectedThread.value = null
       currentMessages.value = []
       
+      // 🔥 加载该账号的会话列表
       await loadThreads(platform, accountId)
+      
+      console.log(`✅ 账号选择完成，会话数量: ${threadsList.value.length}`)
       
     } catch (error) {
       console.error('选择账号失败:', error)
@@ -80,11 +83,22 @@ export const useMessageStore = defineStore('message', () => {
     isLoadingThreads.value = true
     
     try {
+      console.log(`📋 开始加载会话列表: ${platform} - ${accountId}`)
+      
       const response = await messageApi.getMessageThreads(platform, accountId)
       
       if (response && response.success && response.data) {
         threadsList.value = response.data.threads || []
         console.log(`✅ 加载会话列表成功: ${threadsList.value.length} 个会话`)
+        
+        // 🔥 显示加载的会话详情
+        threadsList.value.forEach(thread => {
+          console.log(`  📝 会话: ${thread.user_name}`, {
+            最后消息: thread.last_message_text,
+            时间: thread.last_message_time,
+            未读数: thread.unread_count
+          })
+        })
       } else {
         console.warn('获取会话列表响应异常:', response)
         threadsList.value = []
@@ -252,7 +266,11 @@ export const useMessageStore = defineStore('message', () => {
         }
         
         monitoringStatus.value = statusMap
-        console.log('✅ 监听状态已刷新')
+        console.log('✅ 监听状态已刷新', {
+          总数: Object.keys(statusMap).length,
+          监听中: Object.values(statusMap).filter(Boolean).length,
+          详细状态: statusMap
+        })
       }
       
     } catch (error) {
