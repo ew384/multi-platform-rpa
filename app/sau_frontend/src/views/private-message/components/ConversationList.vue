@@ -336,6 +336,9 @@ const setFilter = (type) => {
 };
 
 const handleSelectConversation = async (conversation) => {
+  console.log('🔍 选中的会话对象:', conversation); // 🔥 添加这行
+  console.log('🔍 会话的platform值:', conversation.platform); // 🔥 添加这行
+  
   try {
     await messageStore.selectThread(
       conversation.id,

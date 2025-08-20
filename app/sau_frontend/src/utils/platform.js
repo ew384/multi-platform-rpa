@@ -52,13 +52,21 @@ export const getAccountKey = (platform, accountId) => {
  * @returns {string} Logo路径
  */
 export const getPlatformLogo = (platform) => {
+  // 🔥 支持中文显示名称和API key两种格式
   const logoMap = {
+    // 中文显示名称
     '抖音': '/logos/douyin.png',
     '快手': '/logos/kuaishou.png',
     '视频号': '/logos/wechat_shipinghao.png',
     '微信视频号': '/logos/wechat_shipinghao.png',
     '小红书': '/logos/xiaohongshu.jpg',
+    // 🔥 新增：API key格式
+    'douyin': '/logos/douyin.png',
+    'kuaishou': '/logos/kuaishou.png', 
+    'wechat': '/logos/wechat_shipinghao.png',
+    'xiaohongshu': '/logos/xiaohongshu.jpg'
   };
+  
   return logoMap[platform] || '/logos/default.png';
 };
 
