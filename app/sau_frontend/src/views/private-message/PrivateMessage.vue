@@ -33,7 +33,29 @@ const messageStore = useMessageStore();
 // 生命周期
 onMounted(async () => {
   console.log("🚀 私信管理页面已挂载");
+  // 1. 初始化消息模块
   await messageStore.initialize();
+  // 🔥 2. 直接调用自动启动监听（会自动过滤已监听账号）
+  try {
+    console.log("🔄 检查并启动新账号监听...");
+    const { messageApi } = await import("@/api/message");
+    const result = await messageApi.autoStartMonitoring();
+
+    if (result && result.success && result.data) {
+      const { started, failed, skipped } = result.data;
+      console.log(
+        `✅ 监听检查完成: 新启动${started}个, 跳过${skipped}个, 失败${failed}个`
+      );
+
+      // 如果有变化，刷新监听状态
+      if (started > 0) {
+        await messageStore.refreshMonitoringStatus();
+      }
+    }
+  } catch (error) {
+    console.warn("⚠️ 自动启动监听失败:", error);
+    // 不阻断页面正常使用
+  }
 });
 
 onUnmounted(() => {
