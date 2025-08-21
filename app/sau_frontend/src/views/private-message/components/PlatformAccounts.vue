@@ -1,75 +1,62 @@
 <template>
   <div class="platform-accounts">
-    <!-- 顶部统计卡片 -->
-    <div class="stats-header">
-      <div class="stat-item">
-        <div class="stat-icon unread">
-          <el-icon><Message /></el-icon>
+    <!-- 顶部统计区域 -->
+    <div class="stats-section" v-show="!isCollapsed">
+      <div class="stat-card unread">
+        <div class="stat-icon">
+          <el-icon><Bell /></el-icon>
         </div>
         <div class="stat-content">
           <div class="stat-number">{{ messageStore.totalUnreadCount }}</div>
-          <div class="stat-label">总未读</div>
+          <div class="stat-label">未读消息</div>
         </div>
       </div>
 
-      <div class="stat-item">
-        <div class="stat-icon monitoring">
-          <el-icon><VideoCamera /></el-icon>
+      <div class="stat-card monitoring">
+        <div class="stat-icon">
+          <el-icon><Connection /></el-icon>
         </div>
         <div class="stat-content">
           <div class="stat-number">
-            {{ messageStore.activeMonitoringCount }}/{{ totalAccountsCount }}
+            {{ messageStore.activeMonitoringCount }}
           </div>
-          <div class="stat-label">在线</div>
+          <div class="stat-label">在线账号</div>
         </div>
       </div>
     </div>
 
-    <!-- 平台分组区域 -->
-    <div class="platforms-section">
+    <!-- 折叠状态下的简化统计 -->
+    <div class="collapsed-stats" v-show="isCollapsed">
       <div
-        v-for="platformGroup in platformGroups"
-        :key="platformGroup.platform"
-        class="platform-group"
+        class="mini-stat unread"
+        :title="`${messageStore.totalUnreadCount} 条未读消息`"
       >
-        <!-- 平台分组标题 -->
-        <div
-          class="platform-header"
-          @click="togglePlatform(platformGroup.platform)"
-        >
-          <div class="platform-info">
-            <img
-              :src="getPlatformLogo(platformGroup.platform)"
-              :alt="platformGroup.platform"
-              class="platform-logo"
-              @error="handleLogoError"
-              @load="handleLogoLoad"
-            />
-            <span class="platform-name">{{ platformGroup.platform }}</span>
-            <span class="account-count"
-              >({{ platformGroup.accounts.length }})</span
-            >
-          </div>
-          <el-icon
-            class="expand-icon"
-            :class="{
-              expanded: expandedPlatforms.includes(platformGroup.platform),
-            }"
-          >
-            <ArrowDown />
-          </el-icon>
+        <el-icon><Bell /></el-icon>
+        <span class="mini-count" v-if="messageStore.totalUnreadCount > 0">
+          {{
+            messageStore.totalUnreadCount > 99
+              ? "99+"
+              : messageStore.totalUnreadCount
+          }}
+        </span>
+      </div>
+    </div>
+
+    <!-- 账号列表区域 -->
+    <div class="accounts-section">
+      <!-- 展开状态 - 卡片式布局 -->
+      <div v-if="!isCollapsed" class="accounts-expanded">
+        <div class="section-header">
+          <h3 class="section-title">账号列表</h3>
+          <span class="accounts-count">{{ totalAccountsCount }}</span>
         </div>
 
-        <!-- 平台账号列表 -->
-        <div
-          v-show="expandedPlatforms.includes(platformGroup.platform)"
-          class="platform-accounts-list"
-        >
+        <div class="accounts-grid">
           <div
-            v-for="account in platformGroup.accounts"
+            v-for="account in accountStore.accounts"
             :key="`${account.platform}_${account.id}`"
             :class="[
-              'account-item',
+              'account-card',
               {
                 active: isAccountSelected(
                   account.platform,
@@ -77,42 +64,113 @@
                   account.userName
                 ),
                 monitoring: isAccountMonitoring(account.platform, account.id),
+                'has-unread':
+                  getAccountUnreadCount(account.platform, account.id) > 0,
               },
             ]"
             @click="handleSelectAccount(account)"
           >
-            <!-- 账号头像 -->
-            <div class="account-avatar-container">
-              <el-avatar
-                :size="32"
-                :src="getAvatarUrl(account)"
-                @error="handleAvatarError"
-              />
-              <div
-                :class="['status-dot', getAccountStatus(account)]"
-                :title="getAccountStatusText(account)"
-              ></div>
-              <div class="platform-logo">
-                <img
-                  :src="getPlatformLogo(account.platform)"
-                  :alt="account.platform"
+            <!-- 账号头像区域 -->
+            <div class="account-avatar-section">
+              <div class="avatar-container">
+                <el-avatar
+                  :size="48"
+                  :src="getAvatarUrl(account)"
+                  @error="handleAvatarError"
+                  class="account-avatar"
                 />
-              </div>
-              <div
-                v-if="getAccountUnreadCount(account.platform, account.id) > 0"
-                class="unread-badge"
-              >
-                {{
-                  getAccountUnreadCount(account.platform, account.id) > 99
-                    ? "99+"
-                    : getAccountUnreadCount(account.platform, account.id)
-                }}
+
+                <!-- 平台Logo -->
+                <div class="platform-badge">
+                  <img
+                    :src="getPlatformLogo(account.platform)"
+                    :alt="account.platform"
+                    @error="handleLogoError"
+                  />
+                </div>
+
+                <!-- 状态指示器 -->
+                <div
+                  :class="['status-indicator', getAccountStatus(account)]"
+                ></div>
+
+                <!-- 未读消息红点 -->
+                <div
+                  v-if="getAccountUnreadCount(account.platform, account.id) > 0"
+                  class="unread-badge"
+                >
+                  {{
+                    getAccountUnreadCount(account.platform, account.id) > 99
+                      ? "99+"
+                      : getAccountUnreadCount(account.platform, account.id)
+                  }}
+                </div>
               </div>
             </div>
 
-            <!-- 账号信息 -->
-            <div class="account-info">
+            <!-- 账号信息区域 -->
+            <div class="account-info-section">
               <div class="account-name">{{ account.userName }}</div>
+              <div class="account-platform">{{ account.platform }}</div>
+              <div class="account-status-text">
+                {{ getAccountStatusText(account) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 折叠状态 - 圆形头像列表 -->
+      <div v-else class="accounts-collapsed">
+        <div
+          v-for="account in accountStore.accounts"
+          :key="`${account.platform}_${account.id}`"
+          :class="[
+            'account-circle',
+            {
+              active: isAccountSelected(
+                account.platform,
+                account.id,
+                account.userName
+              ),
+              monitoring: isAccountMonitoring(account.platform, account.id),
+              'has-unread':
+                getAccountUnreadCount(account.platform, account.id) > 0,
+            },
+          ]"
+          @click="handleSelectAccount(account)"
+          :title="`${account.userName} (${account.platform})`"
+        >
+          <div class="circle-avatar-container">
+            <el-avatar
+              :size="40"
+              :src="getAvatarUrl(account)"
+              @error="handleAvatarError"
+              class="circle-avatar"
+            />
+
+            <!-- 平台Logo小标识 -->
+            <div class="mini-platform-badge">
+              <img
+                :src="getPlatformLogo(account.platform)"
+                :alt="account.platform"
+                @error="handleLogoError"
+              />
+            </div>
+
+            <!-- 状态点 -->
+            <div :class="['mini-status-dot', getAccountStatus(account)]"></div>
+
+            <!-- 未读红点 -->
+            <div
+              v-if="getAccountUnreadCount(account.platform, account.id) > 0"
+              class="mini-unread-dot"
+            >
+              {{
+                getAccountUnreadCount(account.platform, account.id) > 9
+                  ? "9+"
+                  : getAccountUnreadCount(account.platform, account.id)
+              }}
             </div>
           </div>
         </div>
@@ -121,79 +179,37 @@
   </div>
 </template>
 
-// PlatformAccounts.vue 使用全局工具函数的版本
-
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import {
-  Message,
-  VideoCamera,
-  ArrowDown,
-  Setting,
-} from "@element-plus/icons-vue";
+import { Bell, Connection } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { useAccountStore } from "@/stores/account";
 import { useMessageStore } from "@/stores/message";
-// 🔥 导入平台工具函数
 import {
   getPlatformKey,
   getAccountKey,
   getPlatformLogo,
-  isPlatformSupportMessage,
 } from "@/utils/platform";
+
+// Props
+const props = defineProps({
+  isCollapsed: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 // 状态管理
 const accountStore = useAccountStore();
 const messageStore = useMessageStore();
 
-// 本地状态
-const expandedPlatforms = ref(["抖音", "视频号", "小红书", "快手"]); // 默认全部展开
-
 // 计算属性
-const platformGroups = computed(() => {
-  // 按平台分组账号
-  const groups = {};
-
-  accountStore.accounts.forEach((account) => {
-    const platform = account.platform;
-    console.log(
-      "🔍 账号平台:",
-      platform,
-      "对应logo:",
-      getPlatformLogo(platform)
-    );
-    if (!groups[platform]) {
-      groups[platform] = {
-        platform,
-        accounts: [],
-      };
-    }
-    groups[platform].accounts.push(account);
-  });
-
-  return Object.values(groups);
-});
-const handleLogoError = (e) => {
-  console.error("❌ 平台logo加载失败:", {
-    src: e.target.src,
-    platform: e.target.alt,
-    error: e,
-  });
-};
-
-const handleLogoLoad = (e) => {
-  console.log("✅ 平台logo加载成功:", {
-    src: e.target.src,
-    platform: e.target.alt,
-  });
-};
 const totalAccountsCount = computed(() => {
   return accountStore.accounts.length;
 });
 
-// 获取头像URL（复用AccountManagement的逻辑）
+// 获取头像URL
 const getAvatarUrl = (account) => {
-  // 优先使用数据库中的头像字段
   if (account.local_avatar && account.local_avatar !== "/default-avatar.png") {
     return account.local_avatar.startsWith("assets/avatar/")
       ? `http://localhost:3409/${account.local_avatar}`
@@ -210,7 +226,6 @@ const getAvatarUrl = (account) => {
       : account.avatar;
   }
 
-  // 当头像字段为空，构造可能的本地路径
   if (account.userName && account.platform) {
     const platformKey = getPlatformKey(account.platform);
     if (platformKey !== account.platform.toLowerCase()) {
@@ -221,18 +236,10 @@ const getAvatarUrl = (account) => {
   return "/default-avatar.png";
 };
 
-// 🔥 简化后的账号状态相关方法
+// 账号状态相关方法
 const getAccountStatus = (account) => {
   const accountKey = getAccountKey(account.platform, account.userName);
   const isMonitoring = messageStore.monitoringStatus[accountKey];
-
-  console.log(`🔍 检查账号状态: ${account.userName}`, {
-    platform: account.platform,
-    platformKey: getPlatformKey(account.platform),
-    accountKey: accountKey,
-    isMonitoring: isMonitoring,
-    allMonitoringStatus: messageStore.monitoringStatus,
-  });
 
   if (account.status === "异常") return "error";
   if (isMonitoring) return "monitoring";
@@ -256,7 +263,6 @@ const isAccountMonitoring = (platform, accountId) => {
 
 const isAccountSelected = (platform, accountId, userName) => {
   const platformKey = getPlatformKey(platform);
-
   return (
     messageStore.selectedAccount &&
     messageStore.selectedAccount.platform === platformKey &&
@@ -270,28 +276,17 @@ const getAccountUnreadCount = (platform, accountId) => {
 };
 
 // 事件处理
-const togglePlatform = (platform) => {
-  const index = expandedPlatforms.value.indexOf(platform);
-  if (index > -1) {
-    expandedPlatforms.value.splice(index, 1);
-  } else {
-    expandedPlatforms.value.push(platform);
-  }
-};
-
 const handleSelectAccount = async (account) => {
   try {
     console.log("🔄 选择账号:", account.userName);
-
     const platformKey = getPlatformKey(account.platform);
 
     await messageStore.selectAccount(
-      platformKey, // 🔥 使用工具函数
+      platformKey,
       account.userName,
       account.userName
     );
 
-    // 刷新该账号的未读数
     await messageStore.refreshUnreadCount(platformKey, account.userName);
   } catch (error) {
     console.error("选择账号失败:", error);
@@ -303,11 +298,14 @@ const handleAvatarError = (e) => {
   e.target.src = "/default-avatar.png";
 };
 
+const handleLogoError = (e) => {
+  console.error("❌ 平台logo加载失败:", e.target.src);
+};
+
 // 生命周期
 onMounted(async () => {
   console.log("🚀 平台账号组件已挂载");
 
-  // 确保账号数据已加载
   if (accountStore.accounts.length === 0) {
     try {
       await accountStore.loadAccounts();
@@ -316,329 +314,530 @@ onMounted(async () => {
     }
   }
 
-  // 刷新监听状态和未读数
   await messageStore.refreshMonitoringStatus();
   await messageStore.refreshUnreadCounts();
 });
 </script>
 
 <style lang="scss" scoped>
-$primary: #5b73de;
+$primary: #6366f1;
+$primary-light: #a5b4fc;
 $success: #10b981;
 $warning: #f59e0b;
 $danger: #ef4444;
 $info: #6b7280;
 
-$bg-white: #ffffff;
-$bg-light: #f8fafc;
-$bg-gray: #f1f5f9;
+$bg-primary: #ffffff;
+$bg-secondary: #f8fafc;
+$bg-tertiary: #f1f5f9;
+$bg-accent: rgba(99, 102, 241, 0.05);
 
 $text-primary: #1e293b;
 $text-secondary: #64748b;
 $text-muted: #94a3b8;
+$text-white: #ffffff;
 
 $border-light: #e2e8f0;
-$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+$border-lighter: #f1f5f9;
 
-$radius-sm: 4px;
+$shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+  0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+$radius-sm: 6px;
 $radius-md: 8px;
 $radius-lg: 12px;
+$radius-xl: 16px;
+$radius-full: 9999px;
 
 $space-xs: 4px;
 $space-sm: 8px;
-$space-md: 16px;
-$space-lg: 24px;
+$space-md: 12px;
+$space-lg: 16px;
+$space-xl: 20px;
+$space-2xl: 24px;
 
 .platform-accounts {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: $bg-white;
+  background: $bg-primary;
+  padding: $space-lg;
+  overflow: hidden;
 }
 
-// 顶部统计卡片
-.stats-header {
-  padding: $space-md;
-  border-bottom: 1px solid $border-light;
+// 顶部统计区域
+.stats-section {
+  margin-bottom: $space-xl;
   display: flex;
   flex-direction: column;
-  gap: $space-sm;
-  flex-shrink: 0;
+  gap: $space-md;
 
-  .stat-item {
+  .stat-card {
+    background: linear-gradient(135deg, $bg-secondary 0%, $bg-tertiary 100%);
+    border-radius: $radius-lg;
+    padding: $space-lg;
     display: flex;
     align-items: center;
-    gap: $space-sm;
-    padding: $space-sm;
-    background: $bg-light;
-    border-radius: $radius-md;
+    gap: $space-md;
+    border: 1px solid $border-lighter;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: $shadow-md;
+    }
 
     .stat-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      border-radius: $radius-md;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
 
       .el-icon {
-        font-size: 16px;
-        color: white;
+        font-size: 18px;
+        color: $text-white;
       }
+    }
 
-      &.unread {
-        background: linear-gradient(135deg, $danger 0%, #f87171 100%);
-      }
+    &.unread .stat-icon {
+      background: linear-gradient(135deg, $danger 0%, #f87171 100%);
+    }
 
-      &.monitoring {
-        background: linear-gradient(135deg, $success 0%, #34d399 100%);
-      }
+    &.monitoring .stat-icon {
+      background: linear-gradient(135deg, $success 0%, #34d399 100%);
     }
 
     .stat-content {
       .stat-number {
-        font-size: 16px;
+        font-size: 20px;
         font-weight: 700;
         color: $text-primary;
         line-height: 1.2;
+        margin-bottom: 2px;
       }
 
       .stat-label {
         font-size: 12px;
         color: $text-secondary;
         line-height: 1.2;
+        font-weight: 500;
       }
     }
   }
 }
 
-// 平台分组区域
-.platforms-section {
-  flex: 1;
-  overflow-y: auto;
-  padding: $space-sm 0;
+// 折叠状态统计
+.collapsed-stats {
+  margin-bottom: $space-xl;
+  display: flex;
+  justify-content: center;
 
-  .platform-group {
-    margin-bottom: $space-xs;
+  .mini-stat {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, $danger 0%, #f87171 100%);
+    border-radius: $radius-full;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
 
-    .platform-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: $space-sm $space-md;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      border-radius: $radius-md;
-      margin: 0 $space-sm;
-
-      &:hover {
-        background-color: $bg-light;
-      }
-
-      .platform-info {
-        display: flex;
-        align-items: center;
-        gap: $space-sm;
-
-        .platform-logo {
-          width: 20px;
-          height: 20px;
-          border-radius: $radius-sm;
-          object-fit: cover;
-        }
-
-        .platform-name {
-          font-size: 14px;
-          font-weight: 600;
-          color: $text-primary;
-        }
-
-        .account-count {
-          font-size: 12px;
-          color: $text-muted;
-        }
-      }
-
-      .expand-icon {
-        transition: transform 0.3s ease;
-        color: $text-muted;
-
-        &.expanded {
-          transform: rotate(180deg);
-        }
-      }
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: $shadow-lg;
     }
 
-    .platform-accounts-list {
-      padding: 0 $space-sm;
+    .el-icon {
+      font-size: 16px;
+      color: $text-white;
+    }
 
-      .account-item {
-        display: flex;
-        align-items: center;
-        gap: $space-sm;
-        padding: $space-sm;
-        margin-bottom: $space-xs;
-        border-radius: $radius-md;
-        cursor: pointer;
+    .mini-count {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 18px;
+      height: 18px;
+      background: $text-white;
+      color: $danger;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: $radius-full;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      box-shadow: $shadow-sm;
+      border: 2px solid $danger;
+    }
+  }
+}
+
+// 账号列表区域
+.accounts-section {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// 展开状态
+.accounts-expanded {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $space-lg;
+    padding-bottom: $space-md;
+    border-bottom: 1px solid $border-light;
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: $text-primary;
+      margin: 0;
+    }
+
+    .accounts-count {
+      background: $bg-accent;
+      color: $primary;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: $radius-sm;
+    }
+  }
+
+  .accounts-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+
+    .account-card {
+      background: $bg-secondary;
+      border: 1px solid $border-light;
+      border-radius: $radius-xl;
+      padding: $space-lg;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+
+      &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: transparent;
         transition: all 0.3s ease;
-        position: relative;
+      }
 
-        &:hover {
-          background-color: $bg-light;
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: $shadow-lg;
+        border-color: $primary-light;
+
+        &::before {
+          background: linear-gradient(90deg, $primary 0%, $primary-light 100%);
         }
+      }
 
-        &.active {
-          background-color: rgba(91, 115, 222, 0.1);
-          border-left: 3px solid $primary;
+      &.active {
+        background: $bg-accent;
+        border-color: $primary;
+        box-shadow: $shadow-md;
+
+        &::before {
+          background: linear-gradient(90deg, $primary 0%, $primary-light 100%);
         }
+      }
 
-        &.monitoring {
-          &::before {
-            content: "";
-            position: absolute;
-            left: 4px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 3px;
-            height: 20px;
-            background-color: $success;
-            border-radius: 2px;
-          }
-        }
+      &.monitoring {
+        border-left: 3px solid $success;
+      }
 
-        .account-avatar-container {
+      &.has-unread {
+        background: rgba(239, 68, 68, 0.02);
+        border-color: rgba(239, 68, 68, 0.2);
+      }
+
+      .account-avatar-section {
+        display: flex;
+        justify-content: center;
+        margin-bottom: $space-md;
+
+        .avatar-container {
           position: relative;
-          flex-shrink: 0;
 
-          :deep(.el-avatar) {
-            border: 2px solid #f1f5f9;
-            box-shadow: $shadow-sm;
+          .account-avatar {
+            border: 3px solid $text-white;
+            box-shadow: $shadow-md;
           }
-          // 🔥 添加平台logo样式
-          .platform-logo {
+
+          .platform-badge {
             position: absolute;
             bottom: -2px;
             right: -2px;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: white;
+            width: 20px;
+            height: 20px;
+            background: $text-white;
+            border-radius: $radius-full;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-            border: 1px solid white;
+            box-shadow: $shadow-sm;
+            border: 2px solid $text-white;
 
             img {
-              width: 12px;
-              height: 12px;
-              border-radius: 50%;
+              width: 14px;
+              height: 14px;
+              border-radius: $radius-full;
               object-fit: cover;
             }
           }
-          .status-dot {
+
+          .status-indicator {
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: $shadow-sm;
+            top: 2px;
+            right: 2px;
+            width: 12px;
+            height: 12px;
+            border-radius: $radius-full;
+            border: 2px solid $text-white;
+            box-shadow: $shadow-xs;
 
             &.monitoring {
-              background-color: $success;
+              background: $success;
             }
 
             &.normal {
-              background-color: $info;
+              background: $info;
             }
 
             &.error {
-              background-color: $danger;
+              background: $danger;
             }
           }
 
           .unread-badge {
             position: absolute;
-            top: -4px;
-            right: -4px;
-            min-width: 16px;
-            height: 16px;
+            top: -6px;
+            right: -6px;
+            min-width: 20px;
+            height: 20px;
             background: $danger;
-            color: white;
+            color: $text-white;
             font-size: 10px;
-            font-weight: 600;
-            border-radius: 8px;
+            font-weight: 700;
+            border-radius: $radius-full;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0 4px;
-            border: 2px solid white;
+            padding: 0 6px;
             box-shadow: $shadow-sm;
+            border: 2px solid $text-white;
           }
         }
+      }
 
-        .account-info {
-          flex: 1;
-          min-width: 0;
+      .account-info-section {
+        text-align: center;
 
-          .account-name {
-            font-size: 13px;
-            font-weight: 500;
-            color: $text-primary;
-            line-height: 1.2;
-            margin-bottom: 2px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        .account-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: $text-primary;
+          margin-bottom: 4px;
+          line-height: 1.3;
+        }
+
+        .account-platform {
+          font-size: 11px;
+          color: $text-muted;
+          margin-bottom: 4px;
+          background: $bg-tertiary;
+          padding: 2px 6px;
+          border-radius: $radius-sm;
+          display: inline-block;
+        }
+
+        .account-status-text {
+          font-size: 10px;
+          font-weight: 500;
+
+          &:has(.monitoring) {
+            color: $success;
           }
 
-          .account-status {
-            .status-text {
-              font-size: 11px;
-              line-height: 1.2;
+          &:has(.normal) {
+            color: $text-muted;
+          }
 
-              &.monitoring {
-                color: $success;
-              }
-
-              &.normal {
-                color: $text-muted;
-              }
-
-              &.error {
-                color: $danger;
-              }
-            }
+          &:has(.error) {
+            color: $danger;
           }
         }
+      }
+    }
+
+    // 滚动条样式
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 2px;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.2);
       }
     }
   }
 }
 
-// 底部操作区
-.actions-footer {
-  padding: $space-md;
-  border-top: 1px solid $border-light;
-  flex-shrink: 0;
+// 折叠状态
+.accounts-collapsed {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-lg;
+  padding-top: $space-md;
 
-  .batch-action-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $space-xs;
-    font-size: 12px;
-    height: 36px;
+  .account-circle {
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    &.active {
+      .circle-avatar-container .circle-avatar {
+        border-color: $primary;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+    }
+
+    &.monitoring {
+      &::before {
+        content: "";
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        right: -4px;
+        bottom: -4px;
+        border: 2px solid $success;
+        border-radius: $radius-full;
+        opacity: 0.6;
+      }
+    }
+
+    &.has-unread {
+      .circle-avatar-container .circle-avatar {
+        border-color: $danger;
+      }
+    }
+
+    .circle-avatar-container {
+      position: relative;
+
+      .circle-avatar {
+        border: 2px solid $border-light;
+        box-shadow: $shadow-sm;
+        transition: all 0.3s ease;
+      }
+
+      .mini-platform-badge {
+        position: absolute;
+        bottom: -1px;
+        right: -1px;
+        width: 14px;
+        height: 14px;
+        background: $text-white;
+        border-radius: $radius-full;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: $shadow-xs;
+        border: 1px solid $border-light;
+
+        img {
+          width: 10px;
+          height: 10px;
+          border-radius: $radius-full;
+          object-fit: cover;
+        }
+      }
+
+      .mini-status-dot {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 8px;
+        height: 8px;
+        border-radius: $radius-full;
+        border: 1px solid $text-white;
+
+        &.monitoring {
+          background: $success;
+        }
+
+        &.normal {
+          background: $info;
+        }
+
+        &.error {
+          background: $danger;
+        }
+      }
+
+      .mini-unread-dot {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        min-width: 16px;
+        height: 16px;
+        background: $danger;
+        color: $text-white;
+        font-size: 9px;
+        font-weight: 700;
+        border-radius: $radius-full;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+        box-shadow: $shadow-sm;
+        border: 2px solid $text-white;
+      }
+    }
   }
-}
 
-// 滚动条样式
-.platforms-section {
+  // 滚动条样式
   &::-webkit-scrollbar {
     width: 4px;
   }

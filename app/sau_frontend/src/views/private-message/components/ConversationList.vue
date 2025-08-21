@@ -3,45 +3,33 @@
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <!-- 搜索框 -->
-      <div class="search-box">
+      <div class="search-container">
         <el-input
           v-model="searchKeyword"
-          placeholder="搜索私信..."
+          placeholder="搜索会话..."
           clearable
           @input="handleSearch"
           class="search-input"
         >
           <template #prefix>
-            <el-icon><Search /></el-icon>
+            <el-icon class="search-icon"><Search /></el-icon>
           </template>
         </el-input>
       </div>
 
-      <!-- 筛选按钮 -->
-      <div class="filter-buttons">
-        <el-button-group>
-          <el-button
-            :type="filterType === 'all' ? 'primary' : ''"
-            size="small"
-            @click="setFilter('all')"
-          >
-            全部
-          </el-button>
-          <el-button
-            :type="filterType === 'unread' ? 'primary' : ''"
-            size="small"
-            @click="setFilter('unread')"
-          >
-            未读
-          </el-button>
-          <el-button
-            :type="filterType === 'recent' ? 'primary' : ''"
-            size="small"
-            @click="setFilter('recent')"
-          >
-            最近
-          </el-button>
-        </el-button-group>
+      <!-- 筛选标签 -->
+      <div class="filter-tabs">
+        <div
+          v-for="filter in filterOptions"
+          :key="filter.key"
+          :class="['filter-tab', { active: filterType === filter.key }]"
+          @click="setFilter(filter.key)"
+        >
+          <span class="filter-label">{{ filter.label }}</span>
+          <span v-if="filter.count > 0" class="filter-count">{{
+            filter.count
+          }}</span>
+        </div>
       </div>
     </div>
 
@@ -49,8 +37,10 @@
     <div class="conversations-container">
       <!-- 加载状态 -->
       <div v-if="messageStore.isLoadingThreads" class="loading-state">
-        <el-icon class="loading-spinner"><Loading /></el-icon>
-        <span>加载会话中...</span>
+        <div class="loading-content">
+          <el-icon class="loading-spinner"><Loading /></el-icon>
+          <span class="loading-text">加载会话中...</span>
+        </div>
       </div>
 
       <!-- 会话列表 -->
@@ -66,47 +56,77 @@
             {
               active: isConversationSelected(conversation),
               unread: conversation.unread_count > 0,
+              pinned: conversation.is_pinned,
             },
           ]"
           @click="handleSelectConversation(conversation)"
         >
-          <!-- 用户头像 -->
-          <div class="user-avatar-container">
-            <el-avatar
-              :size="40"
-              :src="conversation.avatar || '/default-avatar.png'"
-              @error="handleAvatarError"
-            />
-            <!-- 平台标识 -->
-            <div class="platform-badge">
-              <img
-                :src="getPlatformLogo(conversation.platform)"
-                :alt="conversation.platform"
+          <!-- 左侧头像区域 -->
+          <div class="avatar-section">
+            <div class="user-avatar-container">
+              <el-avatar
+                :size="44"
+                :src="conversation.avatar || '/default-avatar.png'"
+                @error="handleAvatarError"
+                class="user-avatar"
               />
-            </div>
-            <!-- 未读消息红点 -->
-            <div v-if="conversation.unread_count > 0" class="unread-dot">
-              {{
-                conversation.unread_count > 99
-                  ? "99+"
-                  : conversation.unread_count
-              }}
+
+              <!-- 在线状态点 -->
+              <div v-if="conversation.is_online" class="online-indicator"></div>
+
+              <!-- 平台标识 -->
+              <div class="platform-indicator">
+                <img
+                  :src="getPlatformLogo(conversation.platform)"
+                  :alt="conversation.platform"
+                  class="platform-logo"
+                />
+              </div>
             </div>
           </div>
 
-          <!-- 会话信息 -->
-          <div class="conversation-info">
-            <div class="conversation-header">
-              <span class="user-name">{{ conversation.user_name }}</span>
-              <span class="message-time">{{
-                formatMessageTime(conversation.last_message_time)
-              }}</span>
+          <!-- 右侧内容区域 -->
+          <div class="content-section">
+            <!-- 顶部信息行 -->
+            <div class="header-row">
+              <div class="user-info">
+                <span class="user-name">{{ conversation.user_name }}</span>
+                <span v-if="conversation.is_verified" class="verified-badge">
+                  <el-icon><Select /></el-icon>
+                </span>
+              </div>
+
+              <div class="meta-info">
+                <span class="message-time">{{
+                  formatMessageTime(conversation.last_message_time)
+                }}</span>
+                <div v-if="conversation.unread_count > 0" class="unread-count">
+                  {{
+                    conversation.unread_count > 99
+                      ? "99+"
+                      : conversation.unread_count
+                  }}
+                </div>
+              </div>
             </div>
 
-            <div class="last-message">
-              <span class="message-preview">{{
-                getMessagePreview(conversation)
-              }}</span>
+            <!-- 消息预览行 -->
+            <div class="message-row">
+              <div class="message-preview">
+                <span class="message-content">{{
+                  getMessagePreview(conversation)
+                }}</span>
+              </div>
+
+              <!-- 消息状态和操作 -->
+              <div class="message-status">
+                <el-icon v-if="conversation.is_pinned" class="pin-icon"
+                  ><Lock
+                /></el-icon>
+                <el-icon v-if="conversation.is_muted" class="mute-icon"
+                  ><MuteNotification
+                /></el-icon>
+              </div>
             </div>
           </div>
         </div>
@@ -115,47 +135,94 @@
       <!-- 空状态 -->
       <div v-else class="empty-state">
         <div class="empty-content">
-          <div class="empty-icon">
-            <el-icon><ChatDotRound /></el-icon>
+          <div class="empty-illustration">
+            <el-icon class="empty-icon"><ChatDotRound /></el-icon>
           </div>
-          <h3 class="empty-title">
-            {{ messageStore.selectedAccount ? "暂无会话" : "请选择账号" }}
-          </h3>
-          <p class="empty-description">
-            {{ getEmptyDescription() }}
-          </p>
+          <h3 class="empty-title">{{ getEmptyTitle() }}</h3>
+          <p class="empty-description">{{ getEmptyDescription() }}</p>
+
+          <!-- 空状态操作按钮 -->
+          <div v-if="!messageStore.selectedAccount" class="empty-actions">
+            <el-button type="primary" class="select-account-btn">
+              <el-icon><User /></el-icon>
+              选择账号
+            </el-button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 底部加载更多 -->
-    <div v-if="showLoadMore" class="load-more">
-      <el-button
-        text
-        @click="loadMoreConversations"
-        :loading="isLoadingMore"
-        class="load-more-btn"
-      >
-        加载更多会话
-      </el-button>
+    <!-- 底部状态栏 -->
+    <div v-if="filteredConversations.length > 0" class="status-bar">
+      <div class="status-info">
+        <span class="conversations-count"
+          >{{ filteredConversations.length }} 个会话</span
+        >
+        <span v-if="getTotalUnreadCount() > 0" class="total-unread">
+          {{ getTotalUnreadCount() }} 条未读
+        </span>
+      </div>
+
+      <!-- 加载更多按钮 -->
+      <div v-if="showLoadMore" class="load-more-section">
+        <el-button
+          text
+          @click="loadMoreConversations"
+          :loading="isLoadingMore"
+          class="load-more-btn"
+          size="small"
+        >
+          加载更多
+        </el-button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { Search, Loading, ChatDotRound } from "@element-plus/icons-vue";
+import {
+  Search,
+  Loading,
+  ChatDotRound,
+  Select,
+  Lock,
+  MuteNotification,
+  User,
+} from "@element-plus/icons-vue";
 import { useMessageStore } from "@/stores/message";
 import { getPlatformLogo } from "@/utils/platform";
+
 // 状态管理
 const messageStore = useMessageStore();
 
 // 本地状态
 const searchKeyword = ref("");
-const filterType = ref("all"); // all, unread, recent
+const filterType = ref("all");
 const isLoadingMore = ref(false);
 const searchResults = ref([]);
 const isSearching = ref(false);
+
+// 筛选选项
+const filterOptions = computed(() => [
+  {
+    key: "all",
+    label: "全部",
+    count: messageStore.threadsList?.length || 0,
+  },
+  {
+    key: "unread",
+    label: "未读",
+    count:
+      messageStore.threadsList?.filter((conv) => conv.unread_count > 0)
+        .length || 0,
+  },
+  {
+    key: "recent",
+    label: "最近",
+    count: getRecentConversationsCount(),
+  },
+]);
 
 // 计算属性
 const filteredConversations = computed(() => {
@@ -175,7 +242,6 @@ const filteredConversations = computed(() => {
       conversations = conversations.filter((conv) => conv.unread_count > 0);
       break;
     case "recent":
-      // 过滤最近24小时的会话
       const oneDayAgo = new Date(
         Date.now() - 24 * 60 * 60 * 1000
       ).toISOString();
@@ -185,12 +251,20 @@ const filteredConversations = computed(() => {
       break;
     case "all":
     default:
-      // 显示全部
       break;
   }
 
-  // 按最后消息时间排序
+  // 按置顶、未读、时间排序
   return conversations.sort((a, b) => {
+    // 置顶会话优先
+    if (a.is_pinned && !b.is_pinned) return -1;
+    if (!a.is_pinned && b.is_pinned) return 1;
+
+    // 未读会话优先
+    if (a.unread_count > 0 && b.unread_count === 0) return -1;
+    if (a.unread_count === 0 && b.unread_count > 0) return 1;
+
+    // 按时间排序
     const timeA = a.last_message_time
       ? new Date(a.last_message_time)
       : new Date(0);
@@ -202,12 +276,25 @@ const filteredConversations = computed(() => {
 });
 
 const showLoadMore = computed(() => {
-  // TODO: 实现分页逻辑
-  return false;
+  return false; // TODO: 实现分页逻辑
 });
 
+// 工具方法
+const getRecentConversationsCount = () => {
+  if (!messageStore.threadsList) return 0;
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  return messageStore.threadsList.filter(
+    (conv) => conv.last_message_time && conv.last_message_time > oneDayAgo
+  ).length;
+};
 
-// 格式化消息时间
+const getTotalUnreadCount = () => {
+  return filteredConversations.value.reduce(
+    (total, conv) => total + (conv.unread_count || 0),
+    0
+  );
+};
+
 const formatMessageTime = (timestamp) => {
   if (!timestamp) return "";
 
@@ -215,6 +302,7 @@ const formatMessageTime = (timestamp) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  const thisWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   if (messageTime >= today) {
     // 今天 - 显示时分
@@ -226,6 +314,9 @@ const formatMessageTime = (timestamp) => {
   } else if (messageTime >= yesterday) {
     // 昨天
     return "昨天";
+  } else if (messageTime >= thisWeek) {
+    // 本周 - 显示星期
+    return messageTime.toLocaleDateString("zh-CN", { weekday: "short" });
   } else {
     // 更早 - 显示月日
     return messageTime.toLocaleDateString("zh-CN", {
@@ -235,29 +326,28 @@ const formatMessageTime = (timestamp) => {
   }
 };
 
-// 获取消息预览
 const getMessagePreview = (conversation) => {
-  // 优先使用最后消息文本
   if (conversation.last_message_text) {
-    return conversation.last_message_text.length > 20
-      ? conversation.last_message_text.substring(0, 20) + "..."
+    return conversation.last_message_text.length > 30
+      ? conversation.last_message_text.substring(0, 30) + "..."
       : conversation.last_message_text;
   }
 
-  // 根据消息类型显示预览
-  if (conversation.last_message_type === "image") {
-    return "[图片]";
-  } else if (conversation.last_message_type === "mixed") {
-    return "[图文消息]";
-  }
+  const typePreviewMap = {
+    image: "[图片]",
+    video: "[视频]",
+    voice: "[语音]",
+    file: "[文件]",
+    mixed: "[图文消息]",
+    system: "[系统消息]",
+  };
 
-  return "暂无消息";
+  return typePreviewMap[conversation.last_message_type] || "暂无消息";
 };
 
-// 获取空状态描述
-const getEmptyDescription = () => {
+const getEmptyTitle = () => {
   if (!messageStore.selectedAccount) {
-    return "在左侧选择账号查看私信会话";
+    return "请选择账号";
   }
 
   if (searchKeyword.value.trim()) {
@@ -270,11 +360,29 @@ const getEmptyDescription = () => {
     case "recent":
       return "暂无最近会话";
     default:
-      return "该账号暂无私信会话";
+      return "暂无会话";
   }
 };
 
-// 判断会话是否选中
+const getEmptyDescription = () => {
+  if (!messageStore.selectedAccount) {
+    return "在左侧选择一个账号来查看私信会话";
+  }
+
+  if (searchKeyword.value.trim()) {
+    return "尝试使用其他关键词搜索";
+  }
+
+  switch (filterType.value) {
+    case "unread":
+      return "所有消息都已查看";
+    case "recent":
+      return "最近24小时内没有新会话";
+    default:
+      return "该账号还没有私信会话";
+  }
+};
+
 const isConversationSelected = (conversation) => {
   return (
     messageStore.selectedThread &&
@@ -301,7 +409,6 @@ const handleSearch = async () => {
   try {
     const results = await messageStore.searchMessages(keyword);
 
-    // 转换搜索结果为会话格式
     searchResults.value = results.map((result) => ({
       id: result.thread_id,
       user_name: result.user_name,
@@ -310,7 +417,8 @@ const handleSearch = async () => {
       last_message_text: result.message.text,
       last_message_type: result.message.type,
       last_message_time: result.message.timestamp,
-      unread_count: 0, // 搜索结果中不显示未读数
+      unread_count: 0,
+      is_search_result: true,
     }));
   } catch (error) {
     console.error("搜索失败:", error);
@@ -325,10 +433,9 @@ const setFilter = (type) => {
 };
 
 const handleSelectConversation = async (conversation) => {
-  console.log('🔍 选中的会话对象:', conversation); // 🔥 添加这行
-  console.log('🔍 会话的platform值:', conversation.platform); // 🔥 添加这行
-  
   try {
+    console.log("🔍 选中的会话对象:", conversation);
+
     await messageStore.selectThread(
       conversation.id,
       conversation.user_name,
@@ -340,11 +447,8 @@ const handleSelectConversation = async (conversation) => {
 };
 
 const loadMoreConversations = async () => {
-  // TODO: 实现分页加载
   isLoadingMore.value = true;
-
   try {
-    // 加载更多会话逻辑
     await new Promise((resolve) => setTimeout(resolve, 1000));
   } finally {
     isLoadingMore.value = false;
@@ -367,78 +471,129 @@ watch(
 </script>
 
 <style lang="scss" scoped>
-$primary: #5b73de;
+$primary: #6366f1;
+$primary-light: #a5b4fc;
 $success: #10b981;
+$warning: #f59e0b;
 $danger: #ef4444;
+$info: #6b7280;
 
-$bg-white: #ffffff;
-$bg-light: #f8fafc;
-$bg-gray: #f1f5f9;
+$bg-primary: #ffffff;
+$bg-secondary: #f8fafc;
+$bg-tertiary: #f1f5f9;
+$bg-accent: rgba(99, 102, 241, 0.05);
+$bg-hover: rgba(99, 102, 241, 0.08);
 
 $text-primary: #1e293b;
 $text-secondary: #64748b;
 $text-muted: #94a3b8;
+$text-white: #ffffff;
 
 $border-light: #e2e8f0;
-$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$border-lighter: #f1f5f9;
 
-$radius-sm: 4px;
+$shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+$radius-sm: 6px;
 $radius-md: 8px;
 $radius-lg: 12px;
+$radius-xl: 16px;
+$radius-full: 9999px;
 
 $space-xs: 4px;
 $space-sm: 8px;
-$space-md: 16px;
-$space-lg: 24px;
+$space-md: 12px;
+$space-lg: 16px;
+$space-xl: 20px;
 
 .conversation-list {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: $bg-light;
+  background: $bg-secondary;
 }
 
 // 顶部工具栏
 .toolbar {
-  padding: $space-md;
-  background: $bg-white;
-  border-bottom: 1px solid $border-light;
+  padding: $space-lg;
+  background: $bg-primary;
+  border-bottom: 1px solid $border-lighter;
   flex-shrink: 0;
 
-  .search-box {
-    margin-bottom: $space-sm;
+  .search-container {
+    margin-bottom: $space-lg;
 
     .search-input {
       :deep(.el-input__wrapper) {
-        border-radius: $radius-lg;
-        box-shadow: $shadow-sm;
+        border-radius: $radius-xl;
+        border: 1px solid $border-light;
+        box-shadow: $shadow-xs;
+        transition: all 0.3s ease;
+
+        &:hover {
+          border-color: $primary-light;
+        }
+
+        &.is-focus {
+          border-color: $primary;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+      }
+
+      .search-icon {
+        color: $text-muted;
       }
     }
   }
 
-  .filter-buttons {
+  .filter-tabs {
     display: flex;
-    justify-content: center;
+    gap: $space-xs;
 
-    :deep(.el-button-group) {
-      .el-button {
-        font-size: 12px;
-        padding: 6px 12px;
-        border-radius: $radius-md;
+    .filter-tab {
+      display: flex;
+      align-items: center;
+      gap: $space-xs;
+      padding: $space-sm $space-md;
+      background: $bg-tertiary;
+      border: 1px solid $border-light;
+      border-radius: $radius-lg;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 13px;
 
-        &:first-child {
-          border-top-right-radius: 0;
-          border-bottom-right-radius: 0;
+      &:hover {
+        background: $bg-hover;
+        border-color: $primary-light;
+      }
+
+      &.active {
+        background: $primary;
+        border-color: $primary;
+        color: $text-white;
+
+        .filter-count {
+          background: rgba(255, 255, 255, 0.2);
+          color: $text-white;
         }
+      }
 
-        &:last-child {
-          border-top-left-radius: 0;
-          border-bottom-left-radius: 0;
-        }
+      .filter-label {
+        font-weight: 500;
+      }
 
-        &:not(:first-child):not(:last-child) {
-          border-radius: 0;
-        }
+      .filter-count {
+        background: $bg-primary;
+        color: $primary;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: $radius-sm;
+        min-width: 16px;
+        text-align: center;
       }
     }
   }
@@ -448,20 +603,30 @@ $space-lg: 24px;
 .conversations-container {
   flex: 1;
   overflow-y: auto;
-  position: relative;
+  background: $bg-secondary;
 
   .loading-state {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 200px;
-    gap: $space-sm;
-    color: $text-secondary;
 
-    .loading-spinner {
-      font-size: 24px;
-      animation: rotate 1s linear infinite;
+    .loading-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: $space-md;
+      color: $text-secondary;
+
+      .loading-spinner {
+        font-size: 24px;
+        animation: rotate 1s linear infinite;
+      }
+
+      .loading-text {
+        font-size: 14px;
+        font-weight: 500;
+      }
     }
   }
 
@@ -469,122 +634,219 @@ $space-lg: 24px;
     .conversation-item {
       display: flex;
       align-items: center;
-      gap: $space-sm;
-      padding: $space-sm $space-md;
+      gap: $space-md;
+      padding: $space-lg;
+      background: $bg-primary;
+      border-bottom: 1px solid $border-lighter;
       cursor: pointer;
-      transition: background-color 0.3s ease;
-      border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+      transition: all 0.3s ease;
+      position: relative;
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: transparent;
+        transition: all 0.3s ease;
+      }
 
       &:hover {
-        background-color: rgba(255, 255, 255, 0.8);
+        background: $bg-hover;
+        transform: translateX(2px);
+
+        &::before {
+          background: $primary-light;
+        }
       }
 
       &.active {
-        background-color: $bg-white;
-        border-left: 3px solid $primary;
-        box-shadow: $shadow-sm;
+        background: $bg-accent;
+        border-color: $primary;
+
+        &::before {
+          background: $primary;
+        }
       }
 
       &.unread {
-        background-color: rgba(91, 115, 222, 0.05);
+        background: rgba(239, 68, 68, 0.02);
 
         .user-name {
           font-weight: 600;
         }
 
-        .message-preview {
+        .message-content {
           font-weight: 500;
           color: $text-primary;
         }
       }
 
-      .user-avatar-container {
-        position: relative;
-        flex-shrink: 0;
-
-        :deep(.el-avatar) {
-          border: 2px solid white;
-          box-shadow: $shadow-sm;
-        }
-
-        .platform-badge {
+      &.pinned {
+        &::after {
+          content: "";
           position: absolute;
-          bottom: -2px;
-          right: -2px;
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-
-          img {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            object-fit: cover;
-          }
-        }
-
-        .unread-dot {
-          position: absolute;
-          top: -4px;
-          right: -4px;
-          min-width: 18px;
-          height: 18px;
-          background: $danger;
-          color: white;
-          font-size: 10px;
-          font-weight: 600;
-          border-radius: 9px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 4px;
-          border: 2px solid white;
-          box-shadow: $shadow-sm;
+          top: $space-sm;
+          right: $space-sm;
+          width: 6px;
+          height: 6px;
+          background: $warning;
+          border-radius: $radius-full;
         }
       }
 
-      .conversation-info {
+      .avatar-section {
+        flex-shrink: 0;
+
+        .user-avatar-container {
+          position: relative;
+
+          .user-avatar {
+            border: 2px solid $bg-tertiary;
+            box-shadow: $shadow-xs;
+            transition: all 0.3s ease;
+          }
+
+          .online-indicator {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 10px;
+            height: 10px;
+            background: $success;
+            border: 2px solid $bg-primary;
+            border-radius: $radius-full;
+            box-shadow: $shadow-xs;
+          }
+
+          .platform-indicator {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 18px;
+            height: 18px;
+            background: $bg-primary;
+            border-radius: $radius-full;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: $shadow-sm;
+            border: 2px solid $bg-primary;
+
+            .platform-logo {
+              width: 12px;
+              height: 12px;
+              border-radius: $radius-full;
+              object-fit: cover;
+            }
+          }
+        }
+      }
+
+      .content-section {
         flex: 1;
         min-width: 0;
 
-        .conversation-header {
+        .header-row {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          margin-bottom: 2px;
+          justify-content: space-between;
+          margin-bottom: 6px;
 
-          .user-name {
-            font-size: 14px;
-            font-weight: 500;
-            color: $text-primary;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+          .user-info {
+            display: flex;
+            align-items: center;
+            gap: $space-xs;
             flex: 1;
-            margin-right: $space-xs;
+            min-width: 0;
+
+            .user-name {
+              font-size: 15px;
+              font-weight: 500;
+              color: $text-primary;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .verified-badge {
+              color: $primary;
+              font-size: 12px;
+              flex-shrink: 0;
+            }
           }
 
-          .message-time {
-            font-size: 11px;
-            color: $text-muted;
+          .meta-info {
+            display: flex;
+            align-items: center;
+            gap: $space-sm;
             flex-shrink: 0;
+
+            .message-time {
+              font-size: 12px;
+              color: $text-muted;
+              font-weight: 500;
+            }
+
+            .unread-count {
+              min-width: 18px;
+              height: 18px;
+              background: $danger;
+              color: $text-white;
+              font-size: 11px;
+              font-weight: 600;
+              border-radius: $radius-full;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 0 6px;
+              box-shadow: $shadow-xs;
+            }
           }
         }
 
-        .last-message {
+        .message-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: $space-sm;
+
           .message-preview {
-            font-size: 13px;
-            color: $text-secondary;
-            line-height: 1.3;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            display: block;
+            flex: 1;
+            min-width: 0;
+
+            .message-content {
+              font-size: 13px;
+              color: $text-secondary;
+              line-height: 1.4;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              display: block;
+            }
+          }
+
+          .message-status {
+            display: flex;
+            align-items: center;
+            gap: $space-xs;
+            flex-shrink: 0;
+
+            .pin-icon,
+            .mute-icon {
+              font-size: 12px;
+              color: $text-muted;
+            }
+
+            .pin-icon {
+              color: $warning;
+            }
+
+            .mute-icon {
+              color: $info;
+            }
           }
         }
       }
@@ -596,60 +858,62 @@ $space-lg: 24px;
     align-items: center;
     justify-content: center;
     height: 100%;
-    padding: $space-lg;
+    padding: $space-xl;
+    background: $bg-primary;
 
     .empty-content {
       text-align: center;
-      max-width: 240px;
+      max-width: 280px;
 
-      .empty-icon {
-        width: 64px;
-        height: 64px;
-        border-radius: 50%;
-        background: $bg-gray;
+      .empty-illustration {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto $space-xl;
+        background: linear-gradient(
+          135deg,
+          $bg-tertiary 0%,
+          $border-light 100%
+        );
+        border-radius: $radius-full;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto $space-md;
 
-        .el-icon {
-          font-size: 24px;
+        .empty-icon {
+          font-size: 32px;
           color: $text-muted;
         }
       }
 
       .empty-title {
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 600;
         color: $text-primary;
-        margin: 0 0 $space-xs 0;
+        margin: 0 0 $space-sm 0;
       }
 
       .empty-description {
-        font-size: 12px;
+        font-size: 14px;
         color: $text-secondary;
-        line-height: 1.4;
-        margin: 0;
+        line-height: 1.5;
+        margin: 0 0 $space-xl 0;
+      }
+
+      .empty-actions {
+        .select-account-btn {
+          border-radius: $radius-lg;
+          padding: $space-md $space-xl;
+          font-weight: 500;
+
+          .el-icon {
+            margin-right: $space-xs;
+          }
+        }
       }
     }
   }
-}
 
-// 底部加载更多
-.load-more {
-  padding: $space-sm;
-  text-align: center;
-  border-top: 1px solid $border-light;
-  background: $bg-white;
-
-  .load-more-btn {
-    font-size: 12px;
-    color: $text-secondary;
-  }
-}
-
-// 滚动条样式
-.conversations-container {
+  // 滚动条样式
   &::-webkit-scrollbar {
     width: 4px;
   }
@@ -668,6 +932,49 @@ $space-lg: 24px;
   }
 }
 
+// 底部状态栏
+.status-bar {
+  padding: $space-md $space-lg;
+  background: $bg-primary;
+  border-top: 1px solid $border-lighter;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+
+  .status-info {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    font-size: 12px;
+
+    .conversations-count {
+      color: $text-secondary;
+      font-weight: 500;
+    }
+
+    .total-unread {
+      color: $danger;
+      font-weight: 600;
+      background: rgba(239, 68, 68, 0.1);
+      padding: 2px 6px;
+      border-radius: $radius-sm;
+    }
+  }
+
+  .load-more-section {
+    .load-more-btn {
+      font-size: 12px;
+      color: $primary;
+      font-weight: 500;
+
+      &:hover {
+        background: $bg-hover;
+      }
+    }
+  }
+}
+
 // 旋转动画
 @keyframes rotate {
   from {
@@ -675,6 +982,80 @@ $space-lg: 24px;
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+// 响应式适配
+@media (max-width: 768px) {
+  .toolbar {
+    padding: $space-md;
+
+    .search-container {
+      margin-bottom: $space-md;
+    }
+
+    .filter-tabs {
+      gap: $space-xs;
+
+      .filter-tab {
+        padding: $space-xs $space-sm;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .conversations-list {
+    .conversation-item {
+      padding: $space-md;
+
+      .avatar-section {
+        .user-avatar-container {
+          .user-avatar {
+            width: 36px !important;
+            height: 36px !important;
+          }
+        }
+      }
+
+      .content-section {
+        .header-row {
+          .user-info {
+            .user-name {
+              font-size: 14px;
+            }
+          }
+
+          .meta-info {
+            .message-time {
+              font-size: 11px;
+            }
+
+            .unread-count {
+              min-width: 16px;
+              height: 16px;
+              font-size: 10px;
+            }
+          }
+        }
+
+        .message-row {
+          .message-preview {
+            .message-content {
+              font-size: 12px;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .status-bar {
+    padding: $space-sm $space-md;
+
+    .status-info {
+      gap: $space-sm;
+      font-size: 11px;
+    }
   }
 }
 </style>
