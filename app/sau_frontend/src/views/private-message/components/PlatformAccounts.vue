@@ -118,20 +118,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 底部操作区 -->
-    <div class="actions-footer">
-      <el-button
-        size="small"
-        type="primary"
-        @click="handleBatchMonitoring"
-        :loading="isBatchOperating"
-        class="batch-action-btn"
-      >
-        <el-icon><Setting /></el-icon>
-        批量监听设置
-      </el-button>
-    </div>
   </div>
 </template>
 
@@ -149,11 +135,11 @@ import { ElMessage } from "element-plus";
 import { useAccountStore } from "@/stores/account";
 import { useMessageStore } from "@/stores/message";
 // 🔥 导入平台工具函数
-import { 
-  getPlatformKey, 
-  getAccountKey, 
+import {
+  getPlatformKey,
+  getAccountKey,
   getPlatformLogo,
-  isPlatformSupportMessage 
+  isPlatformSupportMessage,
 } from "@/utils/platform";
 
 // 状态管理
@@ -162,7 +148,6 @@ const messageStore = useMessageStore();
 
 // 本地状态
 const expandedPlatforms = ref(["抖音", "视频号", "小红书", "快手"]); // 默认全部展开
-const isBatchOperating = ref(false);
 
 // 计算属性
 const platformGroups = computed(() => {
@@ -171,7 +156,12 @@ const platformGroups = computed(() => {
 
   accountStore.accounts.forEach((account) => {
     const platform = account.platform;
-    console.log('🔍 账号平台:', platform, '对应logo:', getPlatformLogo(platform));
+    console.log(
+      "🔍 账号平台:",
+      platform,
+      "对应logo:",
+      getPlatformLogo(platform)
+    );
     if (!groups[platform]) {
       groups[platform] = {
         platform,
@@ -184,17 +174,17 @@ const platformGroups = computed(() => {
   return Object.values(groups);
 });
 const handleLogoError = (e) => {
-  console.error('❌ 平台logo加载失败:', {
+  console.error("❌ 平台logo加载失败:", {
     src: e.target.src,
     platform: e.target.alt,
-    error: e
+    error: e,
   });
 };
 
 const handleLogoLoad = (e) => {
-  console.log('✅ 平台logo加载成功:', {
+  console.log("✅ 平台logo加载成功:", {
     src: e.target.src,
-    platform: e.target.alt
+    platform: e.target.alt,
   });
 };
 const totalAccountsCount = computed(() => {
@@ -241,7 +231,7 @@ const getAccountStatus = (account) => {
     platformKey: getPlatformKey(account.platform),
     accountKey: accountKey,
     isMonitoring: isMonitoring,
-    allMonitoringStatus: messageStore.monitoringStatus
+    allMonitoringStatus: messageStore.monitoringStatus,
   });
 
   if (account.status === "异常") return "error";
@@ -266,7 +256,7 @@ const isAccountMonitoring = (platform, accountId) => {
 
 const isAccountSelected = (platform, accountId, userName) => {
   const platformKey = getPlatformKey(platform);
-  
+
   return (
     messageStore.selectedAccount &&
     messageStore.selectedAccount.platform === platformKey &&
@@ -292,12 +282,12 @@ const togglePlatform = (platform) => {
 const handleSelectAccount = async (account) => {
   try {
     console.log("🔄 选择账号:", account.userName);
-    
+
     const platformKey = getPlatformKey(account.platform);
-    
+
     await messageStore.selectAccount(
-      platformKey,        // 🔥 使用工具函数
-      account.userName,   
+      platformKey, // 🔥 使用工具函数
+      account.userName,
       account.userName
     );
 
@@ -307,11 +297,6 @@ const handleSelectAccount = async (account) => {
     console.error("选择账号失败:", error);
     ElMessage.error("加载账号会话失败");
   }
-};
-
-const handleBatchMonitoring = async () => {
-  // TODO: 实现批量监听设置对话框
-  ElMessage.info("批量监听设置功能开发中");
 };
 
 const handleAvatarError = (e) => {
