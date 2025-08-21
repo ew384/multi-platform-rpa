@@ -158,19 +158,22 @@ $radius-xl: 16px;
   height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   overflow: hidden;
+  position: fixed; // 固定定位
+  top: 0;
+  left: 240px; // 紧贴侧边栏
+  right: 0;
+  bottom: 0;
 }
 
 .message-layout {
   display: flex;
   height: 100%;
-  gap: 1px; // 极细分割线效果
 
   .platform-accounts-column {
     flex-shrink: 0;
     background: $bg-primary;
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    border-radius: 0 $radius-lg 0 0;
     box-shadow: $shadow-soft;
 
     &.collapsed {

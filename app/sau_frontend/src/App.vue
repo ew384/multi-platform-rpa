@@ -2,9 +2,7 @@
   <div id="app">
     <div class="app-layout">
       <!-- 侧边栏 -->
-      <div 
-        :class="['sidebar', { collapsed: isCollapsed }]"
-      >
+      <div :class="['sidebar', { collapsed: isCollapsed }]">
         <!-- 用户信息区域 -->
         <div class="sidebar-header">
           <div class="user-info">
@@ -24,8 +22,8 @@
         <!-- 导航菜单 -->
         <div class="sidebar-menu">
           <nav class="nav-menu">
-            <router-link 
-              v-for="item in menuItems" 
+            <router-link
+              v-for="item in menuItems"
               :key="item.path"
               :to="item.path"
               :class="['nav-item', { active: isActiveRoute(item.path) }]"
@@ -34,15 +32,19 @@
                 <component :is="item.icon" />
               </div>
               <transition name="fade">
-                <span v-show="!isCollapsed" class="nav-text">{{ item.name }}</span>
+                <span v-show="!isCollapsed" class="nav-text">{{
+                  item.name
+                }}</span>
               </transition>
-              <div v-show="!isCollapsed && item.badge" class="nav-badge">{{ item.badge }}</div>
+              <div v-show="!isCollapsed && item.badge" class="nav-badge">
+                {{ item.badge }}
+              </div>
             </router-link>
           </nav>
         </div>
 
         <!-- 拖拽调整区域 -->
-        <div 
+        <div
           class="resize-handle"
           @mouseenter="showResizeHandle = true"
           @mouseleave="showResizeHandle = false"
@@ -60,7 +62,10 @@
       </div>
 
       <!-- 主内容区 -->
-      <div class="main-content" :style="{ marginLeft: (isCollapsed ? 64 : 240) + 'px' }">
+      <div
+        class="main-content"
+        :style="{ marginLeft: (isCollapsed ? 64 : 240) + 'px' }"
+      >
         <!-- 页面内容 -->
         <main class="page-content">
           <router-view />
@@ -71,118 +76,132 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { useAccountStore } from '@/stores/account'
-import { 
-  VideoCamera, HomeFilled, Upload, User, 
-  Monitor, DataAnalysis, Fold, Expand,
-  Bell, Setting
-} from '@element-plus/icons-vue'
-import { pathService } from '@/utils/pathService';
-const route = useRoute()
-const accountStore = useAccountStore() 
-const isCollapsed = ref(false)
-const showResizeHandle = ref(false)
-const isDragging = ref(false)
-const dragStartX = ref(0)
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRoute } from "vue-router";
+import { useAccountStore } from "@/stores/account";
+import {
+  VideoCamera,
+  HomeFilled,
+  Upload,
+  User,
+  Monitor,
+  DataAnalysis,
+  Fold,
+  Expand,
+  Bell,
+  Setting,
+} from "@element-plus/icons-vue";
+import { pathService } from "@/utils/pathService";
+const route = useRoute();
+const accountStore = useAccountStore();
+const isCollapsed = ref(false);
+const showResizeHandle = ref(false);
+const isDragging = ref(false);
+const dragStartX = ref(0);
 
 // 固定宽度值
-const EXPANDED_WIDTH = 240
-const COLLAPSED_WIDTH = 64
+const EXPANDED_WIDTH = 240;
+const COLLAPSED_WIDTH = 64;
 
 // 计算当前宽度
 const sidebarWidth = computed(() => {
-  return isCollapsed.value ? COLLAPSED_WIDTH : EXPANDED_WIDTH
-})
+  return isCollapsed.value ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
+});
 
 // 菜单项配置
 const menuItems = [
-  { path: '/', name: '首页', icon: 'HomeFilled' },
-  { path: '/publish-records', name: '发布', icon: 'Upload' },
-  { path: '/account-management', name: '账号', icon: 'User' },
-  { path: '/data', name: '数据', icon: 'DataAnalysis' },
-  { path: '/team', name: '团队', icon: 'User' },
-  { path: '/material-management', name: '素材', icon: 'VideoCamera' },
-  { path: '/website', name: '网站', icon: 'Monitor' },
-  { path: '/private-message', name: '私信管理', icon: 'DataAnalysis', badge: 'NEW' }
-]
+  { path: "/", name: "首页", icon: "HomeFilled" },
+  { path: "/publish-records", name: "发布", icon: "Upload" },
+  { path: "/account-management", name: "账号", icon: "User" },
+  { path: "/data", name: "数据", icon: "DataAnalysis" },
+  { path: "/team", name: "团队", icon: "User" },
+  { path: "/material-management", name: "素材", icon: "VideoCamera" },
+  { path: "/website", name: "网站", icon: "Monitor" },
+  {
+    path: "/private-message",
+    name: "私信管理",
+    icon: "DataAnalysis",
+    badge: "NEW",
+  },
+];
 
 // 判断路由是否激活
 const isActiveRoute = (path) => {
-  return route.path === path
-}
+  return route.path === path;
+};
 
 // 拖拽触发折叠/展开
 const startResize = (e) => {
-  isDragging.value = true
-  dragStartX.value = e.clientX
-  document.addEventListener('mousemove', handleDrag)
-  document.addEventListener('mouseup', stopDrag)
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-}
+  isDragging.value = true;
+  dragStartX.value = e.clientX;
+  document.addEventListener("mousemove", handleDrag);
+  document.addEventListener("mouseup", stopDrag);
+  document.body.style.cursor = "col-resize";
+  document.body.style.userSelect = "none";
+};
 
 const handleDrag = (e) => {
-  if (!isDragging.value) return
-  
-  const deltaX = e.clientX - dragStartX.value
-  const threshold = 30 // 拖拽阈值，超过30px才触发状态切换
-  
+  if (!isDragging.value) return;
+
+  const deltaX = e.clientX - dragStartX.value;
+  const threshold = 30; // 拖拽阈值，超过30px才触发状态切换
+
   // 向右拖拽且当前是折叠状态 -> 展开
   if (deltaX > threshold && isCollapsed.value) {
-    isCollapsed.value = false
-    stopDrag()
+    isCollapsed.value = false;
+    stopDrag();
   }
   // 向左拖拽且当前是展开状态 -> 折叠
   else if (deltaX < -threshold && !isCollapsed.value) {
-    isCollapsed.value = true
-    stopDrag()
+    isCollapsed.value = true;
+    stopDrag();
   }
-}
+};
 
 const stopDrag = () => {
-  isDragging.value = false
-  document.removeEventListener('mousemove', handleDrag)
-  document.removeEventListener('mouseup', stopDrag)
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-}
+  isDragging.value = false;
+  document.removeEventListener("mousemove", handleDrag);
+  document.removeEventListener("mouseup", stopDrag);
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+};
 onMounted(async () => {
   try {
-    console.log('🚀 应用启动，初始化服务...');
-    
+    console.log("🚀 应用启动，初始化服务...");
+
     // 🔥 1. 先初始化路径服务
     await pathService.initialize();
-    
+
     // 🔥 2. 再加载账号数据
     await accountStore.loadAccounts();
-    
-    console.log('✅ 应用初始化完成');
+
+    console.log("✅ 应用初始化完成");
   } catch (error) {
-    console.warn('启动时初始化失败:', error);
+    console.warn("启动时初始化失败:", error);
   }
 });
 // 清理事件监听器
 onUnmounted(() => {
   if (isDragging.value) {
-    stopDrag()
+    stopDrag();
   }
-})
+});
 </script>
 
 <style lang="scss" scoped>
 $primary: #6366f1;
-$bg-dark: #1F2937;
+$bg-dark: #1f2937;
 $bg-light: #f8fafc;
-$bg-white: #FFFFFF;
+$bg-white: #ffffff;
 $text-primary: #0f172a;
 $text-secondary: #475569;
-$text-muted: #94A3B8;
-$text-white: #FFFFFF;
-$border-light: #E2E8F0;
-$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$text-muted: #94a3b8;
+$text-white: #ffffff;
+$border-light: #e2e8f0;
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+  0 4px 6px -2px rgba(0, 0, 0, 0.05);
 $shadow-hover: 0 8px 25px -8px rgba(99, 102, 241, 0.25);
 $radius-md: 8px;
 $radius-lg: 12px;
@@ -299,12 +318,12 @@ $space-lg: 24px;
         }
 
         &.active {
-          background: linear-gradient(135deg, $primary 0%, #8B9EE8 100%);
+          background: linear-gradient(135deg, $primary 0%, #8b9ee8 100%);
           color: white;
           box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 
           &::before {
-            content: '';
+            content: "";
             position: absolute;
             left: -16px;
             top: 50%;
@@ -462,20 +481,29 @@ $space-lg: 24px;
 .main-content {
   min-height: 100vh;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  &.private-message-layout {
+    margin-left: 0 !important;
+  }
 }
 
 .page-content {
   padding: $space-lg;
   background-color: $bg-light;
   min-height: 100vh;
+  &.private-message-content {
+    padding: 0;
+    background-color: transparent;
+  }
 }
 
 // 动画效果
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.3s ease;
 }
 
-.fade-enter-from, .fade-leave-to {
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 

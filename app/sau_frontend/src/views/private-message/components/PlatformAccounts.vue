@@ -1,29 +1,7 @@
 <template>
   <div class="platform-accounts">
     <!-- 顶部统计区域 -->
-    <div class="stats-section" v-show="!isCollapsed">
-      <div class="stat-card unread">
-        <div class="stat-icon">
-          <el-icon><Bell /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-number">{{ messageStore.totalUnreadCount }}</div>
-          <div class="stat-label">未读消息</div>
-        </div>
-      </div>
-
-      <div class="stat-card monitoring">
-        <div class="stat-icon">
-          <el-icon><Connection /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-number">
-            {{ messageStore.activeMonitoringCount }}
-          </div>
-          <div class="stat-label">在线账号</div>
-        </div>
-      </div>
-    </div>
+    <div class="stats-section" v-show="!isCollapsed"></div>
 
     <!-- 折叠状态下的简化统计 -->
     <div class="collapsed-stats" v-show="isCollapsed">
@@ -112,9 +90,6 @@
             <div class="account-info-section">
               <div class="account-name">{{ account.userName }}</div>
               <div class="account-platform">{{ account.platform }}</div>
-              <div class="account-status-text">
-                {{ getAccountStatusText(account) }}
-              </div>
             </div>
           </div>
         </div>
@@ -244,16 +219,6 @@ const getAccountStatus = (account) => {
   if (account.status === "异常") return "error";
   if (isMonitoring) return "monitoring";
   return "normal";
-};
-
-const getAccountStatusText = (account) => {
-  const status = getAccountStatus(account);
-  const statusMap = {
-    monitoring: "监听中",
-    normal: "未监听",
-    error: "异常",
-  };
-  return statusMap[status] || "未知";
 };
 
 const isAccountMonitoring = (platform, accountId) => {
@@ -529,10 +494,13 @@ $space-2xl: 24px;
     gap: $space-md;
 
     .account-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       background: $bg-secondary;
       border: 1px solid $border-light;
-      border-radius: $radius-xl;
-      padding: $space-lg;
+      border-radius: $radius-lg;
+      padding: 12px 16px; // 调整内边距
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
@@ -580,15 +548,16 @@ $space-2xl: 24px;
 
       .account-avatar-section {
         display: flex;
-        justify-content: center;
-        margin-bottom: $space-md;
+        margin-bottom: 0;
 
         .avatar-container {
           position: relative;
 
           .account-avatar {
-            border: 3px solid $text-white;
-            box-shadow: $shadow-md;
+            width: 40px !important;
+            height: 40px !important;
+            border: 2px solid $text-white;
+            box-shadow: $shadow-sm;
           }
 
           .platform-badge {
