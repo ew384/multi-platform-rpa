@@ -14,20 +14,6 @@
         <p class="empty-description">
           从左侧会话列表中选择一个用户，开始私信对话
         </p>
-        <div class="empty-features">
-          <div class="feature-item">
-            <el-icon><ChatDotRound /></el-icon>
-            <span>实时消息同步</span>
-          </div>
-          <div class="feature-item">
-            <el-icon><Picture /></el-icon>
-            <span>支持图片发送</span>
-          </div>
-          <div class="feature-item">
-            <el-icon><Notification /></el-icon>
-            <span>智能消息提醒</span>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -691,35 +677,6 @@ $space-2xl: 24px;
       color: $text-secondary;
       line-height: 1.6;
       margin: 0 0 $space-2xl 0;
-    }
-
-    .empty-features {
-      display: flex;
-      flex-direction: column;
-      gap: $space-lg;
-
-      .feature-item {
-        display: flex;
-        align-items: center;
-        gap: $space-md;
-        padding: $space-lg;
-        background: $bg-primary;
-        border-radius: $radius-xl;
-        box-shadow: $shadow-sm;
-        border: 1px solid $border-lighter;
-
-        .el-icon {
-          font-size: 20px;
-          color: $primary;
-          flex-shrink: 0;
-        }
-
-        span {
-          font-size: 14px;
-          font-weight: 500;
-          color: $text-primary;
-        }
-      }
     }
   }
 }

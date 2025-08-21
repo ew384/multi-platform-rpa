@@ -140,14 +140,6 @@
           </div>
           <h3 class="empty-title">{{ getEmptyTitle() }}</h3>
           <p class="empty-description">{{ getEmptyDescription() }}</p>
-
-          <!-- 空状态操作按钮 -->
-          <div v-if="!messageStore.selectedAccount" class="empty-actions">
-            <el-button type="primary" class="select-account-btn">
-              <el-icon><User /></el-icon>
-              选择账号
-            </el-button>
-          </div>
         </div>
       </div>
     </div>
