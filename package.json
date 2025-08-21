@@ -7,6 +7,9 @@
   ],
   "devDependencies": {
     "pnpm": "^9.0.0"
+  },
+  "dependencies": {
+    "element-plus": "^2.10.7",
+    "socket.io-client": "^4.8.1"
   }
 }
-

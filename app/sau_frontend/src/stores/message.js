@@ -4,7 +4,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { messageApi } from '@/api/message'
 import { ElMessage } from 'element-plus'
-
+import { io } from 'socket.io-client'
 export const useMessageStore = defineStore('message', () => {
   // ==================== 🔥 核心数据状态 ====================
   
@@ -64,6 +64,15 @@ export const useMessageStore = defineStore('message', () => {
       refreshMonitoringStatus().catch(err => console.warn('监听状态刷新失败:', err))
       refreshUnreadCounts().catch(err => console.warn('未读统计刷新失败:', err))
       
+      // 🔥 新增：设置WebSocket监听
+      setupWebSocket()
+      
+      // 🔥 新增：延迟刷新状态（给后台服务启动时间）
+      setTimeout(() => {
+        refreshMonitoringStatus()
+        refreshUnreadCounts()
+      }, 2000)
+      
       console.log('✅ 消息store初始化完成')
       
     } catch (error) {
@@ -88,7 +97,7 @@ export const useMessageStore = defineStore('message', () => {
       
       // 🔥 保存选中状态到本地存储
       saveLastSelectedAccount(accountInfo)
-      
+      console.log(`📞 调用loadThreads参数:`, { platform, accountId })
       // 🔥 加载该账号的会话列表
       await loadThreads(platform, accountId)
       
@@ -432,7 +441,39 @@ export const useMessageStore = defineStore('message', () => {
     hasMoreMessages.value = true
     connectionStatus.value = 'connected'
   }
-
+  const setupWebSocket = () => {
+    try {
+      const socket = io('http://localhost:3409')
+      
+      socket.on('message-updated', (data) => {
+        console.log('🔄 收到消息更新推送:', data)
+        refreshCurrentThreads()
+      })
+      
+      socket.on('message-processing', (data) => {
+        console.log('📡 消息处理中:', data)
+        setConnectionStatus('processing')
+      })
+      
+      socket.on('message-error', (data) => {
+        console.log('❌ 消息处理错误:', data)
+        setConnectionStatus('error')
+      })
+      
+      socket.on('connect', () => {
+        console.log('✅ WebSocket连接成功')
+        setConnectionStatus('connected')
+      })
+      
+      socket.on('disconnect', () => {
+        console.log('🔌 WebSocket连接断开')
+        setConnectionStatus('reconnecting')
+      })
+      
+    } catch (error) {
+      console.warn('⚠️ WebSocket设置失败:', error)
+    }
+  }
   return {
     // 🔥 核心状态
     selectedAccount,

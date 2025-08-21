@@ -155,7 +155,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import { Bell, Connection } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { useAccountStore } from "@/stores/account";
@@ -245,12 +245,14 @@ const handleSelectAccount = async (account) => {
   try {
     console.log("🔄 选择账号:", account.userName);
     const platformKey = getPlatformKey(account.platform);
+    const accountId = account.userName; // 或 account.id，取决于实际数据结构
 
-    await messageStore.selectAccount(
+    console.log("📋 传递参数:", {
       platformKey,
-      account.userName,
-      account.userName
-    );
+      accountId,
+      userName: account.userName,
+    });
+    await messageStore.selectAccount(platformKey, accountId, account.userName);
 
     await messageStore.refreshUnreadCount(platformKey, account.userName);
   } catch (error) {

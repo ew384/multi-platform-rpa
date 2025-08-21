@@ -47,7 +47,7 @@ import { useMessageStore } from "@/stores/message";
 import PlatformAccounts from "./components/PlatformAccounts.vue";
 import ConversationList from "./components/ConversationList.vue";
 import ChatWindow from "./components/ChatWindow.vue";
-
+import messageApi from "@/api/message";
 // 状态管理
 const messageStore = useMessageStore();
 
