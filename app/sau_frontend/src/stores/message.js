@@ -1,24 +1,27 @@
-// src/stores/message.js
+// src/stores/message.js - 极简化版本
+
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { messageApi } from '@/api/message'
 import { ElMessage } from 'element-plus'
 
 export const useMessageStore = defineStore('message', () => {
+  // ==================== 🔥 核心数据状态 ====================
+  
   // 当前选中状态
   const selectedAccount = ref(null)      // { platform, accountId, userName }
   const selectedThread = ref(null)       // { threadId, userName, avatar }
   
   // 数据缓存
-  const platformAccounts = ref({})       // 按平台分组的账号列表
   const threadsList = ref([])           // 当前账号的会话列表
   const currentMessages = ref([])       // 当前会话的消息列表
   
-  // 统计数据
+  // 系统状态（简化）
+  const connectionStatus = ref('connected')  // connected | reconnecting | error
   const unreadCounts = ref({})          // { platform_accountId: count }
   const monitoringStatus = ref({})      // { platform_accountId: boolean }
   
-  // UI状态
+  // 加载状态
   const isLoadingThreads = ref(false)
   const isLoadingMessages = ref(false)
   const isSending = ref(false)
@@ -26,8 +29,9 @@ export const useMessageStore = defineStore('message', () => {
   // 分页状态
   const messagesOffset = ref(0)
   const hasMoreMessages = ref(true)
+
+  // ==================== 🔥 计算属性 ====================
   
-  // 计算属性
   const totalUnreadCount = computed(() => {
     return Object.values(unreadCounts.value).reduce((sum, count) => sum + count, 0)
   })
@@ -36,14 +40,54 @@ export const useMessageStore = defineStore('message', () => {
     return Object.values(monitoringStatus.value).filter(Boolean).length
   })
 
-  // 选择账号并加载会话列表
+  const isSystemReady = computed(() => {
+    return connectionStatus.value === 'connected' && activeMonitoringCount.value > 0
+  })
+
+  // ==================== 🔥 系统初始化（极简） ====================
+  
+  /**
+   * 🔥 初始化 - 只加载历史数据，不管监听服务
+   */
+  const initialize = async () => {
+    try {
+      console.log('🔄 初始化消息store...')
+      
+      // 🔥 步骤1: 恢复上次选中的账号
+      const lastAccount = getLastSelectedAccount()
+      if (lastAccount) {
+        console.log(`📋 恢复上次选中账号: ${lastAccount.userName}`)
+        await selectAccount(lastAccount.platform, lastAccount.accountId, lastAccount.userName)
+      }
+      
+      // 🔥 步骤2: 加载基础状态（快速操作）
+      refreshMonitoringStatus().catch(err => console.warn('监听状态刷新失败:', err))
+      refreshUnreadCounts().catch(err => console.warn('未读统计刷新失败:', err))
+      
+      console.log('✅ 消息store初始化完成')
+      
+    } catch (error) {
+      console.error('❌ 消息store初始化失败:', error)
+      // 不抛出错误，避免阻塞页面
+    }
+  }
+
+  // ==================== 🔥 账号和会话管理 ====================
+  
+  /**
+   * 选择账号并加载会话列表
+   */
   const selectAccount = async (platform, accountId, userName) => {
     try {
       console.log(`🔄 选择账号: ${platform} - ${userName}`)
       
-      selectedAccount.value = { platform, accountId, userName }
+      const accountInfo = { platform, accountId, userName }
+      selectedAccount.value = accountInfo
       selectedThread.value = null
       currentMessages.value = []
+      
+      // 🔥 保存选中状态到本地存储
+      saveLastSelectedAccount(accountInfo)
       
       // 🔥 加载该账号的会话列表
       await loadThreads(platform, accountId)
@@ -52,11 +96,13 @@ export const useMessageStore = defineStore('message', () => {
       
     } catch (error) {
       console.error('选择账号失败:', error)
-      ElMessage.error('加载会话列表失败')
+      ElMessage.error('加载账号数据失败')
     }
   }
 
-  // 选择会话并加载消息
+  /**
+   * 选择会话并加载消息
+   */
   const selectThread = async (threadId, userName, avatar) => {
     try {
       console.log(`💬 选择会话: ${userName}`)
@@ -76,29 +122,22 @@ export const useMessageStore = defineStore('message', () => {
     }
   }
 
-  // 加载会话列表
+  /**
+   * 加载会话列表
+   */
   const loadThreads = async (platform, accountId) => {
     if (isLoadingThreads.value) return
     
     isLoadingThreads.value = true
     
     try {
-      console.log(`📋 开始加载会话列表: ${platform} - ${accountId}`)
+      console.log(`📋 加载会话列表: ${platform} - ${accountId}`)
       
       const response = await messageApi.getMessageThreads(platform, accountId)
       
-      if (response && response.success && response.data) {
+      if (response?.success && response.data) {
         threadsList.value = response.data.threads || []
-        console.log(`✅ 加载会话列表成功: ${threadsList.value.length} 个会话`)
-        
-        // 🔥 显示加载的会话详情
-        threadsList.value.forEach(thread => {
-          console.log(`  📝 会话: ${thread.user_name}`, {
-            最后消息: thread.last_message_text,
-            时间: thread.last_message_time,
-            未读数: thread.unread_count
-          })
-        })
+        console.log(`✅ 会话列表加载成功: ${threadsList.value.length} 个会话`)
       } else {
         console.warn('获取会话列表响应异常:', response)
         threadsList.value = []
@@ -107,13 +146,21 @@ export const useMessageStore = defineStore('message', () => {
     } catch (error) {
       console.error('加载会话列表失败:', error)
       threadsList.value = []
-      throw error
+      
+      // 🔥 友好的错误提示
+      if (error.message?.includes('timeout')) {
+        ElMessage.warning('加载超时，请检查网络连接')
+      } else {
+        ElMessage.error('加载会话失败，请稍后重试')
+      }
     } finally {
       isLoadingThreads.value = false
     }
   }
 
-  // 加载消息
+  /**
+   * 加载消息
+   */
   const loadMessages = async (threadId, reset = false) => {
     if (isLoadingMessages.value || (!hasMoreMessages.value && !reset)) return
     
@@ -123,7 +170,7 @@ export const useMessageStore = defineStore('message', () => {
       const offset = reset ? 0 : messagesOffset.value
       const response = await messageApi.getThreadMessages(threadId, 50, offset)
       
-      if (response && response.success && response.data) {
+      if (response?.success && response.data) {
         const newMessages = response.data.messages || []
         
         if (reset) {
@@ -145,13 +192,17 @@ export const useMessageStore = defineStore('message', () => {
     } catch (error) {
       console.error('加载消息失败:', error)
       if (reset) currentMessages.value = []
-      throw error
+      ElMessage.error('加载消息失败')
     } finally {
       isLoadingMessages.value = false
     }
   }
 
-  // 发送消息
+  // ==================== 🔥 消息操作 ====================
+  
+  /**
+   * 发送消息
+   */
   const sendMessage = async (content) => {
     if (isSending.value || !selectedAccount.value || !selectedThread.value) {
       return { success: false, error: '发送条件不满足' }
@@ -169,7 +220,7 @@ export const useMessageStore = defineStore('message', () => {
         accountId: selectedAccount.value.accountId
       })
       
-      if (response && response.success) {
+      if (response?.success) {
         // 重新加载消息以显示发送的消息
         await loadMessages(selectedThread.value.threadId, true)
         console.log('✅ 消息发送成功')
@@ -188,7 +239,9 @@ export const useMessageStore = defineStore('message', () => {
     }
   }
 
-  // 标记已读
+  /**
+   * 标记已读
+   */
   const markAsRead = async (threadId, messageIds = null) => {
     try {
       const response = await messageApi.markMessagesAsRead({
@@ -196,7 +249,7 @@ export const useMessageStore = defineStore('message', () => {
         messageIds: messageIds
       })
       
-      if (response && response.success) {
+      if (response?.success) {
         // 更新本地未读数
         if (selectedAccount.value) {
           const accountKey = `${selectedAccount.value.platform}_${selectedAccount.value.accountId}`
@@ -220,65 +273,9 @@ export const useMessageStore = defineStore('message', () => {
     }
   }
 
-  // 刷新未读统计
-  const refreshUnreadCounts = async () => {
-    try {
-      const response = await messageApi.getUnreadCount()
-      
-      if (response && response.success && response.data) {
-        // 这里需要根据实际API响应格式调整
-        console.log('✅ 未读统计已刷新')
-      }
-      
-    } catch (error) {
-      console.error('刷新未读统计失败:', error)
-    }
-  }
-
-  // 刷新指定账号的未读统计
-  const refreshUnreadCount = async (platform, accountId) => {
-    try {
-      const response = await messageApi.getUnreadCount(platform, accountId)
-      
-      if (response && response.success && response.data) {
-        const accountKey = `${platform}_${accountId}`
-        unreadCounts.value[accountKey] = response.data.unreadCount || 0
-      }
-      
-    } catch (error) {
-      console.error('刷新账号未读数失败:', error)
-    }
-  }
-
-  // 刷新监听状态
-  const refreshMonitoringStatus = async () => {
-    try {
-      const response = await messageApi.getMonitoringStatus()
-      
-      if (response && response.success && response.data) {
-        const statusMap = {}
-        
-        if (response.data.monitoring) {
-          response.data.monitoring.forEach(status => {
-            const accountKey = `${status.platform}_${status.accountId}`
-            statusMap[accountKey] = status.isMonitoring
-          })
-        }
-        
-        monitoringStatus.value = statusMap
-        console.log('✅ 监听状态已刷新', {
-          总数: Object.keys(statusMap).length,
-          监听中: Object.values(statusMap).filter(Boolean).length,
-          详细状态: statusMap
-        })
-      }
-      
-    } catch (error) {
-      console.error('刷新监听状态失败:', error)
-    }
-  }
-
-  // 搜索私信
+  /**
+   * 搜索消息
+   */
   const searchMessages = async (keyword) => {
     if (!selectedAccount.value || !keyword.trim()) {
       return []
@@ -291,7 +288,7 @@ export const useMessageStore = defineStore('message', () => {
         keyword.trim()
       )
       
-      if (response && response.success && response.data) {
+      if (response?.success && response.data) {
         console.log(`🔍 搜索完成: 找到 ${response.data.results.length} 条结果`)
         return response.data.results || []
       }
@@ -304,20 +301,128 @@ export const useMessageStore = defineStore('message', () => {
     }
   }
 
-  // 初始化数据
-  const initialize = async () => {
+  // ==================== 🔥 系统状态管理（简化） ====================
+  
+  /**
+   * 刷新监听状态
+   */
+  const refreshMonitoringStatus = async () => {
     try {
-      await Promise.all([
-        refreshUnreadCounts(),
-        refreshMonitoringStatus()
-      ])
-      console.log('✅ 消息模块初始化完成')
+      const response = await messageApi.getMonitoringStatus()
+      
+      if (response?.success && response.data) {
+        const statusMap = {}
+        
+        if (response.data.monitoring) {
+          response.data.monitoring.forEach(status => {
+            const accountKey = `${status.platform}_${status.accountId}`
+            statusMap[accountKey] = status.isMonitoring
+          })
+        }
+        
+        monitoringStatus.value = statusMap
+        
+        // 🔥 根据监听状态更新连接状态
+        const hasActiveMonitoring = Object.values(statusMap).some(Boolean)
+        if (hasActiveMonitoring && connectionStatus.value !== 'connected') {
+          connectionStatus.value = 'connected'
+        }
+        
+        console.log('✅ 监听状态已刷新')
+      }
+      
     } catch (error) {
-      console.error('消息模块初始化失败:', error)
+      console.error('刷新监听状态失败:', error)
+      // 🔥 网络错误时更新连接状态
+      if (connectionStatus.value === 'connected') {
+        connectionStatus.value = 'error'
+      }
     }
   }
 
-  // 清理状态
+  /**
+   * 刷新未读统计
+   */
+  const refreshUnreadCounts = async () => {
+    try {
+      const response = await messageApi.getUnreadCount()
+      
+      if (response?.success && response.data) {
+        // 这里需要根据实际API响应格式调整
+        console.log('✅ 未读统计已刷新')
+      }
+      
+    } catch (error) {
+      console.error('刷新未读统计失败:', error)
+    }
+  }
+
+  /**
+   * 刷新指定账号的未读统计
+   */
+  const refreshUnreadCount = async (platform, accountId) => {
+    try {
+      const response = await messageApi.getUnreadCount(platform, accountId)
+      
+      if (response?.success && response.data) {
+        const accountKey = `${platform}_${accountId}`
+        unreadCounts.value[accountKey] = response.data.unreadCount || 0
+      }
+      
+    } catch (error) {
+      console.error('刷新账号未读数失败:', error)
+    }
+  }
+
+  /**
+   * 🔥 设置连接状态
+   */
+  const setConnectionStatus = (status) => {
+    connectionStatus.value = status
+  }
+
+  /**
+   * 🔥 实时刷新当前会话数据（用于WebSocket推送）
+   */
+  const refreshCurrentThreads = async () => {
+    if (!selectedAccount.value) return
+    
+    try {
+      console.log('🔄 实时刷新当前会话列表...')
+      await loadThreads(selectedAccount.value.platform, selectedAccount.value.accountId)
+    } catch (error) {
+      console.warn('实时刷新会话失败:', error)
+    }
+  }
+
+  // ==================== 🔥 本地存储辅助方法 ====================
+  
+  /**
+   * 获取上次选中的账号
+   */
+  const getLastSelectedAccount = () => {
+    try {
+      const saved = localStorage.getItem('messageStore_lastSelectedAccount')
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * 保存当前选中的账号
+   */
+  const saveLastSelectedAccount = (account) => {
+    try {
+      localStorage.setItem('messageStore_lastSelectedAccount', JSON.stringify(account))
+    } catch (error) {
+      console.warn('保存选中账号失败:', error)
+    }
+  }
+
+  /**
+   * 清理状态
+   */
   const cleanup = () => {
     selectedAccount.value = null
     selectedThread.value = null
@@ -325,39 +430,47 @@ export const useMessageStore = defineStore('message', () => {
     currentMessages.value = []
     messagesOffset.value = 0
     hasMoreMessages.value = true
+    connectionStatus.value = 'connected'
   }
 
   return {
-    // 状态
+    // 🔥 核心状态
     selectedAccount,
     selectedThread,
-    platformAccounts,
     threadsList,
     currentMessages,
+    connectionStatus,
     unreadCounts,
     monitoringStatus,
+    
+    // 🔥 UI状态
     isLoadingThreads,
     isLoadingMessages,
     isSending,
     messagesOffset,
     hasMoreMessages,
     
-    // 计算属性
+    // 🔥 计算属性
     totalUnreadCount,
     activeMonitoringCount,
+    isSystemReady,
     
-    // 方法
+    // 🔥 核心方法
+    initialize,
     selectAccount,
     selectThread,
     loadThreads,
     loadMessages,
     sendMessage,
     markAsRead,
+    searchMessages,
+    
+    // 🔥 状态管理
+    refreshMonitoringStatus,
     refreshUnreadCounts,
     refreshUnreadCount,
-    refreshMonitoringStatus,
-    searchMessages,
-    initialize,
+    setConnectionStatus,
+    refreshCurrentThreads,
     cleanup
   }
 })

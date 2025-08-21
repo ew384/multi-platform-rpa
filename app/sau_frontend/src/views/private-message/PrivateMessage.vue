@@ -23,8 +23,6 @@
           <div class="resize-indicator">
             <div class="resize-dots">
               <span></span>
-              <span></span>
-              <span></span>
             </div>
           </div>
         </div>
@@ -106,31 +104,58 @@ const stopAccountsDrag = () => {
   document.body.style.userSelect = "";
 };
 
-// 生命周期
+// 生命周期 - 页面挂载
 onMounted(async () => {
   console.log("🚀 私信管理页面已挂载");
-  await messageStore.initialize();
 
   try {
-    console.log("🔄 检查并启动新账号监听...");
-    const { messageApi } = await import("@/api/message");
-    const result = await messageApi.autoStartMonitoring();
+    // 🔥 立即加载历史数据
+    await messageStore.initialize();
 
-    if (result && result.success && result.data) {
-      const { started, failed, skipped } = result.data;
-      console.log(
-        `✅ 监听检查完成: 新启动${started}个, 跳过${skipped}个, 失败${failed}个`
-      );
-
-      if (started > 0) {
-        await messageStore.refreshMonitoringStatus();
-      }
-    }
+    // 🔥 后台启动服务（用户无感知）
+    initializeBackgroundServices();
   } catch (error) {
-    console.warn("⚠️ 自动启动监听失败:", error);
+    console.warn("⚠️ 页面初始化失败:", error);
+    showErrorState("页面加载失败，请刷新页面重试");
   }
 });
 
+// 🔥 后台服务初始化（完全自动化）
+const initializeBackgroundServices = async () => {
+  try {
+    const result = await messageApi.initializeMonitoring();
+
+    if (result.success) {
+      // 🔥 只记录日志，不打扰用户
+      console.log(
+        `✅ 后台服务就绪: ${result.summary.monitoringStarted}个账号监听中`
+      );
+
+      // 🔥 只有账号失效这种重要问题才提示用户
+      if (result.summary.validationFailed > 0) {
+        ElMessage({
+          message: `${result.summary.validationFailed} 个账号需要重新登录`,
+          type: "warning",
+          duration: 8000,
+          showClose: true,
+        });
+      }
+    }
+  } catch (error) {
+    console.warn("⚠️ 后台服务启动失败:", error);
+    // 🔥 静默失败，不影响用户查看历史数据
+  }
+};
+
+// 🔥 显示错误状态
+const showErrorState = (message) => {
+  ElMessage({
+    message,
+    type: "error",
+    duration: 0, // 不自动消失
+    showClose: true,
+  });
+};
 onUnmounted(() => {
   console.log("🔄 私信管理页面已卸载");
   messageStore.cleanup();
