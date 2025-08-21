@@ -84,5 +84,9 @@ export const messageApi = {
   // 停止所有监听
   stopAllMonitoring() {
     return http.post('/api/message-automation/monitoring/stop-all')
+  },
+  // 🔥 新增：自动启动监听
+  autoStartMonitoring() {
+    return http.post('/api/message-automation/monitoring/auto-start')
   }
 }

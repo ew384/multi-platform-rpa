@@ -40,7 +40,6 @@
               <span class="platform-tag">{{
                 messageStore.selectedAccount?.platform
               }}</span>
-              <span class="user-status">在线</span>
             </div>
           </div>
         </div>
@@ -746,12 +745,6 @@ $space-2xl: 24px;
             padding: 4px 8px;
             border-radius: $radius-sm;
           }
-
-          .user-status {
-            font-size: 12px;
-            color: $success;
-            font-weight: 500;
-          }
         }
       }
     }
@@ -1199,11 +1192,6 @@ $space-2xl: 24px;
 
           .user-meta {
             gap: $space-sm;
-
-            .platform-tag,
-            .user-status {
-              font-size: 11px;
-            }
           }
         }
       }
