@@ -43,6 +43,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useMessageStore } from "@/stores/message";
 import PlatformAccounts from "./components/PlatformAccounts.vue";
 import ConversationList from "./components/ConversationList.vue";

@@ -52,7 +52,7 @@
 
     <!-- 我的头像（我的消息显示） -->
     <div v-if="message.sender === 'me'" class="message-avatar">
-      <el-avatar :size="32" src="/my-avatar.png" @error="handleAvatarError" />
+      <el-avatar :size="32" :src="getMyAvatar()" @error="handleAvatarError" />
     </div>
   </div>
 </template>
@@ -60,8 +60,8 @@
 <script setup>
 import { computed } from "vue";
 import { ZoomIn, Check, Clock } from "@element-plus/icons-vue";
-
-// Props
+import { useMessageStore } from "@/stores/message";
+import { getPlatformKey } from "@/utils/platform";
 const props = defineProps({
   message: {
     type: Object,
@@ -72,7 +72,7 @@ const props = defineProps({
     default: "",
   },
 });
-
+const messageStore = useMessageStore();
 // Emits
 const emit = defineEmits(["image-preview"]);
 
@@ -83,10 +83,47 @@ const isMessageRead = computed(() => {
 
 // 获取用户头像
 const getUserAvatar = () => {
-  // 这里可以根据需要获取对方用户的头像
+  return messageStore.selectedThread?.avatar || "/default-avatar.png";
+};
+// 获取我的头像
+const getMyAvatar = () => {
+  const selectedAccount = messageStore.selectedAccount;
+  if (!selectedAccount) return "/default-avatar.png";
+
+  // 使用与 PlatformAccounts 相同的逻辑
+  const account = {
+    local_avatar: selectedAccount.local_avatar,
+    avatar_url: selectedAccount.avatar_url,
+    avatar: selectedAccount.avatar,
+    userName: selectedAccount.userName || selectedAccount.accountId,
+    platform: selectedAccount.platform,
+  };
+
+  if (account.local_avatar && account.local_avatar !== "/default-avatar.png") {
+    return account.local_avatar.startsWith("assets/avatar/")
+      ? `http://localhost:3409/${account.local_avatar}`
+      : account.local_avatar;
+  }
+
+  if (account.avatar_url && account.avatar_url !== "/default-avatar.png") {
+    return account.avatar_url;
+  }
+
+  if (account.avatar && account.avatar !== "/default-avatar.png") {
+    return account.avatar.startsWith("assets/avatar/")
+      ? `http://localhost:3409/${account.avatar}`
+      : account.avatar;
+  }
+
+  if (account.userName && account.platform) {
+    const platformKey = getPlatformKey(account.platform);
+    if (platformKey !== account.platform.toLowerCase()) {
+      return `http://localhost:3409/assets/avatar/${platformKey}/${account.userName}/avatar.jpg`;
+    }
+  }
+
   return "/default-avatar.png";
 };
-
 // 获取图片URL
 const getImageUrl = (imagePath) => {
   if (!imagePath) return "/placeholder-image.png";
