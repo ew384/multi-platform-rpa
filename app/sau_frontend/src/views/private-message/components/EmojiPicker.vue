@@ -75,12 +75,7 @@ const popupStyle = computed(() => {
 
 // 🔥 获取所有emoji，不分类
 const allEmojis = computed(() => {
-  const all = [];
-  Object.values(EMOJI_CATEGORIES).forEach((categoryEmojis) => {
-    all.push(...categoryEmojis);
-  });
-  // 🔥 去重
-  return [...new Set(all)];
+  return EMOJI_CATEGORIES;
 });
 
 const handleEmojiClick = (emoji) => {

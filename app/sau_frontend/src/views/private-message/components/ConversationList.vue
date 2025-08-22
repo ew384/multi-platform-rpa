@@ -184,7 +184,7 @@ import {
 } from "@element-plus/icons-vue";
 import { useMessageStore } from "@/stores/message";
 import { getPlatformLogo } from "@/utils/platform";
-
+import { convertWechatToEmoji } from "@/utils/emoji";
 // 状态管理
 const messageStore = useMessageStore();
 
@@ -320,9 +320,11 @@ const formatMessageTime = (timestamp) => {
 
 const getMessagePreview = (conversation) => {
   if (conversation.last_message_text) {
-    return conversation.last_message_text.length > 30
-      ? conversation.last_message_text.substring(0, 30) + "..."
-      : conversation.last_message_text;
+    // 🔥 先转换emoji，再截断文本
+    const convertedText = convertWechatToEmoji(conversation.last_message_text);
+    return convertedText.length > 30
+      ? convertedText.substring(0, 30) + "..."
+      : convertedText;
   }
 
   const typePreviewMap = {
