@@ -175,10 +175,9 @@
                 circle
                 size="small"
                 class="tool-btn emoji-btn"
-                :disabled="true"
-                title="表情功能开发中"
+                @click="showEmojiPicker = !showEmojiPicker"
               >
-                <el-icon><ChatRound /></el-icon>
+                😊
               </el-button>
 
               <!-- 图片上传 -->
@@ -259,10 +258,17 @@
       @close="handleCloseImagePreview"
     />
   </div>
+  <!-- 添加emoji选择器 -->
+  <EmojiPicker
+    :visible="showEmojiPicker"
+    @close="showEmojiPicker = false"
+    @select="handleEmojiSelect"
+  />
 </template>
 
 <script setup>
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from "vue";
+import EmojiPicker from "./EmojiPicker.vue";
 import {
   ChatDotRound,
   Picture,
@@ -515,7 +521,28 @@ const checkScrollPosition = () => {
       !isNearBottom && messageStore.currentMessages.length > 0;
   }
 };
+const showEmojiPicker = ref(false);
 
+const handleEmojiSelect = (emoji) => {
+  // 插入emoji到输入框
+  const textarea = messageInputRef.value?.$el?.querySelector("textarea");
+  if (textarea) {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newText =
+      messageInput.value.substring(0, start) +
+      emoji +
+      messageInput.value.substring(end);
+    messageInput.value = newText;
+
+    // 恢复光标位置
+    nextTick(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+      textarea.focus();
+    });
+  }
+  showEmojiPicker.value = false;
+};
 // 监听选中会话变化，滚动到底部
 watch(
   () => messageStore.selectedThread,

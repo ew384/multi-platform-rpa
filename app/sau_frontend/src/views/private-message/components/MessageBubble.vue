@@ -11,7 +11,7 @@
       <div :class="['bubble', message.sender]">
         <!-- 文字内容 -->
         <div v-if="message.text" class="text-content">
-          {{ message.text }}
+          {{ displayText }}
         </div>
 
         <!-- 图片内容 -->
@@ -36,17 +36,6 @@
             </div>
           </div>
         </div>
-
-        <!-- 消息时间和状态 -->
-        <div class="message-meta">
-          <span class="message-time">{{ formatTime(message.timestamp) }}</span>
-          <span v-if="message.sender === 'me'" class="message-status">
-            <el-icon v-if="isMessageRead" class="status-read"
-              ><Check
-            /></el-icon>
-            <el-icon v-else class="status-sent"><Clock /></el-icon>
-          </span>
-        </div>
       </div>
     </div>
 
@@ -62,6 +51,8 @@ import { computed } from "vue";
 import { ZoomIn, Check, Clock } from "@element-plus/icons-vue";
 import { useMessageStore } from "@/stores/message";
 import { getPlatformKey } from "@/utils/platform";
+import { useAccountStore } from "@/stores/account";
+import { convertWechatToEmoji } from "@/utils/emoji";
 const props = defineProps({
   message: {
     type: Object,
@@ -73,9 +64,12 @@ const props = defineProps({
   },
 });
 const messageStore = useMessageStore();
+const accountStore = useAccountStore();
 // Emits
 const emit = defineEmits(["image-preview"]);
-
+const displayText = computed(() => {
+  return convertWechatToEmoji(props.message.text);
+});
 // 计算属性
 const isMessageRead = computed(() => {
   return props.message.is_read === true || props.message.is_read === 1;
@@ -90,35 +84,58 @@ const getMyAvatar = () => {
   const selectedAccount = messageStore.selectedAccount;
   if (!selectedAccount) return "/default-avatar.png";
 
-  // 使用与 PlatformAccounts 相同的逻辑
-  const account = {
-    local_avatar: selectedAccount.local_avatar,
-    avatar_url: selectedAccount.avatar_url,
-    avatar: selectedAccount.avatar,
-    userName: selectedAccount.userName || selectedAccount.accountId,
-    platform: selectedAccount.platform,
-  };
+  // 🔥 使用工具函数进行平台名称标准化
+  const selectedPlatformKey = getPlatformKey(selectedAccount.platform);
 
-  if (account.local_avatar && account.local_avatar !== "/default-avatar.png") {
-    return account.local_avatar.startsWith("assets/avatar/")
-      ? `http://localhost:3409/${account.local_avatar}`
-      : account.local_avatar;
+  // 🔥 找到匹配的账号（支持平台名称的多种格式）
+  const fullAccount = accountStore.accounts.find((acc) => {
+    const accountPlatformKey = getPlatformKey(acc.platform);
+    const accountMatch =
+      acc.userName === selectedAccount.accountId ||
+      acc.id === selectedAccount.accountId;
+
+    //console.log(
+    //  `🔍 比较账号: ${selectedPlatformKey} === ${accountPlatformKey} && ${
+    //    acc.userName
+    //  } === ${selectedAccount.accountId} = ${
+    //    accountPlatformKey === selectedPlatformKey && accountMatch
+    //  }`
+    //);
+
+    return accountPlatformKey === selectedPlatformKey && accountMatch;
+  });
+
+  //console.log("🔍 找到的完整账号:", fullAccount);
+
+  if (!fullAccount) return "/default-avatar.png";
+
+  // 🔥 使用 PlatformAccounts 相同的 getAvatarUrl 逻辑
+  if (
+    fullAccount.local_avatar &&
+    fullAccount.local_avatar !== "/default-avatar.png"
+  ) {
+    return fullAccount.local_avatar.startsWith("assets/avatar/")
+      ? `http://localhost:3409/${fullAccount.local_avatar}`
+      : fullAccount.local_avatar;
   }
 
-  if (account.avatar_url && account.avatar_url !== "/default-avatar.png") {
-    return account.avatar_url;
+  if (
+    fullAccount.avatar_url &&
+    fullAccount.avatar_url !== "/default-avatar.png"
+  ) {
+    return fullAccount.avatar_url;
   }
 
-  if (account.avatar && account.avatar !== "/default-avatar.png") {
-    return account.avatar.startsWith("assets/avatar/")
-      ? `http://localhost:3409/${account.avatar}`
-      : account.avatar;
+  if (fullAccount.avatar && fullAccount.avatar !== "/default-avatar.png") {
+    return fullAccount.avatar.startsWith("assets/avatar/")
+      ? `http://localhost:3409/${fullAccount.avatar}`
+      : fullAccount.avatar;
   }
 
-  if (account.userName && account.platform) {
-    const platformKey = getPlatformKey(account.platform);
-    if (platformKey !== account.platform.toLowerCase()) {
-      return `http://localhost:3409/assets/avatar/${platformKey}/${account.userName}/avatar.jpg`;
+  if (fullAccount.userName && fullAccount.platform) {
+    const platformKey = getPlatformKey(fullAccount.platform);
+    if (platformKey !== fullAccount.platform.toLowerCase()) {
+      return `http://localhost:3409/assets/avatar/${platformKey}/${fullAccount.userName}/avatar.jpg`;
     }
   }
 
@@ -215,20 +232,6 @@ $space-md: 16px;
           background: linear-gradient(135deg, $primary 0%, #8b9ee8 100%);
           color: white;
           border-bottom-right-radius: $space-xs;
-
-          .message-meta {
-            .message-time {
-              color: rgba(255, 255, 255, 0.8);
-            }
-
-            .status-read {
-              color: rgba(255, 255, 255, 0.9);
-            }
-
-            .status-sent {
-              color: rgba(255, 255, 255, 0.7);
-            }
-          }
         }
       }
     }
