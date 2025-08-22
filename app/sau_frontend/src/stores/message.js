@@ -168,7 +168,7 @@ export const useMessageStore = defineStore('message', () => {
   }
 
   /**
-   * 加载消息
+   * 加载消息 - 修改为聊天应用的逻辑
    */
   const loadMessages = async (threadId, reset = false) => {
     if (isLoadingMessages.value || (!hasMoreMessages.value && !reset)) return
@@ -176,23 +176,38 @@ export const useMessageStore = defineStore('message', () => {
     isLoadingMessages.value = true
     
     try {
-      const offset = reset ? 0 : messagesOffset.value
-      const response = await messageApi.getThreadMessages(threadId, 50, offset)
+      let offset, limit
+      
+      if (reset) {
+        // 🔥 首次加载：获取最新的50条消息，offset=0
+        offset = 0
+        limit = 50
+      } else {
+        // 🔥 加载更多历史消息：offset应该是当前已加载的消息数量
+        offset = currentMessages.value.length
+        limit = 50
+      }
+      
+      console.log(`📋 加载消息: threadId=${threadId}, reset=${reset}, offset=${offset}, limit=${limit}`)
+      
+      const response = await messageApi.getThreadMessages(threadId, limit, offset)
       
       if (response?.success && response.data) {
         const newMessages = response.data.messages || []
         
         if (reset) {
+          // 🔥 首次加载：直接设置消息列表
           currentMessages.value = newMessages
           messagesOffset.value = newMessages.length
         } else {
-          currentMessages.value = [...currentMessages.value, ...newMessages]
+          // 🔥 加载历史消息：插入到数组开头（因为是更早的消息）
+          currentMessages.value = [...newMessages, ...currentMessages.value]
           messagesOffset.value += newMessages.length
         }
         
         hasMoreMessages.value = newMessages.length === 50
         
-        console.log(`✅ 加载消息成功: ${newMessages.length} 条新消息`)
+        console.log(`✅ 加载消息成功: ${newMessages.length} 条新消息，总计 ${currentMessages.value.length} 条`)
       } else {
         console.warn('获取消息响应异常:', response)
         if (reset) currentMessages.value = []
@@ -206,7 +221,6 @@ export const useMessageStore = defineStore('message', () => {
       isLoadingMessages.value = false
     }
   }
-
   // ==================== 🔥 消息操作 ====================
   
   /**
