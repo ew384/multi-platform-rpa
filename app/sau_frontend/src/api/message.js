@@ -4,23 +4,13 @@ import { http } from '@/utils/request'
 
 // ====================  核心API  ====================
 export const messageApi = {
-  _initPromise: null,
-  _hasInitialized: false,
+  _initPromise: null, // 只保留防并发的Promise
 
   async initializeMonitoring() {
-    // 🔥 如果已经成功初始化过，直接返回
-    if (this._hasInitialized) {
-      console.log('✅ 系统已初始化，跳过重复调用')
-      return { success: true }
-    }
-
-    // 如果正在初始化，复用Promise
+    // 如果正在调用中，复用Promise（防止并发）
     if (this._initPromise) {
-      console.log('⏳ 复用现有初始化请求...')
       return this._initPromise
     }
-
-    console.log('🚀 开始初始化消息服务...')
     
     // 创建新的初始化Promise
     this._initPromise = http.post('/api/message-automation/monitoring/batch-start', {
