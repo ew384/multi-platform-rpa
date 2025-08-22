@@ -357,6 +357,13 @@ const sendMessage = async () => {
   if (!content || messageStore.isSending) return;
 
   try {
+    // 🔥 立即清空输入框，让用户可以继续输入
+    messageInput.value = "";
+
+    // 🔥 立即滚动到底部，显示新发送的临时消息
+    await nextTick();
+    scrollToBottom(true);
+
     sendStatus.value = {
       type: "sending",
       message: "发送中...",
@@ -365,23 +372,15 @@ const sendMessage = async () => {
     const result = await messageStore.sendMessage(content);
 
     if (result.success) {
-      messageInput.value = "";
       sendStatus.value = {
         type: "success",
         message: "发送成功",
       };
 
-      // 滚动到底部
-      await nextTick();
-      scrollToBottom(true);
-
       // 3秒后清除状态
       setTimeout(() => {
         sendStatus.value = null;
       }, 3000);
-
-      // 聚焦输入框
-      messageInputRef.value?.focus();
     } else {
       sendStatus.value = {
         type: "error",
@@ -392,6 +391,9 @@ const sendMessage = async () => {
         sendStatus.value = null;
       }, 5000);
     }
+
+    // 🔥 无论成功失败都要聚焦输入框
+    messageInputRef.value?.focus();
   } catch (error) {
     console.error("发送消息失败:", error);
     sendStatus.value = {
@@ -402,6 +404,8 @@ const sendMessage = async () => {
     setTimeout(() => {
       sendStatus.value = null;
     }, 5000);
+
+    messageInputRef.value?.focus();
   }
 };
 

@@ -11,7 +11,7 @@ export const useMessageStore = defineStore('message', () => {
   // 当前选中状态
   const selectedAccount = ref(null)      // { platform, accountId, userName }
   const selectedThread = ref(null)       // { threadId, userName, avatar }
-  
+  const pendingSentMessages = ref([])
   // 数据缓存
   const threadsList = ref([])           // 当前账号的会话列表
   const currentMessages = ref([])       // 当前会话的消息列表
@@ -179,12 +179,11 @@ export const useMessageStore = defineStore('message', () => {
       let offset, limit
       
       if (reset) {
-        // 🔥 首次加载：获取最新的50条消息，offset=0
         offset = 0
         limit = 50
       } else {
-        // 🔥 加载更多历史消息：offset应该是当前已加载的消息数量
-        offset = currentMessages.value.length
+        // 🔥 加载更多时只计算非临时消息
+        offset = currentMessages.value.filter(msg => !msg.isTemporary).length
         limit = 50
       }
       
@@ -196,32 +195,92 @@ export const useMessageStore = defineStore('message', () => {
         const newMessages = response.data.messages || []
         
         if (reset) {
-          // 🔥 首次加载：直接设置消息列表
-          currentMessages.value = newMessages
+          // 🔥 重置时执行无感替换
+          const processedMessages = replaceTemporaryMessages(newMessages)
+          
+          // 🔥 合并：新消息 + 未确认的临时消息
+          const remainingTempMessages = currentMessages.value.filter(msg => 
+            msg.isTemporary && (msg.status === 'sending' || msg.status === 'failed')
+          )
+          
+          currentMessages.value = [...processedMessages, ...remainingTempMessages]
           messagesOffset.value = newMessages.length
+          
+          console.log(`✅ 消息重置完成: ${newMessages.length} 条数据库消息 + ${remainingTempMessages.length} 条临时消息`)
         } else {
-          // 🔥 加载历史消息：插入到数组开头（因为是更早的消息）
+          // 加载历史消息，直接插入
           currentMessages.value = [...newMessages, ...currentMessages.value]
           messagesOffset.value += newMessages.length
         }
         
         hasMoreMessages.value = newMessages.length === 50
         
-        console.log(`✅ 加载消息成功: ${newMessages.length} 条新消息，总计 ${currentMessages.value.length} 条`)
       } else {
         console.warn('获取消息响应异常:', response)
-        if (reset) currentMessages.value = []
+        if (reset) {
+          // 即使获取失败，也要保留临时消息
+          const tempMessages = currentMessages.value.filter(msg => msg.isTemporary)
+          currentMessages.value = tempMessages
+        }
       }
       
     } catch (error) {
       console.error('加载消息失败:', error)
-      if (reset) currentMessages.value = []
+      if (reset) {
+        // 异常时保留临时消息
+        const tempMessages = currentMessages.value.filter(msg => msg.isTemporary)
+        currentMessages.value = tempMessages
+      }
       ElMessage.error('加载消息失败')
     } finally {
       isLoadingMessages.value = false
     }
   }
-  // ==================== 🔥 消息操作 ====================
+
+  // 🔥 WebSocket消息更新处理
+  const handleMessageUpdated = () => {
+    if (selectedThread.value) {
+      console.log('🔄 收到消息更新推送，开始无感替换处理...')
+      
+      // 🔥 稍微延迟，确保数据库写入完成
+      setTimeout(() => {
+        loadMessages(selectedThread.value.threadId, true)
+          .then(() => {
+            console.log('✅ 无感消息替换完成')
+          })
+          .catch(error => {
+            console.error('❌ 消息更新失败:', error)
+          })
+      }, 100) // 100ms延迟
+    }
+  }
+  // 🔥 定期清理超时的待确认消息（兜底机制）
+  const cleanupPendingMessages = () => {
+    const now = Date.now()
+    const beforeCount = pendingSentMessages.value.length
+    
+    pendingSentMessages.value = pendingSentMessages.value.filter(pending => {
+      const age = now - pending.sendTime
+      if (age > 600000) { // 10分钟超时
+        console.log(`🧹 清理超时待确认消息: "${pending.content}"`)
+        
+        // 同时清理对应的临时消息
+        currentMessages.value = currentMessages.value.filter(msg => 
+          msg.id !== pending.tempId
+        )
+        
+        return false
+      }
+      return true
+    })
+    
+    if (beforeCount > pendingSentMessages.value.length) {
+      console.log(`🧹 清理了 ${beforeCount - pendingSentMessages.value.length} 条超时待确认消息`)
+    }
+  }
+
+  // 每2分钟清理一次
+  setInterval(cleanupPendingMessages, 120000)
   
   /**
    * 发送消息
@@ -234,9 +293,38 @@ export const useMessageStore = defineStore('message', () => {
     isSending.value = true
     
     try {
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const sendTime = Date.now()
+      
+      // 🔥 步骤1: 创建临时消息
+      const tempMessage = {
+        id: tempId,
+        sender: 'me',
+        text: content.trim(),
+        timestamp: new Date().toISOString(),
+        is_read: true,
+        type: 'text',
+        status: 'sending',
+        isTemporary: true
+      }
+      
+      // 🔥 步骤2: 记录到待确认队列（用于后续匹配）
+      const pendingInfo = {
+        tempId: tempId,
+        content: content.trim(),
+        sendTime: sendTime,
+        threadId: selectedThread.value.threadId,
+        status: 'pending' // pending -> sent -> confirmed
+      }
+      pendingSentMessages.value.push(pendingInfo)
+      
+      // 立即显示临时消息
+      currentMessages.value.push(tempMessage)
+      
+      // 🔥 步骤3: 调用后端API
       const response = await messageApi.sendMessage({
         platform: selectedAccount.value.platform,
-        tabId: 'current', // 需要根据实际情况获取
+        tabId: 'current',
         userName: selectedThread.value.userName,
         content: content,
         type: 'text',
@@ -244,14 +332,33 @@ export const useMessageStore = defineStore('message', () => {
       })
       
       if (response?.success) {
-        // 重新加载消息以显示发送的消息
-        await loadMessages(selectedThread.value.threadId, true)
-        console.log('✅ 消息发送成功')
+        // 🔥 更新临时消息状态
+        const tempIndex = currentMessages.value.findIndex(msg => msg.id === tempId)
+        if (tempIndex !== -1) {
+          currentMessages.value[tempIndex].status = 'sent'
+        }
+        
+        // 🔥 更新待确认队列状态
+        const pendingIndex = pendingSentMessages.value.findIndex(p => p.tempId === tempId)
+        if (pendingIndex !== -1) {
+          pendingSentMessages.value[pendingIndex].status = 'sent'
+          pendingSentMessages.value[pendingIndex].sentTime = Date.now()
+        }
+        
+        console.log('✅ 消息发送成功，等待同步确认')
         return { success: true }
+        
       } else {
-        const error = response?.data?.error || '发送失败'
-        console.error('发送消息失败:', error)
-        return { success: false, error }
+        // 🔥 发送失败，清理待确认队列
+        pendingSentMessages.value = pendingSentMessages.value.filter(p => p.tempId !== tempId)
+        
+        const tempIndex = currentMessages.value.findIndex(msg => msg.id === tempId)
+        if (tempIndex !== -1) {
+          currentMessages.value[tempIndex].status = 'failed'
+          currentMessages.value[tempIndex].error = response?.data?.error || '发送失败'
+        }
+        
+        return { success: false, error: response?.data?.error || '发送失败' }
       }
       
     } catch (error) {
@@ -261,6 +368,59 @@ export const useMessageStore = defineStore('message', () => {
       isSending.value = false
     }
   }
+
+  // 🔥 核心方法：无感替换临时消息
+  const replaceTemporaryMessages = (newMessages) => {
+    if (pendingSentMessages.value.length === 0) {
+      // 没有待确认消息，直接使用新消息
+      return newMessages
+    }
+    
+    console.log(`🔄 开始无感替换: ${newMessages.length} 条新消息, ${pendingSentMessages.value.length} 条待确认`)
+    
+    // 🔥 策略：检查最新的几条消息中是否有我们刚发送的
+    const recentNewMessages = newMessages.slice(-5) // 检查最新5条
+    const confirmedTempIds = []
+    
+    pendingSentMessages.value.forEach(pending => {
+      if (pending.status !== 'sent') return // 只处理已发送但未确认的
+      
+      // 🔥 简单匹配：内容相同 + 发送者是我 + 时间合理
+      const matchingMessage = recentNewMessages.find(newMsg => {
+        return newMsg.sender === 'me' && 
+              newMsg.text === pending.content &&
+              // 时间窗口检查：消息时间应该在发送后的合理范围内
+              (Date.now() - pending.sendTime) < 300000 // 5分钟内
+      })
+      
+      if (matchingMessage) {
+        console.log(`✅ 找到匹配消息: "${pending.content}" -> ID: ${matchingMessage.id}`)
+        confirmedTempIds.push(pending.tempId)
+        pending.status = 'confirmed'
+        pending.realMessageId = matchingMessage.id
+      }
+    })
+    
+    // 🔥 从当前消息列表中移除已确认的临时消息
+    if (confirmedTempIds.length > 0) {
+      const beforeCount = currentMessages.value.length
+      currentMessages.value = currentMessages.value.filter(msg => {
+        if (msg.isTemporary && confirmedTempIds.includes(msg.id)) {
+          console.log(`🗑️ 移除已确认的临时消息: "${msg.text}"`)
+          return false
+        }
+        return true
+      })
+      
+      console.log(`📊 消息替换完成: 移除 ${beforeCount - currentMessages.value.length} 条临时消息`)
+    }
+    
+    // 🔥 清理已确认的待处理记录
+    pendingSentMessages.value = pendingSentMessages.value.filter(p => p.status !== 'confirmed')
+    
+    return newMessages
+  }
+
 
   /**
    * 标记已读
@@ -461,8 +621,9 @@ export const useMessageStore = defineStore('message', () => {
       
       socket.on('message-updated', (data) => {
         console.log('🔄 收到消息更新推送:', data)
-        refreshCurrentThreads()
+        handleMessageUpdated() // 触发无感替换
       })
+      
       
       socket.on('message-processing', (data) => {
         console.log('📡 消息处理中:', data)

@@ -36,6 +36,31 @@
             </div>
           </div>
         </div>
+        <!-- 🔥 状态指示器直接放在消息内容内部 -->
+        <div v-if="message.sender === 'me'" class="message-status">
+          <!-- 发送中状态 -->
+          <div v-if="message.status === 'sending'" class="status-sending">
+            <el-icon class="loading-icon"><Loading /></el-icon>
+          </div>
+
+          <!-- 发送成功状态 -->
+          <div v-else-if="message.status === 'sent'" class="status-sent">
+            <el-icon class="success-icon"><Check /></el-icon>
+          </div>
+
+          <!-- 发送失败状态 -->
+          <div v-else-if="message.status === 'failed'" class="status-failed">
+            <el-icon class="error-icon"><Close /></el-icon>
+            <span v-if="message.error" class="error-tooltip">{{
+              message.error
+            }}</span>
+          </div>
+
+          <!-- 已同步确认状态（数据库中的消息）- 通常不显示，或显示更淡的勾 -->
+          <div v-else class="status-confirmed">
+            <el-icon class="confirmed-icon"><Check /></el-icon>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -48,7 +73,14 @@
 
 <script setup>
 import { computed } from "vue";
-import { ZoomIn, Check, Clock } from "@element-plus/icons-vue";
+import {
+  ZoomIn,
+  Check,
+  Clock,
+  Loading,
+  Close,
+  CircleCheck,
+} from "@element-plus/icons-vue";
 import { useMessageStore } from "@/stores/message";
 import { getPlatformKey } from "@/utils/platform";
 import { useAccountStore } from "@/stores/account";
@@ -93,14 +125,6 @@ const getMyAvatar = () => {
     const accountMatch =
       acc.userName === selectedAccount.accountId ||
       acc.id === selectedAccount.accountId;
-
-    //console.log(
-    //  `🔍 比较账号: ${selectedPlatformKey} === ${accountPlatformKey} && ${
-    //    acc.userName
-    //  } === ${selectedAccount.accountId} = ${
-    //    accountPlatformKey === selectedPlatformKey && accountMatch
-    //  }`
-    //);
 
     return accountPlatformKey === selectedPlatformKey && accountMatch;
   });
@@ -195,6 +219,14 @@ const handleImageLoad = (e) => {
   // 图片加载完成，可以在这里处理一些逻辑
   console.log("图片加载完成:", e.target.src);
 };
+// 🔥 新增：计算消息样式类
+const messageClasses = computed(() => ({
+  "is-mine": message.sender === "me",
+  "is-user": message.sender === "user",
+  "is-sending": message.status === "sending",
+  "is-failed": message.status === "failed",
+  // ... 其他现有的类保持不变
+}));
 </script>
 
 <style lang="scss" scoped>
@@ -247,6 +279,7 @@ $space-md: 16px;
   }
 
   .message-content {
+    position: relative;
     display: flex;
     flex-direction: column;
     max-width: 70%;
@@ -365,6 +398,22 @@ $space-md: 16px;
       }
     }
   }
+
+  // 🔥 状态修饰符样式放在最后
+  &.is-sending {
+    opacity: 0.8;
+
+    .message-content {
+      border: 1px dashed #6b7280;
+    }
+  }
+
+  &.is-failed {
+    .message-content {
+      border-left: 3px solid #ef4444;
+      background: rgba(239, 68, 68, 0.05);
+    }
+  }
 }
 
 // 特殊样式处理
@@ -407,6 +456,14 @@ $space-md: 16px;
         }
       }
     }
+  }
+}
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>
