@@ -288,7 +288,7 @@ $space-md: 16px;
     .bubble {
       padding: $space-sm $space-md;
       border-radius: $radius-lg;
-      position: relative;
+      position: relative; // 🔥 关键：为状态图标绝对定位做准备
       word-wrap: break-word;
       word-break: break-word;
 
@@ -396,22 +396,98 @@ $space-md: 16px;
           }
         }
       }
+
+      // 🔥 新增：状态图标样式 - 放在 .bubble 内部
+      .message-status {
+        position: absolute;
+        bottom: 4px;
+        right: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        height: 16px;
+        z-index: 2; // 确保在其他内容之上
+
+        .status-sending {
+          color: rgba(255, 255, 255, 0.7); // 白色半透明（在蓝色背景上）
+
+          .loading-icon {
+            font-size: 12px;
+            animation: rotate 1s linear infinite;
+          }
+        }
+
+        .status-sent {
+          color: rgba(255, 255, 255, 0.9); // 白色（在蓝色背景上）
+
+          .success-icon {
+            font-size: 14px;
+          }
+        }
+
+        .status-failed {
+          position: relative;
+          color: #fca5a5; // 浅红色（在蓝色背景上更明显）
+          cursor: pointer;
+
+          .error-icon {
+            font-size: 14px;
+          }
+
+          .error-tooltip {
+            position: absolute;
+            bottom: 120%;
+            right: 0;
+            background: #1f2937;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 10;
+
+            &::after {
+              content: "";
+              position: absolute;
+              top: 100%;
+              right: 8px;
+              border: 4px solid transparent;
+              border-top-color: #1f2937;
+            }
+          }
+
+          &:hover .error-tooltip {
+            opacity: 1;
+          }
+        }
+
+        .status-confirmed {
+          color: rgba(255, 255, 255, 0.5); // 很淡的白色
+
+          .confirmed-icon {
+            font-size: 12px;
+          }
+        }
+      }
     }
   }
 
-  // 🔥 状态修饰符样式放在最后
+  // 🔥 状态修饰符样式
   &.is-sending {
     opacity: 0.8;
 
-    .message-content {
-      border: 1px dashed #6b7280;
+    .bubble {
+      border: 1px dashed rgba(255, 255, 255, 0.5) !important;
     }
   }
 
   &.is-failed {
-    .message-content {
-      border-left: 3px solid #ef4444;
-      background: rgba(239, 68, 68, 0.05);
+    .bubble {
+      border-left: 3px solid #ef4444 !important;
+      background: linear-gradient(135deg, #ef4444 0%, #fca5a5 100%) !important;
     }
   }
 }

@@ -149,22 +149,6 @@
 
       <!-- 输入框区域 -->
       <div class="input-area">
-        <!-- 消息状态提示 -->
-        <div v-if="sendStatus" class="status-indicator">
-          <div :class="['status-content', sendStatus.type]">
-            <el-icon v-if="sendStatus.type === 'success'"
-              ><CircleCheck
-            /></el-icon>
-            <el-icon v-if="sendStatus.type === 'error'"
-              ><CircleClose
-            /></el-icon>
-            <el-icon v-if="sendStatus.type === 'sending'" class="loading-icon"
-              ><Loading
-            /></el-icon>
-            <span class="status-text">{{ sendStatus.message }}</span>
-          </div>
-        </div>
-
         <!-- 输入框容器 -->
         <div class="input-container">
           <!-- 工具栏 -->
@@ -301,7 +285,6 @@ const messageStore = useMessageStore();
 
 // 本地状态
 const messageInput = ref("");
-const sendStatus = ref(null);
 const messagesContainer = ref(null);
 const messageInputRef = ref(null);
 const showImagePreview = ref(false);
@@ -357,58 +340,17 @@ const sendMessage = async () => {
   if (!content || messageStore.isSending) return;
 
   try {
-    // 🔥 立即清空输入框，让用户可以继续输入
     messageInput.value = "";
-
-    // 🔥 立即滚动到底部，显示新发送的临时消息
     await nextTick();
     scrollToBottom(true);
 
-    sendStatus.value = {
-      type: "sending",
-      message: "发送中...",
-    };
-
     const result = await messageStore.sendMessage(content);
-
-    if (result.success) {
-      sendStatus.value = {
-        type: "success",
-        message: "发送成功",
-      };
-
-      // 3秒后清除状态
-      setTimeout(() => {
-        sendStatus.value = null;
-      }, 3000);
-    } else {
-      sendStatus.value = {
-        type: "error",
-        message: result.error || "发送失败",
-      };
-
-      setTimeout(() => {
-        sendStatus.value = null;
-      }, 5000);
-    }
-
-    // 🔥 无论成功失败都要聚焦输入框
     messageInputRef.value?.focus();
   } catch (error) {
     console.error("发送消息失败:", error);
-    sendStatus.value = {
-      type: "error",
-      message: "发送失败，请重试",
-    };
-
-    setTimeout(() => {
-      sendStatus.value = null;
-    }, 5000);
-
     messageInputRef.value?.focus();
   }
 };
-
 const loadMoreMessages = async () => {
   try {
     await messageStore.loadMessages(
@@ -1005,35 +947,6 @@ $space-2xl: 24px;
     border-top: 1px solid $border-lighter;
     flex-shrink: 0;
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
-
-    .status-indicator {
-      padding: $space-sm $space-xl;
-      border-bottom: 1px solid $border-lighter;
-
-      .status-content {
-        display: flex;
-        align-items: center;
-        gap: $space-sm;
-        font-size: 12px;
-        font-weight: 500;
-
-        &.success {
-          color: $success;
-        }
-
-        &.error {
-          color: $danger;
-        }
-
-        &.sending {
-          color: $primary;
-        }
-
-        .loading-icon {
-          animation: rotate 1s linear infinite;
-        }
-      }
-    }
 
     .input-container {
       padding: $space-lg $space-xl;
