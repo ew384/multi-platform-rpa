@@ -123,16 +123,21 @@ onMounted(async () => {
 // 🔥 后台服务初始化（完全自动化）
 const initializeBackgroundServices = async () => {
   try {
+    console.log("🔄 启动后台监听服务...");
+
     const result = await messageApi.initializeMonitoring();
 
     if (result.success) {
-      // 🔥 只记录日志，不打扰用户
-      console.log(
-        `✅ 后台服务就绪: ${result.summary.monitoringStarted}个账号监听中`
-      );
+      console.log(`✅ 后台服务就绪`);
 
-      // 🔥 只有账号失效这种重要问题才提示用户
-      if (result.summary.validationFailed > 0) {
+      // 🔥 无论是新启动还是已存在，都刷新状态
+      setTimeout(() => {
+        messageStore.refreshMonitoringStatus();
+        messageStore.refreshUnreadCounts();
+      }, 1000);
+
+      // 🔥 只有在有验证失败的账号时才提示
+      if (result.summary && result.summary.validationFailed > 0) {
         ElMessage({
           message: `${result.summary.validationFailed} 个账号需要重新登录`,
           type: "warning",
@@ -140,13 +145,26 @@ const initializeBackgroundServices = async () => {
           showClose: true,
         });
       }
+    } else {
+      console.warn("⚠️ 后台服务启动失败:", result.error);
+      // 🔥 只有真正的错误才提示用户
+      ElMessage({
+        message: "后台监听服务启动失败，请刷新页面重试",
+        type: "error",
+        duration: 5000,
+        showClose: true,
+      });
     }
   } catch (error) {
-    console.warn("⚠️ 后台服务启动失败:", error);
-    // 🔥 静默失败，不影响用户查看历史数据
+    console.warn("⚠️ 后台服务启动异常:", error);
+    ElMessage({
+      message: "服务连接异常，请检查网络后重试",
+      type: "error",
+      duration: 5000,
+      showClose: true,
+    });
   }
 };
-
 // 🔥 显示错误状态
 const showErrorState = (message) => {
   ElMessage({

@@ -2,79 +2,119 @@
 
 import { http } from '@/utils/request'
 
+// ====================  核心API  ====================
 export const messageApi = {
-  // ====================  核心API  ====================
-  
-  /**
-   * 系统初始化（页面加载时自动调用）
-   * 自动发现账号 + 验证 + 同步 + 启动监听
-   */
+  _initPromise: null,
+  _hasInitialized: false,
+
   async initializeMonitoring() {
-    try {
-      console.log('🚀 开始初始化消息服务...');
-      
-      // 调用后端的自动发现模式
-      const result = await http.post('/api/message-automation/monitoring/batch-start', {
-        // 不传accounts，触发自动发现模式
-        withSync: true,
-        syncOptions: {
-          intelligentSync: true,
-          forceSync: false,
-          timeout: 30000
-        }
-      });
+    // 🔥 如果已经成功初始化过，直接返回
+    if (this._hasInitialized) {
+      console.log('✅ 系统已初始化，跳过重复调用')
+      return { success: true }
+    }
 
-      if (result?.success && result.data) {
-        const { summary } = result.data;
-        console.log(`✅ 初始化完成: 监听${summary.monitoringSuccess}个账号`);
-        
-        return {
-          success: true,
-          summary: {
-            totalAccounts: summary.totalAccounts,
-            monitoringStarted: summary.monitoringSuccess,
-            validationFailed: summary.validationFailed,
-            syncedMessages: summary.recoveredMessages
-          }
-        };
+    // 如果正在初始化，复用Promise
+    if (this._initPromise) {
+      console.log('⏳ 复用现有初始化请求...')
+      return this._initPromise
+    }
+
+    console.log('🚀 开始初始化消息服务...')
+    
+    // 创建新的初始化Promise
+    this._initPromise = http.post('/api/message-automation/monitoring/batch-start', {
+      withSync: true,
+      syncOptions: {
+        intelligentSync: true,
+        forceSync: false,
+        timeout: 30000
       }
-
-      return { success: false, error: '初始化失败' };
+    })
+    .then(result => {
+      // 🔥 方案1核心修改：判断是否为成功状态
+      const isSuccess = this._isInitializationSuccess(result)
       
-    } catch (error) {
-      console.error('❌ 初始化失败:', error);
+      if (isSuccess) {
+        this._hasInitialized = true
+        
+        // 🔥 统一返回成功格式
+        if (result?.success && result.data) {
+          const { summary } = result.data
+          console.log(`✅ 初始化完成: 监听${summary.monitoringSuccess}个账号`)
+          return {
+            success: true,
+            summary: {
+              totalAccounts: summary.totalAccounts,
+              monitoringStarted: summary.monitoringSuccess,
+              validationFailed: summary.validationFailed,
+              syncedMessages: summary.recoveredMessages
+            }
+          }
+        } else {
+          // 🔥 "已在监听"的情况
+          console.log('✅ 后端监听服务已就绪')
+          return {
+            success: true,
+            summary: {
+              totalAccounts: 0,
+              monitoringStarted: 0,
+              validationFailed: 0,
+              syncedMessages: 0
+            }
+          }
+        }
+      } else {
+        return { 
+          success: false, 
+          error: result?.error || '初始化失败' 
+        }
+      }
+    })
+    .catch(error => {
+      console.error('❌ 初始化失败:', error)
       return { 
         success: false, 
         error: error.message || '网络错误' 
-      };
-    }
+      }
+    })
+    .finally(() => {
+      this._initPromise = null
+    })
+
+    return this._initPromise
   },
 
   /**
-   * 🔥 系统重新连接（仅在异常时自动调用）
+   * 🔥 判断初始化是否应该视为成功
    */
-  async reconnectMonitoring() {
-    try {
-      console.log('🔄 开始重新连接...');
-      
-      // 先停止所有监听
-      await http.post('/api/message-automation/monitoring/stop-all');
-      
-      // 等待1秒
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 重新启动（跳过同步，快速重连）
-      const result = await http.post('/api/message-automation/monitoring/batch-start', {
-        withSync: false  // 重连时跳过同步，更快
-      });
-      
-      console.log('✅ 重新连接完成');
-      return result;
-      
-    } catch (error) {
-      console.error('❌ 重新连接失败:', error);
-      throw error;
+  _isInitializationSuccess(result) {
+    // 情况1：正常成功
+    if (result?.success) {
+      return true
     }
+    
+    // 情况2：后端返回"已在监听"错误 - 也应该视为成功
+    if (result?.error) {
+      const errorMsg = result.error.toLowerCase()
+      if (errorMsg.includes('已在监听') || 
+          errorMsg.includes('already_monitoring') || 
+          errorMsg.includes('already monitoring')) {
+        console.log('📋 后端监听服务已存在，视为初始化成功')
+        return true
+      }
+    }
+    
+    return false
+  },
+
+  /**
+   * 🔥 重置状态（仅在必要时使用）
+   */
+  resetInitStatus() {
+    console.log('🔄 重置初始化状态')
+    this._initPromise = null
+    this._hasInitialized = false
   },
 
   // ==================== 🔥 数据查询API - 核心功能 ====================
