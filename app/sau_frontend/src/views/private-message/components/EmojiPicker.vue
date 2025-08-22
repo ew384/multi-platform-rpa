@@ -49,7 +49,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { EMOJI_CATEGORIES } from "@/utils/emoji";
+import { EMOJI_CATEGORIES, WECHAT_EMOJI_MAP } from "@/utils/emoji"; // 🔥 需要导入 WECHAT_EMOJI_MAP
 
 defineProps({
   visible: {
@@ -58,14 +58,12 @@ defineProps({
   },
 });
 
-defineEmits(["close", "select"]);
-
+const emit = defineEmits(["close", "select"]);
 const activeCategory = ref("常用");
 const searchTerm = ref("");
 
 const displayEmojis = computed(() => {
   if (searchTerm.value) {
-    // 搜索模式
     const term = searchTerm.value.toLowerCase();
     const allEmojis = Object.values(EMOJI_CATEGORIES).flat();
     return allEmojis.filter(
@@ -81,11 +79,11 @@ const displayEmojis = computed(() => {
 });
 
 const handleEmojiClick = (emoji) => {
-  $emit("select", emoji);
+  emit("select", emoji); // 🔥 使用 emit 函数
 };
 
 const handleOverlayClick = () => {
-  $emit("close");
+  emit("close"); // 🔥 使用 emit 函数
 };
 </script>
 
