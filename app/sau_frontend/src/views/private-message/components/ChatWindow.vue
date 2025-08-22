@@ -172,10 +172,11 @@
             <div class="toolbar-left">
               <!-- 表情按钮 -->
               <el-button
+                ref="emojiButtonRef"
                 circle
                 size="small"
                 class="tool-btn emoji-btn"
-                @click="showEmojiPicker = !showEmojiPicker"
+                @click.stop="toggleEmojiPicker"
               >
                 😊
               </el-button>
@@ -261,6 +262,7 @@
   <!-- 添加emoji选择器 -->
   <EmojiPicker
     :visible="showEmojiPicker"
+    :button-rect="emojiButtonRect"
     @close="showEmojiPicker = false"
     @select="handleEmojiSelect"
   />
@@ -521,6 +523,42 @@ const checkScrollPosition = () => {
       !isNearBottom && messageStore.currentMessages.length > 0;
   }
 };
+const emojiButtonRef = ref(null);
+const emojiButtonRect = ref({ top: 0, left: 0, width: 0, height: 0 });
+
+const toggleEmojiPicker = () => {
+  if (!showEmojiPicker.value && emojiButtonRef.value) {
+    // 🔥 确保获取到正确的按钮位置
+    const buttonElement = emojiButtonRef.value.$el || emojiButtonRef.value;
+    const rect = buttonElement.getBoundingClientRect();
+
+    console.log("按钮位置:", rect); // 🔥 调试用
+
+    emojiButtonRect.value = {
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+    };
+  }
+  showEmojiPicker.value = !showEmojiPicker.value;
+};
+
+const handleClickOutside = (event) => {
+  if (showEmojiPicker.value) {
+    const emojiPicker = document.querySelector(".emoji-picker-popup");
+    const emojiButton = emojiButtonRef.value?.$el || emojiButtonRef.value;
+
+    if (
+      emojiPicker &&
+      !emojiPicker.contains(event.target) &&
+      emojiButton &&
+      !emojiButton.contains(event.target)
+    ) {
+      showEmojiPicker.value = false;
+    }
+  }
+};
 const showEmojiPicker = ref(false);
 
 const handleEmojiSelect = (emoji) => {
@@ -567,12 +605,14 @@ watch(
 
 // 生命周期
 onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
   if (messagesContainer.value) {
     messagesContainer.value.addEventListener("scroll", checkScrollPosition);
   }
 });
 
 onUnmounted(() => {
+  document.removeEventListener("click", handleClickOutside);
   if (messagesContainer.value) {
     messagesContainer.value.removeEventListener("scroll", checkScrollPosition);
   }
