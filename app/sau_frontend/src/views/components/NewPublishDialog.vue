@@ -513,6 +513,7 @@ const customCoverSet = ref(false);
 
 // 🔥 修改现有的 handleVideoUploadSuccess 方法
 const handleVideoUploadSuccess = async (response, file) => {
+  console.log("🔧 handleVideoUploadSuccess 开始", { response, file: file.name });
   if (response.code === 200) {
     const filePath = response.data.path || response.data;
     const filename = filePath.split("/").pop();
@@ -526,9 +527,13 @@ const handleVideoUploadSuccess = async (response, file) => {
     };
 
     selectedVideos.value.push(videoInfo);
-
+    console.log("🔧 视频添加完成，准备处理封面", { 
+      videosCount: selectedVideos.value.length, 
+      filename 
+    });
     if (selectedVideos.value.length === 1) {
       await handleCoverGeneration(file, videoInfo.url, filename);
+      console.log("🔧 handleCoverGeneration 完成");
     }
 
     ElMessage.success("视频上传成功");
@@ -539,6 +544,11 @@ const handleVideoUploadSuccess = async (response, file) => {
 
 // 🔥 新增：封面处理逻辑
 const handleCoverGeneration = async (videoFile, videoUrl, filename) => {
+  console.log("🔧 handleCoverGeneration 调用", { 
+    hasCustomCover: customCoverSet.value, 
+    hasCover: !!publishForm.cover,
+    filename 
+  });
   if (customCoverSet.value && publishForm.cover) {
     console.log("🎨 用户已设置自定义封面，保存自定义封面到本地");
     await saveCustomCoverToLocal(publishForm.cover, filename);
@@ -613,7 +623,7 @@ const saveCustomCoverToLocal = async (frameData, videoFilename) => {
   try {
     const response = await fetch(frameData);
     const blob = await response.blob();
-    const posterFilename = videoFilename.replace(/\.[^/.]+$/, "_poster.png");
+    const posterFilename = videoFilename.replace(/\.[^/.]+$/, "_cover.png");
 
     await saveToLocalCovers(blob, posterFilename);
     console.log("✅ 自定义封面保存完成:", posterFilename);
