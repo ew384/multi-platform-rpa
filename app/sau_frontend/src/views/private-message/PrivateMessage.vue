@@ -10,7 +10,10 @@
         ]"
         :style="{ width: accountsColumnWidth + 'px' }"
       >
-        <PlatformAccounts :is-collapsed="isAccountsCollapsed" />
+        <PlatformAccounts 
+          :is-collapsed="isAccountsCollapsed" 
+          @toggle-collapse="isAccountsCollapsed = !isAccountsCollapsed"
+        />
 
         <!-- 拖拽调整区域 -->
         <div

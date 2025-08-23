@@ -24,14 +24,108 @@
     <div class="accounts-section">
       <!-- 展开状态 - 卡片式布局 -->
       <div v-if="!isCollapsed" class="accounts-expanded">
-        <div class="section-header">
-          <h3 class="section-title">账号列表</h3>
-          <span class="accounts-count">{{ totalAccountsCount }}</span>
+        <!-- 🔥 新的工具栏设计 -->
+        <div class="toolbar-header">
+          <div class="toolbar-left">
+            <!-- 折叠按钮 -->
+            <el-button
+              circle
+              size="small"
+              class="collapse-btn"
+              @click="$emit('toggle-collapse')"
+              title="折叠账号栏"
+            >
+              <el-icon><ArrowLeft /></el-icon>
+            </el-button>
+            
+            <!-- 搜索框 -->
+            <div class="search-container">
+              <el-input
+                v-model="searchKeyword"
+                placeholder="按账号搜索"
+                clearable
+                @input="handleSearch"
+                class="search-input"
+                size="small"
+              >
+                <template #prefix>
+                  <el-icon class="search-icon"><Search /></el-icon>
+                </template>
+              </el-input>
+            </div>
+          </div>
+          
+          <div class="toolbar-right">
+            <!-- 筛选按钮 -->
+            <el-dropdown 
+              @command="handleFilterCommand" 
+              trigger="click"
+              class="filter-dropdown"
+            >
+              <el-button circle size="small" class="filter-btn" title="筛选">
+                <el-icon><Filter /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu class="filter-dropdown-menu">
+                  <!-- 平台筛选 -->
+                  <div class="filter-section">
+                    <div class="filter-section-title">平台</div>
+                    <el-dropdown-item 
+                      :command="`platform-`"
+                      :class="{ active: filterPlatform === '' }"
+                    >
+                      全部平台
+                    </el-dropdown-item>
+                    <el-dropdown-item 
+                      v-for="platform in availablePlatforms" 
+                      :key="platform"
+                      :command="`platform-${platform}`"
+                      :class="{ active: filterPlatform === platform }"
+                    >
+                      {{ platform }}
+                    </el-dropdown-item>
+                  </div>
+                  
+                  <el-divider style="margin: 8px 0;" />
+                  
+                  <!-- 分组筛选 -->
+                  <div class="filter-section">
+                    <div class="filter-section-title">分组</div>
+                    <el-dropdown-item 
+                      :command="`group-`"
+                      :class="{ active: filterGroup === '' }"
+                    >
+                      全部分组
+                    </el-dropdown-item>
+                    <el-dropdown-item 
+                      :command="`group-ungrouped`"
+                      :class="{ active: filterGroup === 'ungrouped' }"
+                    >
+                      未分组
+                    </el-dropdown-item>
+                    <el-dropdown-item 
+                      v-for="group in availableGroups" 
+                      :key="group.id"
+                      :command="`group-${group.id}`"
+                      :class="{ active: filterGroup === group.id }"
+                    >
+                      {{ group.name }}
+                    </el-dropdown-item>
+                  </div>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </div>
+
+        <!-- 账号数量显示 -->
+        <div class="accounts-count-info">
+          <span class="count-text">{{ filteredAccountsCount }} 个账号</span>
         </div>
 
         <div class="accounts-grid">
           <div
-            v-for="account in accountStore.accounts"
+            v-for="account in filteredAccounts"
             :key="`${account.platform}_${account.id}`"
             :class="[
               'account-card',
@@ -97,7 +191,7 @@
       <!-- 折叠状态 - 圆形头像列表 -->
       <div v-else class="accounts-collapsed">
         <div
-          v-for="account in accountStore.accounts"
+          v-for="account in filteredAccounts"
           :key="`${account.platform}_${account.id}`"
           :class="[
             'account-circle',
@@ -155,7 +249,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from "vue";
-import { Bell, Connection } from "@element-plus/icons-vue";
+import { Bell, Connection,Search, Filter, ArrowLeft  } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { useAccountStore } from "@/stores/account";
 import { useMessageStore } from "@/stores/message";
@@ -181,7 +275,76 @@ const messageStore = useMessageStore();
 const totalAccountsCount = computed(() => {
   return accountStore.accounts.length;
 });
+// 🔥 新增筛选和搜索相关状态
+const searchKeyword = ref("");
+const filterPlatform = ref("");
+const filterGroup = ref("");
 
+// 🔥 添加 emits 声明
+const emit = defineEmits(['toggle-collapse']);
+
+// 🔥 计算可用平台列表
+const availablePlatforms = computed(() => {
+  const platforms = [...new Set(accountStore.accounts.map(acc => acc.platform))];
+  return platforms.filter(p => p); // 过滤空值
+});
+
+// 🔥 计算可用分组列表
+const availableGroups = computed(() => {
+  return accountStore.groups || [];
+});
+
+// 🔥 过滤后的账号列表
+const filteredAccounts = computed(() => {
+  let accounts = accountStore.accounts;
+
+  // 🔥 按搜索关键词筛选
+  if (searchKeyword.value.trim()) {
+    accounts = accounts.filter(acc => 
+      acc.userName.toLowerCase().includes(searchKeyword.value.toLowerCase())
+    );
+  }
+
+  // 🔥 按平台筛选
+  if (filterPlatform.value) {
+    accounts = accounts.filter(acc => acc.platform === filterPlatform.value);
+  }
+
+  // 🔥 按分组筛选
+  if (filterGroup.value) {
+    if (filterGroup.value === 'ungrouped') {
+      accounts = accounts.filter(acc => !acc.group_id);
+    } else {
+      accounts = accounts.filter(acc => acc.group_id === filterGroup.value);
+    }
+  }
+
+  return accounts;
+});
+
+// 🔥 过滤后账号数量
+const filteredAccountsCount = computed(() => {
+  return filteredAccounts.value.length;
+});
+
+// 🔥 搜索处理
+const handleSearch = () => {
+  // 搜索逻辑已通过计算属性实现
+  console.log('搜索关键词:', searchKeyword.value);
+};
+
+// 🔥 筛选命令处理
+const handleFilterCommand = (command) => {
+  const [type, value] = command.split('-');
+  
+  if (type === 'platform') {
+    filterPlatform.value = value || '';
+    console.log('平台筛选:', filterPlatform.value);
+  } else if (type === 'group') {
+    filterGroup.value = value || '';
+    console.log('分组筛选:', filterGroup.value);
+  }
+};
 // 获取头像URL
 const getAvatarUrl = (account) => {
   if (account.local_avatar && account.local_avatar !== "/default-avatar.png") {
@@ -325,7 +488,89 @@ $space-md: 12px;
 $space-lg: 16px;
 $space-xl: 20px;
 $space-2xl: 24px;
+.toolbar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-md;
+  padding-bottom: $space-sm;
 
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    flex: 1;
+
+    .collapse-btn {
+      width: 28px;
+      height: 28px;
+      background: $bg-tertiary;
+      border: 1px solid $border-light;
+      color: $text-secondary;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: $primary;
+        border-color: $primary;
+        color: $text-white;
+        transform: scale(1.05);
+      }
+
+      .el-icon {
+        font-size: 12px;
+      }
+    }
+
+    .search-container {
+      flex: 1;
+      max-width: 140px;
+
+      .search-input {
+        :deep(.el-input__wrapper) {
+          border-radius: $radius-lg;
+          border: 1px solid $border-light;
+          transition: all 0.3s ease;
+
+          &:hover {
+            border-color: $primary-light;
+          }
+
+          &.is-focus {
+            border-color: $primary;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+          }
+        }
+
+        .search-icon {
+          color: $text-muted;
+          font-size: 12px;
+        }
+      }
+    }
+  }
+
+  .toolbar-right {
+    .filter-btn {
+      width: 28px;
+      height: 28px;
+      background: $bg-tertiary;
+      border: 1px solid $border-light;
+      color: $text-secondary;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: $primary;
+        border-color: $primary;
+        color: $text-white;
+        transform: scale(1.05);
+      }
+
+      .el-icon {
+        font-size: 12px;
+      }
+    }
+  }
+}
 .platform-accounts {
   height: 100%;
   display: flex;
@@ -335,6 +580,48 @@ $space-2xl: 24px;
   overflow: hidden;
 }
 
+// 🔥 账号数量信息
+.accounts-count-info {
+  margin-bottom: $space-md;
+
+  .count-text {
+    font-size: 12px;
+    color: $text-muted;
+    font-weight: 500;
+  }
+}
+
+// 🔥 筛选下拉菜单样式
+.filter-dropdown-menu {
+  min-width: 160px;
+
+  .filter-section {
+    .filter-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: $text-muted;
+      padding: 6px 12px 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .el-dropdown-menu__item {
+    font-size: 12px;
+    padding: 6px 12px;
+    
+    &.active {
+      background: $bg-accent;
+      color: $primary;
+      font-weight: 500;
+    }
+
+    &:hover {
+      background: $bg-hover;
+      color: $primary;
+    }
+  }
+}
 // 顶部统计区域
 .stats-section {
   margin-bottom: $space-xl;
@@ -492,50 +779,51 @@ $space-2xl: 24px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: $space-sm;
+    gap: 0; // 从 $space-sm 改为 0，移除卡片间距
 
     .account-card {
       display: flex;
       align-items: center;
-      gap: 8px; // 从 12px 改为 8px
+      gap: 8px;
       background: $bg-secondary;
       border: 1px solid $border-light;
-      border-radius: $radius-md; // 从 $radius-lg 改为 $radius-md
-      padding: 8px 12px; // 从 12px 16px 改为 8px 12px，减少内边距
+      border-radius: 0; // 移除圆角，让卡片完全贴合
+      padding: 8px 12px;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       overflow: hidden;
+      border-top: none; // 移除顶部边框避免重复
 
-      &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: transparent;
-        transition: all 0.3s ease;
+      // 第一个卡片保留顶部边框
+      &:first-child {
+        border-top: 1px solid $border-light;
+        border-radius: $radius-md $radius-md 0 0; // 只在顶部加圆角
+      }
+
+      // 最后一个卡片在底部加圆角
+      &:last-child {
+        border-radius: 0 0 $radius-md $radius-md; // 只在底部加圆角
+      }
+
+      // 如果只有一个卡片，保持完整圆角
+      &:first-child:last-child {
+        border-radius: $radius-md;
       }
 
       &:hover {
-        transform: translateY(-2px);
+        transform: translateY(0); // 移除Y轴移动，避免影响紧贴效果
         box-shadow: $shadow-lg;
         border-color: $primary-light;
+        z-index: 1; // 确保hover状态在最上层
 
-        &::before {
-          background: linear-gradient(90deg, $primary 0%, $primary-light 100%);
-        }
       }
 
       &.active {
         background: $bg-accent;
         border-color: $primary;
         box-shadow: $shadow-md;
-
-        &::before {
-          background: linear-gradient(90deg, $primary 0%, $primary-light 100%);
-        }
+        z-index: 2; // 确保选中状态在hover之上
       }
 
       &.monitoring {
