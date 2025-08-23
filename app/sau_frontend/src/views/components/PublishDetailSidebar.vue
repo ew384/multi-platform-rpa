@@ -77,17 +77,26 @@
                 <!-- 账号信息 -->
                 <div class="account-header" @click="toggleAccountExpand(`${accountStatus.record_id}-${accountStatus.account_name}`)">
                   <div class="account-info">
-                    <div class="account-name">
-                      {{ accountStatus.account_name }}
-                      <span class="platform-name">({{ accountStatus.platform }})</span>
-                      <el-tag 
-                        v-if="isAccountInvalid(accountStatus)"
-                        type="danger" 
-                        size="small"
-                        style="margin-left: 8px;"
+                    <!-- 箭头图标移到账号名称左边 -->
+                    <div class="account-name-wrapper">
+                      <el-icon 
+                        class="expand-icon" 
+                        :class="{ expanded: expandedAccounts.has(`${accountStatus.record_id}-${accountStatus.account_name}`) }"
                       >
-                        账号已失效
-                      </el-tag>
+                        <ArrowRight />
+                      </el-icon>
+                      <div class="account-name">
+                        {{ accountStatus.account_name }}
+                        <span class="platform-name">({{ accountStatus.platform }})</span>
+                        <el-tag 
+                          v-if="isAccountInvalid(accountStatus)"
+                          type="danger" 
+                          size="small"
+                          style="margin-left: 8px;"
+                        >
+                          账号已失效
+                        </el-tag>
+                      </div>
                     </div>
                   </div>
                   <div class="account-status">
@@ -97,9 +106,6 @@
                     >
                       {{ getAccountStatusText(accountStatus.status) }}
                     </el-tag>
-                    <el-icon class="expand-icon" :class="{ expanded: expandedAccounts.has(`${accountStatus.record_id}-${accountStatus.account_name}`) }">
-                      <ArrowRight />
-                    </el-icon>
                   </div>
                 </div>
 
@@ -579,11 +585,12 @@ $space-xl: 32px;
   display: flex;
   justify-content: flex-end;
 
+  // 侧边栏整体背景调整为灰色
   .detail-sidebar {
     width: 45%;
     max-width: 600px;
     min-width: 400px;
-    background: $bg-white;
+    background: #f8fafc; // 整体灰色背景
     box-shadow: $shadow-lg;
     display: flex;
     flex-direction: column;
@@ -599,8 +606,10 @@ $space-xl: 32px;
       justify-content: space-between;
       align-items: center;
       padding: $space-lg;
-      border-bottom: 1px solid $border-light;
-      background: $bg-light;
+      border-bottom: none; // 去掉分割线
+      background: $bg-white; // 白色卡片
+      margin: $space-md $space-md 0 $space-md; // 四周留白间距
+      border-radius: $radius-lg; // 圆角
 
       .sidebar-title {
         font-size: 18px;
@@ -622,7 +631,8 @@ $space-xl: 32px;
     .sidebar-content {
       flex: 1;
       overflow-y: auto;
-      padding: $space-lg;
+      padding: 0 $space-md $space-md $space-md; // 左右下留白，顶部不留（紧贴header）
+      background: transparent; // 透明背景显示灰色
 
       .loading-container {
         display: flex;
@@ -630,6 +640,9 @@ $space-xl: 32px;
         align-items: center;
         gap: $space-md;
         padding: $space-xl;
+        background: $bg-white; // 白色卡片
+        border-radius: $radius-lg;
+        margin-top: $space-md;
         color: $text-secondary;
 
         .is-loading {
@@ -640,29 +653,41 @@ $space-xl: 32px;
 
       .error-container {
         padding: $space-lg;
+        background: $bg-white; // 白色卡片
+        border-radius: $radius-lg;
+        margin-top: $space-md;
       }
 
       .detail-content {
-        // 1. 统计卡片更扁平
+        // 统计数据横栏 - 白色卡片无边框
         .stats-section {
-          margin-bottom: $space-lg;
+          margin: $space-md 0 $space-lg 0; // 顶部留白
 
           .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px; // 进一步减小间隙
+            display: flex;
+            background: $bg-white; // 白色卡片
+            border-radius: $radius-lg;
+            padding: 16px 20px;
+            border: none; // 完全无边框
+            box-shadow: none; // 去掉阴影，依靠背景色对比
 
             .stat-card {
-              background: $bg-gray;
-              border-radius: $radius-sm; // 减小圆角
-              padding: 8px 6px; // 进一步缩小内边距
+              flex: 1;
+              background: transparent;
+              border: none;
+              border-radius: 0;
+              padding: 0;
               text-align: center;
-              border: 2px solid transparent;
-              transition: all 0.3s ease;
+              transition: none;
+
+              // 完全去掉分割线
+              &:not(:last-child) {
+                margin-right: 20px;
+                padding-right: 20px;
+              }
 
               &:hover {
-                border-color: $primary;
-                transform: translateY(-1px); // 减小悬浮效果
+                transform: none;
               }
 
               &.failed {
@@ -672,15 +697,15 @@ $space-xl: 32px;
               }
 
               .stat-value {
-                font-size: 14px; // 从18px进一步减小到14px
-                font-weight: 600; // 从700减轻到600
+                font-size: 16px; // 稍微增大字体，因为空间更充足
+                font-weight: 600;
                 color: $text-primary;
-                margin-bottom: 2px; // 进一步减小
+                margin-bottom: 4px;
                 line-height: 1.2;
               }
 
               .stat-label {
-                font-size: 10px; // 从11px减小到10px
+                font-size: 11px; // 稍微增大
                 color: $text-secondary;
                 font-weight: 500;
                 line-height: 1;
@@ -689,65 +714,94 @@ $space-xl: 32px;
           }
         }
 
-        // 2. 全部字体调小
+        // 流程区域 - 压缩空间留白
         .process-section {
           .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: $space-md;
-            padding-bottom: $space-xs;
-            border-bottom: 1px solid $border-light;
+            padding: 12px 16px; // 减少内边距
+            background: $bg-white;
+            border-radius: $radius-lg;
+            border: none;
 
             h3 {
-              font-size: 14px; // 从16px减小到14px
+              font-size: 15px;
               font-weight: 600;
               color: $text-primary;
               margin: 0;
             }
 
             :deep(.el-tag) {
-              font-size: 10px; // 标签字体调小
+              font-size: 10px;
             }
           }
 
           .process-list {
+            background: $bg-white;
+            border-radius: $radius-lg;
+            border: none;
+            padding: 8px 0; // 大幅减少上下内边距
+            overflow: hidden;
+
             .process-item {
-              padding: $space-xs 0; // 进一步减小内边距
+              padding: 8px 16px; // 大幅减少内边距
               margin-bottom: 0;
-              border-bottom: 1px solid $border-light;
+              border-bottom: none;
               
+              // 减少账号间间距
+              &:not(:last-child) {
+                margin-bottom: 6px; // 从 $space-sm 减小
+              }
+
               &:last-child {
                 margin-bottom: 0;
-                border-bottom: none;
               }
 
               .account-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: $space-xs; // 进一步减小
+                margin-bottom: 6px; // 减少间距
                 cursor: pointer;
-                padding: $space-xs $space-sm; // 减小内边距
+                padding: 6px 8px; // 减少内边距
                 border-radius: $radius-sm;
                 transition: background-color 0.2s ease;
 
                 &:hover {
-                  background-color: rgba(0, 0, 0, 0.02);
+                  background-color: rgba(0, 0, 0, 0.03);
                 }
 
                 .account-info {
-                  .account-name {
-                    font-size: 12px; // 从14px减小到12px
-                    font-weight: 600;
-                    color: $text-primary;
-                    line-height: 1.3;
+                  .account-name-wrapper {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px; // 减少间距
 
-                    .platform-name {
-                      font-size: 10px; // 从12px减小到10px
-                      font-weight: 400;
-                      color: $text-secondary;
-                      margin-left: $space-xs;
+                    .expand-icon {
+                      font-size: 12px;
+                      color: $text-muted;
+                      transition: transform 0.2s ease;
+                      flex-shrink: 0;
+
+                      &.expanded {
+                        transform: rotate(90deg);
+                      }
+                    }
+
+                    .account-name {
+                      font-size: 13px;
+                      font-weight: 600;
+                      color: $text-primary;
+                      line-height: 1.2; // 减少行高
+
+                      .platform-name {
+                        font-size: 11px;
+                        font-weight: 400;
+                        color: $text-secondary;
+                        margin-left: 4px; // 减少间距
+                      }
                     }
                   }
                 }
@@ -755,44 +809,36 @@ $space-xl: 32px;
                 .account-status {
                   display: flex;
                   align-items: center;
-                  gap: $space-xs;
 
                   :deep(.el-tag) {
-                    font-size: 9px; // 状态标签字体调小
-                    padding: 1px 4px;
+                    font-size: 9px;
+                    padding: 1px 4px; // 减少内边距
                     height: auto;
-                  }
-
-                  .expand-icon {
-                    font-size: 12px; // 从14px减小到12px
-                    color: $text-muted;
-                    transition: transform 0.2s ease;
-
-                    &.expanded {
-                      transform: rotate(90deg);
-                    }
                   }
                 }
               }
 
               .process-steps {
+                background: rgba(248, 250, 252, 0.3); // 更淡的背景
+                border-radius: $radius-sm;
+                padding: 6px 12px; // 大幅减少内边距
+                margin-top: 4px; // 减少顶部间距
+
                 .process-step {
                   display: flex;
                   align-items: center;
-                  gap: $space-sm;
-                  padding: $space-xs 0; // 减小内边距
-                  border-left: 2px solid $border-light;
-                  padding-left: $space-sm;
-                  margin-left: 8px; // 减小缩进
+                  gap: 8px; // 减少间距
+                  padding: 4px 0; // 大幅减少内边距
+                  border-left: none;
+                  padding-left: 24px; // 减少左边距
+                  margin-left: 0;
                   position: relative;
 
                   &:not(:last-child) {
-                    margin-bottom: $space-xs; // 减小间距
+                    margin-bottom: 4px; // 大幅减少间距
                   }
 
                   &.completed {
-                    border-left-color: $success;
-                    
                     .step-icon {
                       background-color: $success;
                       color: white;
@@ -800,8 +846,6 @@ $space-xl: 32px;
                   }
 
                   &.failed {
-                    border-left-color: $danger;
-                    
                     .step-icon {
                       background-color: $danger;
                       color: white;
@@ -809,8 +853,6 @@ $space-xl: 32px;
                   }
 
                   &.pending {
-                    border-left-color: $warning;
-                    
                     .step-icon {
                       background-color: $warning;
                       color: white;
@@ -818,45 +860,50 @@ $space-xl: 32px;
                   }
 
                   .step-icon {
-                    width: 16px; // 从20px减小到16px
+                    width: 16px; // 保持图标大小
                     height: 16px;
                     border-radius: 50%;
                     background-color: $bg-gray;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 10px; // 从12px减小到10px
+                    font-size: 10px;
                     position: absolute;
-                    left: -9px; // 调整位置
-                    box-shadow: $shadow-sm;
+                    left: 6px; // 调整位置
+                    box-shadow: none;
                   }
 
                   .step-info {
                     .step-label {
-                      font-size: 11px; // 从13px减小到11px
+                      font-size: 12px;
                       font-weight: 500;
                       color: $text-primary;
-                      margin-bottom: 1px;
-                      line-height: 1.2;
+                      margin-bottom: 1px; // 最小间距
+                      line-height: 1.1; // 减少行高
                     }
 
                     .step-status {
-                      font-size: 10px; // 从12px减小到10px
+                      font-size: 11px;
                       color: $text-secondary;
-                      line-height: 1.2;
+                      line-height: 1.1; // 减少行高
                     }
                   }
                 }
               }
 
               .error-message {
-                margin-top: $space-xs; // 减小间距
-                padding-left: $space-md;
+                margin-top: 6px; // 减少间距
+                padding-left: 16px; // 减少左边距
                 
                 :deep(.el-alert) {
+                  background-color: rgba(239, 68, 68, 0.05);
+                  border: none;
+                  border-radius: $radius-sm;
+                  padding: 6px 8px; // 减少内边距
+                  
                   .el-alert__title {
-                    font-size: 10px; // 从12px减小到10px
-                    line-height: 1.3;
+                    font-size: 11px;
+                    line-height: 1.2;
                   }
                 }
               }
