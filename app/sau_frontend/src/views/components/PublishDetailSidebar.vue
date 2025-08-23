@@ -75,7 +75,7 @@
                 class="process-item"
               >
                 <!-- 账号信息 -->
-                <div class="account-header">
+                <div class="account-header" @click="toggleAccountExpand(`${accountStatus.record_id}-${accountStatus.account_name}`)">
                   <div class="account-info">
                     <div class="account-name">
                       {{ accountStatus.account_name }}
@@ -85,9 +85,9 @@
                         type="danger" 
                         size="small"
                         style="margin-left: 8px;"
-                        >
+                      >
                         账号已失效
-                    </el-tag>
+                      </el-tag>
                     </div>
                   </div>
                   <div class="account-status">
@@ -97,11 +97,17 @@
                     >
                       {{ getAccountStatusText(accountStatus.status) }}
                     </el-tag>
+                    <el-icon class="expand-icon" :class="{ expanded: expandedAccounts.has(`${accountStatus.record_id}-${accountStatus.account_name}`) }">
+                      <ArrowRight />
+                    </el-icon>
                   </div>
                 </div>
 
                 <!-- 流程步骤 -->
-                <div class="process-steps">
+                <div 
+                  v-show="expandedAccounts.has(`${accountStatus.record_id}-${accountStatus.account_name}`)" 
+                  class="process-steps"
+                >
                   <div 
                     v-for="step in getProcessSteps(accountStatus)"
                     :key="step.key"
@@ -163,10 +169,21 @@ import {
   Close, 
   Loading, 
   Check, 
-  Clock 
+  Clock,
+  ArrowRight
 } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import { publishApi } from '@/api/publish';
+
+const expandedAccounts = ref(new Set()); // 在响应式数据中添加
+
+const toggleAccountExpand = (accountKey) => {
+  if (expandedAccounts.value.has(accountKey)) {
+    expandedAccounts.value.delete(accountKey);
+  } else {
+    expandedAccounts.value.add(accountKey);
+  }
+};
 
 
 // 🔥 判断账号是否失效（基于错误信息）
@@ -626,25 +643,26 @@ $space-xl: 32px;
       }
 
       .detail-content {
+        // 1. 统计卡片更扁平
         .stats-section {
-          margin-bottom: $space-xl;
+          margin-bottom: $space-lg;
 
           .stats-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: $space-md;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px; // 进一步减小间隙
 
             .stat-card {
               background: $bg-gray;
-              border-radius: $radius-lg;
-              padding: $space-lg;
+              border-radius: $radius-sm; // 减小圆角
+              padding: 8px 6px; // 进一步缩小内边距
               text-align: center;
               border: 2px solid transparent;
               transition: all 0.3s ease;
 
               &:hover {
                 border-color: $primary;
-                transform: translateY(-2px);
+                transform: translateY(-1px); // 减小悬浮效果
               }
 
               &.failed {
@@ -654,67 +672,104 @@ $space-xl: 32px;
               }
 
               .stat-value {
-                font-size: 24px;
-                font-weight: 700;
+                font-size: 14px; // 从18px进一步减小到14px
+                font-weight: 600; // 从700减轻到600
                 color: $text-primary;
-                margin-bottom: $space-xs;
+                margin-bottom: 2px; // 进一步减小
+                line-height: 1.2;
               }
 
               .stat-label {
-                font-size: 12px;
+                font-size: 10px; // 从11px减小到10px
                 color: $text-secondary;
                 font-weight: 500;
+                line-height: 1;
               }
             }
           }
         }
 
+        // 2. 全部字体调小
         .process-section {
           .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: $space-lg;
-            padding-bottom: $space-sm;
+            margin-bottom: $space-md;
+            padding-bottom: $space-xs;
             border-bottom: 1px solid $border-light;
 
             h3 {
-              font-size: 16px;
+              font-size: 14px; // 从16px减小到14px
               font-weight: 600;
               color: $text-primary;
               margin: 0;
+            }
+
+            :deep(.el-tag) {
+              font-size: 10px; // 标签字体调小
             }
           }
 
           .process-list {
             .process-item {
-              background: $bg-light;
-              border-radius: $radius-lg;
-              padding: $space-lg;
-              margin-bottom: $space-lg;
-              border: 1px solid $border-light;
-
+              padding: $space-xs 0; // 进一步减小内边距
+              margin-bottom: 0;
+              border-bottom: 1px solid $border-light;
+              
               &:last-child {
                 margin-bottom: 0;
+                border-bottom: none;
               }
 
               .account-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: $space-md;
+                margin-bottom: $space-xs; // 进一步减小
+                cursor: pointer;
+                padding: $space-xs $space-sm; // 减小内边距
+                border-radius: $radius-sm;
+                transition: background-color 0.2s ease;
+
+                &:hover {
+                  background-color: rgba(0, 0, 0, 0.02);
+                }
 
                 .account-info {
                   .account-name {
-                    font-size: 14px;
+                    font-size: 12px; // 从14px减小到12px
                     font-weight: 600;
                     color: $text-primary;
+                    line-height: 1.3;
 
                     .platform-name {
-                      font-size: 12px;
+                      font-size: 10px; // 从12px减小到10px
                       font-weight: 400;
                       color: $text-secondary;
                       margin-left: $space-xs;
+                    }
+                  }
+                }
+
+                .account-status {
+                  display: flex;
+                  align-items: center;
+                  gap: $space-xs;
+
+                  :deep(.el-tag) {
+                    font-size: 9px; // 状态标签字体调小
+                    padding: 1px 4px;
+                    height: auto;
+                  }
+
+                  .expand-icon {
+                    font-size: 12px; // 从14px减小到12px
+                    color: $text-muted;
+                    transition: transform 0.2s ease;
+
+                    &.expanded {
+                      transform: rotate(90deg);
                     }
                   }
                 }
@@ -724,15 +779,15 @@ $space-xl: 32px;
                 .process-step {
                   display: flex;
                   align-items: center;
-                  gap: $space-md;
-                  padding: $space-sm 0;
+                  gap: $space-sm;
+                  padding: $space-xs 0; // 减小内边距
                   border-left: 2px solid $border-light;
-                  padding-left: $space-md;
-                  margin-left: 10px;
+                  padding-left: $space-sm;
+                  margin-left: 8px; // 减小缩进
                   position: relative;
 
                   &:not(:last-child) {
-                    margin-bottom: $space-sm;
+                    margin-bottom: $space-xs; // 减小间距
                   }
 
                   &.completed {
@@ -763,41 +818,45 @@ $space-xl: 32px;
                   }
 
                   .step-icon {
-                    width: 20px;
-                    height: 20px;
+                    width: 16px; // 从20px减小到16px
+                    height: 16px;
                     border-radius: 50%;
                     background-color: $bg-gray;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 12px;
+                    font-size: 10px; // 从12px减小到10px
                     position: absolute;
-                    left: -11px;
+                    left: -9px; // 调整位置
                     box-shadow: $shadow-sm;
                   }
 
                   .step-info {
                     .step-label {
-                      font-size: 13px;
+                      font-size: 11px; // 从13px减小到11px
                       font-weight: 500;
                       color: $text-primary;
-                      margin-bottom: 2px;
+                      margin-bottom: 1px;
+                      line-height: 1.2;
                     }
 
                     .step-status {
-                      font-size: 12px;
+                      font-size: 10px; // 从12px减小到10px
                       color: $text-secondary;
+                      line-height: 1.2;
                     }
                   }
                 }
               }
 
               .error-message {
-                margin-top: $space-md;
+                margin-top: $space-xs; // 减小间距
+                padding-left: $space-md;
                 
                 :deep(.el-alert) {
                   .el-alert__title {
-                    font-size: 12px;
+                    font-size: 10px; // 从12px减小到10px
+                    line-height: 1.3;
                   }
                 }
               }

@@ -283,7 +283,6 @@
                       <el-avatar
                         :size="32"
                         :src="getAvatarUrl(account)"
-                        @error="handleAvatarError"
                       />
                       <div class="platform-logo">
                         <img
@@ -373,7 +372,6 @@
                       <el-avatar
                         :size="32"
                         :src="getAvatarUrl(account)"
-                        @error="handleAvatarError"
                       />
                       <div class="platform-logo">
                         <img

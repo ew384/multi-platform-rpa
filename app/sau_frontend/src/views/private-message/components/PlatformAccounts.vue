@@ -6,17 +6,10 @@
     <!-- 折叠状态下的简化统计 -->
     <div class="collapsed-stats" v-show="isCollapsed">
       <div
-        class="mini-stat unread"
-        :title="`${messageStore.totalUnreadCount} 条未读消息`"
+        class="expand-btn"
+        @click="$emit('toggle-collapse')"
       >
-        <el-icon><Bell /></el-icon>
-        <span class="mini-count" v-if="messageStore.totalUnreadCount > 0">
-          {{
-            messageStore.totalUnreadCount > 99
-              ? "99+"
-              : messageStore.totalUnreadCount
-          }}
-        </span>
+        <el-icon><Expand /></el-icon>
       </div>
     </div>
 
@@ -35,7 +28,7 @@
               @click="$emit('toggle-collapse')"
               title="折叠账号栏"
             >
-              <el-icon><ArrowLeft /></el-icon>
+              <el-icon><Fold /></el-icon>
             </el-button>
             
             <!-- 搜索框 -->
@@ -249,7 +242,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from "vue";
-import { Bell, Connection,Search, Filter, ArrowLeft  } from "@element-plus/icons-vue";
+import { Bell, Connection,Search, Filter, Expand, Fold   } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { useAccountStore } from "@/stores/account";
 import { useMessageStore } from "@/stores/message";
@@ -289,9 +282,15 @@ const availablePlatforms = computed(() => {
   return platforms.filter(p => p); // 过滤空值
 });
 
-// 🔥 计算可用分组列表
+// 🔥 计算可用分组列表 - 过滤掉平台名称分组
 const availableGroups = computed(() => {
-  return accountStore.groups || [];
+  // 定义平台相关的分组名称（需要过滤掉的）
+  const platformGroupNames = ['微信视频号', '视频号', '抖音', '快手', '小红书'];
+  
+  // 只保留非平台分组
+  return (accountStore.groups || []).filter(group => 
+    !platformGroupNames.includes(group.name)
+  );
 });
 
 // 🔥 过滤后的账号列表
@@ -442,7 +441,12 @@ onMounted(async () => {
       console.error("加载账号数据失败:", error);
     }
   }
-
+  console.log('=== 数据调试 ===');
+  console.log('账号数据示例:', accountStore.accounts[0]);
+  console.log('所有平台:', [...new Set(accountStore.accounts.map(acc => acc.platform))]);
+  console.log('分组数据:', accountStore.groups);
+  console.log('可用平台列表:', availablePlatforms.value);
+  console.log('可用分组列表:', availableGroups.value);
   await messageStore.refreshMonitoringStatus();
   await messageStore.refreshUnreadCounts();
 });
@@ -702,7 +706,6 @@ $bg-hover: rgba(99, 102, 241, 0.08);
     position: relative;
     width: 40px;
     height: 40px;
-    background: linear-gradient(135deg, $danger 0%, #f87171 100%);
     border-radius: $radius-full;
     display: flex;
     align-items: center;
@@ -737,6 +740,28 @@ $bg-hover: rgba(99, 102, 241, 0.08);
       padding: 0 4px;
       box-shadow: $shadow-sm;
       border: 2px solid $danger;
+    }
+  }
+  // 展开按钮样式 - 无背景圆圈
+  .expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: $space-sm;
+    
+    .el-icon {
+      font-size: 20px;
+      color: $text-muted;
+      transition: all 0.3s ease;
+    }
+    
+    &:hover {
+      .el-icon {
+        color: $primary;
+        transform: scale(1.1);
+      }
     }
   }
 }
