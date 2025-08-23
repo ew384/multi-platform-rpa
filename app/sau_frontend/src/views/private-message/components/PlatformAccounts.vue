@@ -488,6 +488,12 @@ $space-md: 12px;
 $space-lg: 16px;
 $space-xl: 20px;
 $space-2xl: 24px;
+
+$bg-primary: #ffffff;
+$bg-secondary: #f8fafc;
+$bg-tertiary: #f1f5f9;
+$bg-accent: rgba(99, 102, 241, 0.05);
+$bg-hover: rgba(99, 102, 241, 0.08);
 .toolbar-header {
   display: flex;
   align-items: center;
