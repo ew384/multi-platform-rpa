@@ -183,12 +183,22 @@ const mainContentStyle = computed(() => {
   };
 });
 
-// 添加监听器：当进入私信页面时，向body添加class用于CSS定位
-watch(isPrivateMessagePage, (isPrivateMessage) => {
+watch([isPrivateMessagePage, isCollapsed], ([isPrivateMessage, collapsed]) => {
+  // 清理所有相关class
+  document.body.classList.remove('private-message-layout', 'sidebar-collapsed');
+  
+  // 根据当前状态添加class和CSS变量
   if (isPrivateMessage) {
     document.body.classList.add('private-message-layout');
+    // 设置CSS变量
+    document.documentElement.style.setProperty('--sidebar-width', collapsed ? '64px' : '240px');
+    
+    if (collapsed) {
+      document.body.classList.add('sidebar-collapsed');
+    }
   } else {
-    document.body.classList.remove('private-message-layout');
+    // 非私信页面时清除CSS变量
+    document.documentElement.style.removeProperty('--sidebar-width');
   }
 }, { immediate: true });
 
@@ -206,40 +216,17 @@ onMounted(async () => {
   } catch (error) {
     console.warn("启动时初始化失败:", error);
   }
-  if (isPrivateMessagePage.value) {
-    document.body.classList.add('private-message-layout');
-    if (isCollapsed.value) {
-      document.body.classList.add('sidebar-collapsed');
-    }
-  }
 });
-watch(isCollapsed, (collapsed) => {
-  if (collapsed) {
-    document.body.classList.add('sidebar-collapsed');
-  } else {
-    document.body.classList.remove('sidebar-collapsed');
-  }
-}, { immediate: true });
 
-// 同时监听私信页面状态和侧边栏状态
-watch([isPrivateMessagePage, isCollapsed], ([isPrivateMessage, collapsed]) => {
-  // 清理所有相关class
-  document.body.classList.remove('private-message-layout', 'sidebar-collapsed');
-  
-  // 根据当前状态添加class
-  if (isPrivateMessage) {
-    document.body.classList.add('private-message-layout');
-    if (collapsed) {
-      document.body.classList.add('sidebar-collapsed');
-    }
-  }
-}, { immediate: true });
 // 清理事件监听器
 onUnmounted(() => {
   if (isDragging.value) {
     stopDrag();
   }
+  
+  // 清理 body class 和 CSS 变量
   document.body.classList.remove('private-message-layout', 'sidebar-collapsed');
+  document.documentElement.style.removeProperty('--sidebar-width');
 });
 </script>
 

@@ -89,7 +89,6 @@
             <!-- 账号信息区域 -->
             <div class="account-info-section">
               <div class="account-name">{{ account.userName }}</div>
-              <div class="account-platform">{{ account.platform }}</div>
             </div>
           </div>
         </div>
@@ -630,7 +629,6 @@ $space-2xl: 24px;
 
       .account-info-section {
         text-align: center;
-        flex: 1; // 添加这行，让文本区域占满剩余空间
 
         .account-name {
           font-size: 12px; // 从 14px 改为 12px
@@ -638,16 +636,6 @@ $space-2xl: 24px;
           color: $text-primary;
           margin-bottom: 2px; // 从 4px 改为 2px
           line-height: 1.2; // 从 1.3 改为 1.2
-        }
-
-        .account-platform {
-          font-size: 10px; // 从 11px 改为 10px
-          color: $text-muted;
-          margin-bottom: 2px; // 从 4px 改为 2px
-          background: $bg-tertiary;
-          padding: 1px 4px; // 从 2px 6px 改为 1px 4px
-          border-radius: $radius-sm;
-          display: inline-block;
         }
 
         .account-status-text {

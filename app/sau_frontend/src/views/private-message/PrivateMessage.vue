@@ -207,20 +207,12 @@ $radius-xl: 16px;
   left: 240px; // 默认位置
   right: 0;
   bottom: 0;
-  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); // 添加过渡动画
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-:global(body.private-message-layout) {
-  .private-message {
-    left: var(--sidebar-width, 240px); // 使用CSS变量
-  }
+:global(body.private-message-layout) .private-message {
+  left: var(--sidebar-width, 240px);
 }
 
-// 添加CSS变量的更新：当侧边栏折叠时
-:global(body.private-message-layout.sidebar-collapsed) {
-  .private-message {
-    left: 64px;
-  }
-}
 .message-layout {
   display: flex;
   height: 100%;
