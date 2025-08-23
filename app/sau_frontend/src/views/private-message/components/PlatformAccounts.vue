@@ -493,16 +493,16 @@ $space-2xl: 24px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: $space-md;
+    gap: $space-sm;
 
     .account-card {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px; // 从 12px 改为 8px
       background: $bg-secondary;
       border: 1px solid $border-light;
-      border-radius: $radius-lg;
-      padding: 12px 16px; // 调整内边距
+      border-radius: $radius-md; // 从 $radius-lg 改为 $radius-md
+      padding: 8px 12px; // 从 12px 16px 改为 8px 12px，减少内边距
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
@@ -556,8 +556,8 @@ $space-2xl: 24px;
           position: relative;
 
           .account-avatar {
-            width: 40px !important;
-            height: 40px !important;
+            width: 32px !important; // 从 40px 改为 32px
+            height: 32px !important; // 从 40px 改为 32px
             border: 2px solid $text-white;
             box-shadow: $shadow-sm;
           }
@@ -566,8 +566,8 @@ $space-2xl: 24px;
             position: absolute;
             bottom: -2px;
             right: -2px;
-            width: 20px;
-            height: 20px;
+            width: 16px; // 从 20px 改为 16px
+            height: 16px; // 从 20px 改为 16px
             background: $text-white;
             border-radius: $radius-full;
             display: flex;
@@ -577,8 +577,8 @@ $space-2xl: 24px;
             border: 2px solid $text-white;
 
             img {
-              width: 14px;
-              height: 14px;
+              width: 12px; // 从 14px 改为 12px
+              height: 12px; // 从 14px 改为 12px
               border-radius: $radius-full;
               object-fit: cover;
             }
@@ -586,10 +586,10 @@ $space-2xl: 24px;
 
           .status-indicator {
             position: absolute;
-            top: 2px;
-            right: 2px;
-            width: 12px;
-            height: 12px;
+            top: 1px; // 从 2px 改为 1px
+            right: 1px; // 从 2px 改为 1px
+            width: 10px; // 从 12px 改为 10px
+            height: 10px; // 从 12px 改为 10px
             border-radius: $radius-full;
             border: 2px solid $text-white;
             box-shadow: $shadow-xs;
@@ -609,19 +609,19 @@ $space-2xl: 24px;
 
           .unread-badge {
             position: absolute;
-            top: -6px;
-            right: -6px;
-            min-width: 20px;
-            height: 20px;
+            top: -4px; // 从 -6px 改为 -4px
+            right: -4px; // 从 -6px 改为 -4px
+            min-width: 16px; // 从 20px 改为 16px
+            height: 16px; // 从 20px 改为 16px
             background: $danger;
             color: $text-white;
-            font-size: 10px;
+            font-size: 9px; // 从 10px 改为 9px
             font-weight: 700;
             border-radius: $radius-full;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0 6px;
+            padding: 0 4px; // 从 0 6px 改为 0 4px
             box-shadow: $shadow-sm;
             border: 2px solid $text-white;
           }
@@ -630,21 +630,22 @@ $space-2xl: 24px;
 
       .account-info-section {
         text-align: center;
+        flex: 1; // 添加这行，让文本区域占满剩余空间
 
         .account-name {
-          font-size: 14px;
+          font-size: 12px; // 从 14px 改为 12px
           font-weight: 600;
           color: $text-primary;
-          margin-bottom: 4px;
-          line-height: 1.3;
+          margin-bottom: 2px; // 从 4px 改为 2px
+          line-height: 1.2; // 从 1.3 改为 1.2
         }
 
         .account-platform {
-          font-size: 11px;
+          font-size: 10px; // 从 11px 改为 10px
           color: $text-muted;
-          margin-bottom: 4px;
+          margin-bottom: 2px; // 从 4px 改为 2px
           background: $bg-tertiary;
-          padding: 2px 6px;
+          padding: 1px 4px; // 从 2px 6px 改为 1px 4px
           border-radius: $radius-sm;
           display: inline-block;
         }

@@ -64,7 +64,8 @@
       <!-- 主内容区 -->
       <div
         class="main-content"
-        :style="{ marginLeft: (isCollapsed ? 64 : 240) + 'px' }"
+        :style="mainContentStyle"
+        :class="{ 'private-message-layout': isPrivateMessagePage }"
       >
         <!-- 页面内容 -->
         <main class="page-content">
@@ -76,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted,watch } from "vue";
 import { useRoute } from "vue-router";
 import { useAccountStore } from "@/stores/account";
 import {
@@ -119,7 +120,7 @@ const menuItems = [
   { path: "/website", name: "网站", icon: "Monitor" },
   {
     path: "/private-message",
-    name: "私信管理",
+    name: "私信",
     icon: "DataAnalysis",
     badge: "NEW",
   },
@@ -165,6 +166,32 @@ const stopDrag = () => {
   document.body.style.cursor = "";
   document.body.style.userSelect = "";
 };
+// 添加计算属性：判断是否在私信页面
+const isPrivateMessagePage = computed(() => {
+  return route.path === '/private-message';
+});
+
+// 添加计算属性：私信页面的主内容样式
+const mainContentStyle = computed(() => {
+  if (isPrivateMessagePage.value) {
+    return {
+      marginLeft: '0px' // 私信页面不需要margin-left
+    };
+  }
+  return {
+    marginLeft: (isCollapsed.value ? 64 : 240) + 'px'
+  };
+});
+
+// 添加监听器：当进入私信页面时，向body添加class用于CSS定位
+watch(isPrivateMessagePage, (isPrivateMessage) => {
+  if (isPrivateMessage) {
+    document.body.classList.add('private-message-layout');
+  } else {
+    document.body.classList.remove('private-message-layout');
+  }
+}, { immediate: true });
+
 onMounted(async () => {
   try {
     console.log("🚀 应用启动，初始化服务...");
@@ -179,12 +206,40 @@ onMounted(async () => {
   } catch (error) {
     console.warn("启动时初始化失败:", error);
   }
+  if (isPrivateMessagePage.value) {
+    document.body.classList.add('private-message-layout');
+    if (isCollapsed.value) {
+      document.body.classList.add('sidebar-collapsed');
+    }
+  }
 });
+watch(isCollapsed, (collapsed) => {
+  if (collapsed) {
+    document.body.classList.add('sidebar-collapsed');
+  } else {
+    document.body.classList.remove('sidebar-collapsed');
+  }
+}, { immediate: true });
+
+// 同时监听私信页面状态和侧边栏状态
+watch([isPrivateMessagePage, isCollapsed], ([isPrivateMessage, collapsed]) => {
+  // 清理所有相关class
+  document.body.classList.remove('private-message-layout', 'sidebar-collapsed');
+  
+  // 根据当前状态添加class
+  if (isPrivateMessage) {
+    document.body.classList.add('private-message-layout');
+    if (collapsed) {
+      document.body.classList.add('sidebar-collapsed');
+    }
+  }
+}, { immediate: true });
 // 清理事件监听器
 onUnmounted(() => {
   if (isDragging.value) {
     stopDrag();
   }
+  document.body.classList.remove('private-message-layout', 'sidebar-collapsed');
 });
 </script>
 
