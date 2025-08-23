@@ -513,7 +513,6 @@ const customCoverSet = ref(false);
 
 // 🔥 修改现有的 handleVideoUploadSuccess 方法
 const handleVideoUploadSuccess = async (response, file) => {
-  console.log("🔧 handleVideoUploadSuccess 开始", { response, file: file.name });
   if (response.code === 200) {
     const filePath = response.data.path || response.data;
     const filename = filePath.split("/").pop();
@@ -527,13 +526,10 @@ const handleVideoUploadSuccess = async (response, file) => {
     };
 
     selectedVideos.value.push(videoInfo);
-    console.log("🔧 视频添加完成，准备处理封面", { 
-      videosCount: selectedVideos.value.length, 
-      filename 
-    });
-    if (selectedVideos.value.length === 1) {
-      await handleCoverGeneration(file, videoInfo.url, filename);
-      console.log("🔧 handleCoverGeneration 完成");
+
+    // 🔥 如果是第一个视频且没有自定义封面，生成默认封面
+    if (selectedVideos.value.length === 1 && !customCoverSet.value) {
+      await generateAndSetDefaultCover(videoInfo.url);
     }
 
     ElMessage.success("视频上传成功");
@@ -541,14 +537,59 @@ const handleVideoUploadSuccess = async (response, file) => {
     ElMessage.error(response.msg || "上传失败");
   }
 };
+// 🔥 新增：生成并设置默认封面
+const generateAndSetDefaultCover = async (videoUrl) => {
+  try {
+    console.log("📸 开始生成默认封面:", videoUrl);
+
+    const defaultCover = await generateDefaultCoverDataURL(videoUrl);
+    if (defaultCover) {
+      publishForm.cover = defaultCover;
+      console.log("✅ 默认封面已设置");
+    }
+  } catch (error) {
+    console.error("❌ 生成默认封面失败:", error);
+  }
+};
+
+// 🔥 新增：生成默认封面 DataURL
+const generateDefaultCoverDataURL = (videoUrl) => {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    video.crossOrigin = "anonymous";
+    video.preload = "metadata";
+
+    video.onloadedmetadata = () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      video.currentTime = 0.1; // 0.1秒处截图，避免黑屏
+    };
+
+    video.onseeked = () => {
+      try {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataURL = canvas.toDataURL("image/jpeg", 0.8);
+        resolve(dataURL);
+      } catch (error) {
+        console.error("❌ 封面绘制失败:", error);
+        resolve(null);
+      }
+    };
+
+    video.onerror = () => {
+      console.error("❌ 视频加载失败，无法生成封面");
+      resolve(null);
+    };
+
+    video.src = videoUrl;
+  });
+};
 
 // 🔥 新增：封面处理逻辑
 const handleCoverGeneration = async (videoFile, videoUrl, filename) => {
-  console.log("🔧 handleCoverGeneration 调用", { 
-    hasCustomCover: customCoverSet.value, 
-    hasCover: !!publishForm.cover,
-    filename 
-  });
   if (customCoverSet.value && publishForm.cover) {
     console.log("🎨 用户已设置自定义封面，保存自定义封面到本地");
     await saveCustomCoverToLocal(publishForm.cover, filename);
@@ -581,23 +622,19 @@ const generateDefaultPoster = async (videoFile, videoUrl, filename) => {
         try {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          // 🔥 1. 设置前端显示的封面
-          const dataURL = canvas.toDataURL("image/jpeg", 0.8);
-          publishForm.cover = dataURL;
-          customCoverSet.value = false; // 标记为默认封面，不传后端
-          console.log("✅ 前端显示封面已设置");
-
-          // 🔥 2. 生成本地保存的封面文件
           canvas.toBlob(
             async (blob) => {
               if (blob) {
-                const posterFilename = filename.replace(/\.[^/.]+$/, "_cover.jpg");
+                const posterFilename = filename.replace(
+                  /\.[^/.]+$/,
+                  "_poster.png"
+                );
                 await saveToLocalCovers(blob, posterFilename);
-                console.log("✅ 本地封面保存完成:", posterFilename);
+                console.log("✅ 默认封面生成完成:", posterFilename);
               }
               resolve();
             },
-            "image/jpeg",
+            "image/png",
             0.8
           );
         } catch (error) {
@@ -623,7 +660,7 @@ const saveCustomCoverToLocal = async (frameData, videoFilename) => {
   try {
     const response = await fetch(frameData);
     const blob = await response.blob();
-    const posterFilename = videoFilename.replace(/\.[^/.]+$/, "_cover.png");
+    const posterFilename = videoFilename.replace(/\.[^/.]+$/, "_poster.png");
 
     await saveToLocalCovers(blob, posterFilename);
     console.log("✅ 自定义封面保存完成:", posterFilename);
@@ -699,9 +736,11 @@ const handleMaterialSelected = async (materials) => {
     selectedVideos.value.push(...newMaterials);
 
     // 🔥 如果是第一次添加视频且没有自定义封面，生成默认封面
-    if (selectedVideos.value.length === newMaterials.length) {
-      const filename = newMaterials[0].path.split("/").pop();
-      await handleCoverGeneration(null, newMaterials[0].url, filename);
+    if (
+      selectedVideos.value.length === newMaterials.length &&
+      !customCoverSet.value
+    ) {
+      await generateAndSetDefaultCover(newMaterials[0].url);
     }
 
     ElMessage.success(`已添加 ${newMaterials.length} 个视频`);
@@ -930,7 +969,7 @@ const publishContent = async (mode = "background") => {
             followersCount: account.followersCount,
             videosCount: account.videosCount,
           })),
-          thumbnail: customCoverSet.value ? publishForm.cover : "",
+          thumbnail: publishForm.cover,
           location: getLocationForPlatform(parseInt(platformType)),
           enableTimer: publishForm.scheduleEnabled ? 1 : 0,
           videosPerDay: 1,
