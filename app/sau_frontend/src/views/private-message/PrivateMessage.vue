@@ -185,7 +185,7 @@ onUnmounted(() => {
 });
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 $primary: #6366f1;
 $bg-primary: #ffffff;
 $bg-secondary: #f8fafc;
@@ -209,7 +209,7 @@ $radius-xl: 16px;
   bottom: 0;
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-:global(body.private-message-layout) .private-message {
+body.private-message-layout .private-message {
   left: var(--sidebar-width, 240px);
 }
 
