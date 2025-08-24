@@ -144,30 +144,6 @@
       </div>
     </div>
 
-    <!-- 底部状态栏 -->
-    <div v-if="filteredConversations.length > 0" class="status-bar">
-      <div class="status-info">
-        <span class="conversations-count"
-          >{{ filteredConversations.length }} 个会话</span
-        >
-        <span v-if="getTotalUnreadCount() > 0" class="total-unread">
-          {{ getTotalUnreadCount() }} 条未读
-        </span>
-      </div>
-
-      <!-- 加载更多按钮 -->
-      <div v-if="showLoadMore" class="load-more-section">
-        <el-button
-          text
-          @click="loadMoreConversations"
-          :loading="isLoadingMore"
-          class="load-more-btn"
-          size="small"
-        >
-          加载更多
-        </el-button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -267,9 +243,6 @@ const filteredConversations = computed(() => {
   });
 });
 
-const showLoadMore = computed(() => {
-  return false; // TODO: 实现分页逻辑
-});
 
 // 工具方法
 const getRecentConversationsCount = () => {
@@ -926,48 +899,6 @@ $space-xl: 20px;
   }
 }
 
-// 底部状态栏
-.status-bar {
-  padding: $space-md $space-lg;
-  background: $bg-primary;
-  border-top: 1px solid $border-lighter;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-
-  .status-info {
-    display: flex;
-    align-items: center;
-    gap: $space-md;
-    font-size: 12px;
-
-    .conversations-count {
-      color: $text-secondary;
-      font-weight: 500;
-    }
-
-    .total-unread {
-      color: $danger;
-      font-weight: 600;
-      background: rgba(239, 68, 68, 0.1);
-      padding: 2px 6px;
-      border-radius: $radius-sm;
-    }
-  }
-
-  .load-more-section {
-    .load-more-btn {
-      font-size: 12px;
-      color: $primary;
-      font-weight: 500;
-
-      &:hover {
-        background: $bg-hover;
-      }
-    }
-  }
-}
 
 // 旋转动画
 @keyframes rotate {
