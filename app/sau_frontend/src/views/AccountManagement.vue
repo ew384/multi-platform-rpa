@@ -799,8 +799,8 @@ const customGroups = computed(() => {
     (group) => !platformNames.includes(group.name)
   );
 
-  console.log("🔍 原始分组数据:", accountStore.groups);
-  console.log("✅ 过滤后的自定义分组:", filtered);
+  //console.log("🔍 原始分组数据:", accountStore.groups);
+  //console.log("✅ 过滤后的自定义分组:", filtered);
 
   return filtered;
 });

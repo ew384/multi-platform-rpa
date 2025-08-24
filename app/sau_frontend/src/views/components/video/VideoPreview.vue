@@ -139,7 +139,7 @@ const currentVideo = computed(() => {
     url: getCachedVideoUrl(video.path || video.name),
   };
 
-  console.log("✅ currentVideo 结果:", result);
+  //console.log("✅ currentVideo 结果:", result);
   return result;
 });
 
@@ -178,12 +178,6 @@ watch(currentVideo, async (newVideo, oldVideo) => {
 watch(
   () => props.videos,
   (newVideos, oldVideos) => {
-    console.log("📊 props.videos 变化:", {
-      newCount: newVideos?.length,
-      oldCount: oldVideos?.length,
-      timestamp: Date.now(),
-      newVideos: newVideos?.map((v) => v.name),
-    });
   },
   { immediate: true, deep: true }
 );
