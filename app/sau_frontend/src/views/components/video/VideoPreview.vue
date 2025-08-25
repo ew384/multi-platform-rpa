@@ -283,17 +283,25 @@ const handleVideoError = (event) => {
 
 const handleVideoClick = () => {
   if (props.clickable) {
-    emit("video-click", currentVideo.value);
+    // 🔥 修改：在 record 模式下，点击视频直接播放，不发射 video-click 事件
+    if (props.mode === 'record') {
+      handlePlayClick(); // 直接调用播放方法
+    } else {
+      emit("video-click", currentVideo.value); // 其他模式发射事件
+    }
   }
 };
 
 const handlePlayClick = () => {
-  if (props.mode === "preview" && videoElement.value) {
+  // 🔥 扩展：支持在 record 模式下的播放
+  if ((props.mode === "preview" || props.mode === "record") && videoElement.value) {
     if (isPlaying.value) {
       videoElement.value.pause();
       isPlaying.value = false;
     } else {
-      videoElement.value.play();
+      videoElement.value.play().catch(error => {
+        console.error("视频播放失败:", error);
+      });
       isPlaying.value = true;
     }
   }
@@ -374,56 +382,116 @@ $radius-lg: 12px;
 $space-sm: 8px;
 $space-md: 16px;
 
+// VideoPreview.vue 中完整的样式重构，去除重复和冲突
+
 .video-preview {
+  // 🔥 发布记录模式：紧凑的竖屏显示
   &.mode-record {
-    // 🔥 发布记录模式：使用竖屏比例
     .video-container {
-      width: 100%;           // 填满父容器
-      height: 100%;          // 填满父容器
+      width: 70px;           // 🔥 PublishRecord 中使用的紧凑尺寸
+      height: 125px;         // 🔥 70 * 16 / 9 ≈ 125px，保持 9:16 比例
       aspect-ratio: 9 / 16;  // 🔥 强制竖屏比例
       border: none;          // 🔥 移除边框
-      border-radius: 8px;    // 保持圆角
+      border-radius: 6px;    // 小圆角
       overflow: hidden;
+      background: transparent;
     }
 
     .video-player {
       width: 100%;
       height: 100%;
       aspect-ratio: 9 / 16;  // 🔥 强制竖屏比例
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
+      cursor: pointer;       // 🔥 可点击
       
       video {
         width: 100%;
         height: 100%;
         object-fit: cover;   // 🔥 填满并裁剪，确保不留黑边
-        border-radius: 8px;
+        border-radius: 6px;
+        border: none;        // 🔥 移除视频边框
+      }
+
+      // 🔥 播放覆盖层（适配小尺寸）
+      .play-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.3);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        cursor: pointer;
+
+        .play-button {
+          width: 24px;       // 🔥 更小尺寸适配紧凑设计
+          height: 24px;
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+
+          .play-icon {
+            color: $primary;
+            font-size: 12px;  // 🔥 更小图标
+            margin-left: 1px;
+          }
+        }
+
+        &:hover {
+          .play-button {
+            background: white;
+            transform: scale(1.1);
+          }
+        }
+      }
+
+      &:hover .play-overlay {
+        opacity: 1;
+      }
+
+      // 🔥 播放时隐藏播放按钮
+      &.playing .play-overlay {
+        opacity: 0;
       }
     }
   }
 
-  // 🔥 新增：针对 MaterialSelector 中的小尺寸优化
+  // 🔥 MaterialSelector 中的小尺寸特殊处理
   &.mode-record.size-small {
     .video-container {
-      width: 100%;
-      height: 100%;
-      aspect-ratio: 9 / 16;  // 🔥 确保竖屏
+      width: 100%;         // 🔥 在 MaterialSelector 中填满父容器
+      height: 100%;        // 🔥 填满父容器（父容器高度已在 MaterialSelector 中设置）
+      aspect-ratio: 9 / 16; // 🔥 确保竖屏
       border: none;
-      border-radius: 6px;    // 稍小的圆角适配小尺寸
+      border-radius: 0;    // 🔥 在网格中不需要圆角
+      background: transparent;
     }
 
     .video-player {
-      aspect-ratio: 9 / 16;  // 🔥 确保竖屏
-      border-radius: 6px;
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 9 / 16; // 🔥 确保竖屏
+      border-radius: 0;
       
       video {
-        object-fit: cover;   // 🔥 重要：填满容器
-        border-radius: 6px;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;  // 🔥 重要：填满容器
+        border-radius: 0;
+        border: none;
       }
     }
   }
 
-  // 其他模式保持不变
+  // 🔥 预览模式：手机模拟器效果
   &.mode-preview {
     display: flex;
     justify-content: center;
@@ -432,58 +500,41 @@ $space-md: 16px;
       width: 25%;
       max-width: 200px;
       min-width: 150px;
+      border-radius: $radius-lg;
+      border: 1px solid $border-light;
 
       .video-player {
-        aspect-ratio: 9 / 16;
+        aspect-ratio: 9 / 16; // 竖屏比例
       }
     }
   }
 
+  // 🔥 编辑器模式：横屏完整控制
   &.mode-editor {
     .video-container {
       width: 100%;
       max-width: 400px;
       margin: 0 auto;
-
-      .video-player {
-        aspect-ratio: 16 / 9; // 编辑器模式保持横屏
-      }
-    }
-  }
-
-  &.mode-editor {
-    // 编辑器模式：大尺寸，完整控制
-    .video-container {
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
+      border-radius: $radius-lg;
+      border: 1px solid $border-light;
 
       .video-player {
         aspect-ratio: 16 / 9; // 横屏比例
       }
     }
   }
-  &.size-small {
+
+  // 🔥 默认容器样式（只在非 record 模式应用）
+  &:not(.mode-record) {
     .video-container {
-      aspect-ratio: 9 / 16; // 强制竖屏比例
-    }
-
-    .video-player {
-      aspect-ratio: 9 / 16; // 强制竖屏比例
-      
-      video {
-        object-fit: cover; // 填满容器并裁剪多余部分
-      }
+      background: $bg-light;
+      border-radius: $radius-lg;
+      overflow: hidden;
+      border: 1px solid $border-light;
     }
   }
 
-  .video-container {
-    background: $bg-light;
-    border-radius: $radius-lg;
-    overflow: hidden;
-    border: 1px solid $border-light;
-  }
-
+  // 🔥 多视频切换标签
   .video-tabs {
     display: flex;
     background: $bg-gray;
@@ -516,6 +567,7 @@ $space-md: 16px;
     }
   }
 
+  // 🔥 默认视频播放器样式
   .video-player {
     position: relative;
     width: 100%;
@@ -529,10 +581,11 @@ $space-md: 16px;
     video {
       width: 100%;
       height: 100%;
-      object-fit: contain; // 保持视频原始比例
+      object-fit: contain; // 默认保持视频原始比例
       background: transparent;
     }
 
+    // 🔥 预览模式的播放覆盖层
     .play-overlay {
       position: absolute;
       top: 0;
@@ -576,6 +629,7 @@ $space-md: 16px;
       opacity: 1;
     }
 
+    // 🔥 加载和错误状态
     .video-loading,
     .video-error {
       position: absolute;
@@ -610,6 +664,7 @@ $space-md: 16px;
   }
 }
 
+// 🔥 旋转动画
 @keyframes rotate {
   from {
     transform: rotate(0deg);
@@ -619,7 +674,7 @@ $space-md: 16px;
   }
 }
 
-// 响应式设计
+// 🔥 响应式设计
 @media (max-width: 768px) {
   .video-preview {
     &.mode-preview .video-container {

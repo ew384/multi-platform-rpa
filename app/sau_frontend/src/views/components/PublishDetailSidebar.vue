@@ -164,6 +164,55 @@
             </template>
           </el-result>
         </div>
+        <!-- 🔥 新增：重新发布按钮区域 -->
+        <div v-if="recordDetail && recordDetail.status !== 'pending'" class="republish-section">
+          <div class="republish-card">
+            <div class="republish-header">
+              <div class="republish-stats">
+                <span class="stat-item">总数: {{ republishStats.total }}</span>
+                <span class="stat-item failed" v-if="republishStats.failed > 0">
+                  失败: {{ republishStats.failed }}
+                </span>
+              </div>
+              
+              <div class="republish-actions">
+                <el-dropdown 
+                  @command="handleRepublishCommand"
+                  :disabled="!republishStats.canRepublishAll"
+                >
+                  <el-button 
+                    type="primary" 
+                    size="small"
+                    :disabled="!republishStats.canRepublishAll"
+                    :loading="republishing"
+                  >
+                    {{ republishing ? '发布中...' : '重新发布' }}
+                    <el-icon><ArrowDown /></el-icon>
+                  </el-button>
+                  
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item 
+                        command="all" 
+                        :disabled="!republishStats.canRepublishAll"
+                      >
+                        <el-icon><Users /></el-icon>
+                        选择全部 ({{ republishStats.total }}个账号)
+                      </el-dropdown-item>
+                      <el-dropdown-item 
+                        command="failed" 
+                        :disabled="!republishStats.canRepublishFailed"
+                      >
+                        <el-icon><Warning /></el-icon>
+                        仅发布失败 ({{ republishStats.failed }}个账号)
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </div>
+          </div>
+        </div>        
       </div>
     </div>
   </div>
@@ -176,9 +225,12 @@ import {
   Loading, 
   Check, 
   Clock,
-  ArrowRight
+  ArrowRight,
+  ArrowDown,
+  Warning, 
+  InfoFilled
 } from '@element-plus/icons-vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage,ElMessageBox } from 'element-plus';
 import { publishApi } from '@/api/publish';
 
 const expandedAccounts = ref(new Set()); // 在响应式数据中添加
@@ -272,11 +324,69 @@ const updateRecordDetailSmartly = (newData) => {
     }
   });
 };
+// 现有的响应式数据...
+const republishing = ref(false);
+const republishStats = ref({
+  total: 0,
+  failed: 0, 
+  success: 0,
+  canRepublishAll: false,
+  canRepublishFailed: false
+});
+
+// 🔥 新增：重新发布命令处理
+const handleRepublishCommand = async (command) => {
+  try {
+    const mode = command; // 'all' 或 'failed'
+    const modeText = mode === 'all' ? '全部账号' : '失败账号';
+    const accountCount = mode === 'all' ? republishStats.value.total : republishStats.value.failed;
+    
+    // 确认对话框
+    await ElMessageBox.confirm(
+      `确定要重新发布到${modeText}吗？将会向${accountCount}个账号重新发布相同的视频和设置。`,
+      `重新发布确认`,
+      {
+        confirmButtonText: '确定发布',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    );
+
+    republishing.value = true;
+
+    // 调用重新发布API
+    const response = await publishApi.republishVideo({
+      recordId: props.recordId,
+      mode: mode
+    });
+
+    if (response.code === 200) {
+      ElMessage.success(`重新发布任务已提交，共${accountCount}个账号`);
+      
+      // 刷新当前记录详情
+      setTimeout(() => {
+        loadRecordDetail();
+      }, 1500);
+      
+    } else {
+      ElMessage.error(response.msg || '重新发布失败');
+    }
+
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('重新发布失败:', error);
+      ElMessage.error('重新发布失败');
+    }
+  } finally {
+    republishing.value = false;
+  }
+};
+// 🔥 修改：加载记录详情时同时获取重新发布统计
 const loadRecordDetail = async () => {
   if (!props.recordId) return;
 
   try {
-    // 🔥 如果是首次加载，显示loading
     if (!recordDetail.value) {
       loading.value = true;
     }
@@ -286,14 +396,27 @@ const loadRecordDetail = async () => {
     const data = await publishApi.getPublishRecordDetail(props.recordId);
 
     if (data.code === 200) {
-      // 🔥 直接设置详情数据（已包含实时进度）
       recordDetail.value = data.data;
       
-      // 🔥 关键：根据状态决定是否需要SSE
+      // 🔥 计算重新发布统计
+      if (data.data.account_statuses) {
+        const total = data.data.account_statuses.length;
+        const failed = data.data.account_statuses.filter(s => s.status === 'failed').length;
+        const success = data.data.account_statuses.filter(s => s.status === 'success').length;
+        
+        republishStats.value = {
+          total,
+          failed,
+          success,
+          canRepublishAll: total > 0,
+          canRepublishFailed: failed > 0
+        };
+      }
+
+      // SSE连接逻辑保持不变...
       if (data.data.status === 'pending') {
         connectToProgressSSE();
       } else {
-        // 完成的任务不需要SSE
         disconnectSSE();
       }
     } else {
@@ -309,7 +432,6 @@ const loadRecordDetail = async () => {
     loading.value = false;
   }
 };
-
 // 🔥 新增：建立SSE连接
 const connectToProgressSSE = () => {
   // 先断开现有连接
@@ -914,7 +1036,38 @@ $space-xl: 32px;
     }
   }
 }
-
+.republish-section {
+  margin-top: 16px;
+  
+  .republish-card {
+    background: $bg-white;
+    border-radius: $radius-lg;
+    padding: 16px;
+    border: none; // 🔥 去掉边框
+    
+    .republish-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      
+      .republish-stats {
+        display: flex;
+        gap: 8px;
+        
+        .stat-item {
+          font-size: 12px;
+          color: $text-secondary;
+          
+          &.failed {
+            color: $danger;
+            font-weight: 500;
+          }
+        }
+      }
+    }
+  }
+}
 @keyframes rotate {
   from {
     transform: rotate(0deg);

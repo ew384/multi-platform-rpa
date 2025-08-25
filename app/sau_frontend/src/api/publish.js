@@ -41,5 +41,23 @@ export const publishApi = {
   // 获取最近上传的视频文件
   getRecentUploads() {
     return http.get('/getRecentUploads')
+  },
+    // 🔥 新增：获取重新发布配置
+  getRepublishConfig(recordId, mode = 'all') {
+    return http.get('/getRepublishConfig', { 
+      params: { id: recordId, mode } 
+    })
+  },
+
+  // 🔥 新增：重新发布视频
+  republishVideo(data) {
+    return http.post('/republishVideo', data)
+  },
+
+  // 🔥 新增：获取重新发布统计（可选，前端也可以基于详情数据计算）
+  getRepublishStats(recordId) {
+    return http.get('/getRepublishStats', { 
+      params: { id: recordId } 
+    })
   }
 }

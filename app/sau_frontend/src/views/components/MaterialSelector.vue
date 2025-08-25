@@ -55,18 +55,11 @@
                         :videos="[formatVideoForPreview(video, 'recent')]"
                         mode="record"
                         size="small"
-                        :clickable="false"
+                        :clickable="true"
+                        @video-click="handleRecentVideoDirectPlay"
                       />
-                      <div class="play-overlay">
-                        <el-button 
-                          circle 
-                          type="primary" 
-                          size="small"
-                          @click.stop="showVideoDialog(formatVideoForPreview(video, 'recent'))"
-                        >
-                          <el-icon><VideoPlay /></el-icon>
-                        </el-button>
-                      </div>
+                      <!-- 🔥 移除播放按钮覆盖层，直接使用 VideoPreview 的内置播放功能 -->
+                      
                       <!-- 选中标记 -->
                       <div
                         v-if="selectedRecentIds.includes(video.id)"
@@ -85,9 +78,7 @@
                       </div>
                       <div class="video-meta">
                         <span class="video-size">{{ video.filesize }} MB</span>
-                        <span class="video-date">{{
-                          formatDate(video.upload_time)
-                        }}</span>
+                        <span class="video-date">{{ formatDate(video.upload_time) }}</span>
                       </div>
                     </div>
                   </div>
@@ -453,7 +444,14 @@ const isVideoFile = (filename) => {
   ];
   return videoExtensions.some((ext) => filename.toLowerCase().endsWith(ext));
 };
-
+const handleRecentVideoDirectPlay = (videoData) => {
+  console.log("🎬 最近视频直接播放:", videoData.name);
+  // 阻止事件冒泡，防止触发选择逻辑
+  event?.stopPropagation?.();
+  
+  // 直接播放视频，不弹出对话框
+  // VideoPreview 组件内部会处理播放逻辑
+};
 const toggleRecentSelection = (videoId) => {
   const index = selectedRecentIds.value.indexOf(videoId);
   if (index > -1) {

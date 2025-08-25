@@ -192,7 +192,7 @@
               class="publish-form"
             >
               <!-- 标题 -->
-              <el-form-item label="标题" required>
+              <el-form-item label="标题">
                 <el-input
                   v-model="publishForm.title"
                   placeholder="请输入发布标题"
