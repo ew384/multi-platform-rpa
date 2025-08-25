@@ -30,7 +30,9 @@ export const accountApi = {
   updateAccountGroup(data) {
     return http.post('/updateAccountGroup', data)
   },
-
+  validateAccount(data) {
+    return http.post('/validateAccount', data)
+  },
   addAccount(data) {
     return http.post('/account', data)
   },

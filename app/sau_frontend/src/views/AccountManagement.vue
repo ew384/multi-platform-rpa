@@ -137,6 +137,8 @@
                 v-for="account in filteredAccounts"
                 :key="account.id"
                 class="account-card"
+                :class="{ 'clickable': account.status === '正常' }"
+                @click="handleAccountCardClick(account)"
               >
                 <!-- 账号信息 -->
                 <div class="account-info">
@@ -471,10 +473,10 @@
           <div class="qrcode-container">
             <div class="qrcode-header">
               <el-icon><Iphone /></el-icon>
-              <span>扫码登录</span>
+              <span>请使用{{ accountForm.platform }}APP扫描二维码登录</span>
             </div>
             <p class="qrcode-tip">
-              请使用{{ accountForm.platform }}APP扫描二维码登录
+              扫码后请稍等，请勿关闭此窗口
             </p>
 
             <!-- 🔥 二维码展示框 - 固定大小的容器 -->
@@ -917,7 +919,44 @@ const getPlatformLogo = (platform) => {
 const handleSearch = () => {
   // 搜索逻辑已通过计算属性实现
 };
+// 在现有的方法后添加
+const handleAccountCardClick = async (account) => {
+  // 只有正常状态的账号才能点击
+  if (account.status !== '正常') {
+    return;
+  }
 
+  try {
+    console.log('🔍 手动验证账号:', account.userName);
+    
+    // 显示加载提示
+    const loadingMessage = ElMessage({
+      type: 'info',
+      message: `正在打开 ${account.userName} 的页面...`,
+      duration: 2000
+    });
+
+    // 调用验证API，设置为可见且不自动关闭
+    const response = await accountApi.validateAccount({
+      accountId: Number(account.id),
+      headless: false,  // 可见
+      tabClose: false   // 不自动关闭
+    });
+
+    if (response.code === 200) {
+      // 如果验证结果发生变化，刷新账号列表
+      if ((response.data.isValid && account.status === '异常') || 
+          (!response.data.isValid && account.status === '正常')) {
+        await accountStore.smartRefresh();
+      }
+    } else {
+      console.log(response.msg);
+    }
+  } catch (error) {
+    console.error('验证账号失败:', error);
+    //ElMessage.error('验证账号失败');
+  }
+};
 const handleAddAccount = () => {
   dialogType.value = "add";
   dialogStep.value = 1; // 重置到第一步
@@ -2195,6 +2234,15 @@ $space-2xl: 48px;
     &:hover .account-actions {
       opacity: 1;
       transform: translateY(0);
+    }
+    &.clickable {
+      cursor: pointer;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: $shadow-lg;
+        border: 1px solid $primary;
+      }
     }
   }
 
