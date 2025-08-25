@@ -955,23 +955,25 @@ $radius-xl: 16px;
         }
       }
     }
-
     .records-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); // 🔥 减小最小宽度
+      gap: 8px; // 🔥 减小网格间距，从 14px 改为 8px
+      
       @media (max-width: 1200px) {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); // 🔥 进一步减小
       }
 
       @media (max-width: 768px) {
         grid-template-columns: 1fr;
+        gap: 6px; // 🔥 移动端更紧凑
       }
+
       .record-card {
         background: $bg-white;
         border: 1px solid $border-light;
-        border-radius: $radius-lg;
-        padding: 10px; // 减少内边距
+        border-radius: $radius-md; // 🔥 减小圆角
+        padding: 6px; // 🔥 大幅减少内边距，从 10px 改为 6px
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
         height: fit-content;
@@ -982,245 +984,176 @@ $radius-xl: 16px;
           transform: translateY(-1px);
         }
 
-        &.batch-delete-mode {
-          padding-left: 60px;
-
-          .batch-checkbox {
-            position: absolute;
-            left: 24px;
-            top: 50%;
-            transform: translateY(-50%);
-          }
-
-          &.selected {
-            border-color: #ef4444;
-            background: rgba(239, 68, 68, 0.02);
-          }
-        }
-
         .record-content {
           display: flex;
-          gap: 12px;
+          gap: 8px; // 🔥 减小间距，从 12px 改为 8px
           align-items: flex-start;
         }
 
+        // 🔥 紧凑的视频预览区域
         .video-preview {
-          width: 80px;
-          height: 100px;
-          border-radius: $radius-md;
+          width: 70px;        // 🔥 进一步缩小宽度，从 90px 改为 70px
+          height: 125px;      // 🔥 对应调整高度 (70 * 16 / 9 ≈ 125)
+          border-radius: $radius-sm;
           flex-shrink: 0;
           overflow: hidden;
-          display: flex; // 添加 flex 布局
-          align-items: center; // 垂直居中
-          justify-content: center; // 水平居中
-          background: #f8fafc; // 添加背景色
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent; // 🔥 移除背景色
 
-          // 确保 VideoPreview 组件在容器中居中
+          // 🔥 移除外框线，确保视频填满
           :deep(.video-preview) {
-            display: flex;
-            align-items: center;
-            justify-content: center;
             width: 100%;
             height: 100%;
-          }
+            border: none; // 🔥 移除边框
+            border-radius: $radius-sm;
+            
+            .video-container {
+              width: 100%;
+              height: 100%;
+              border: none; // 🔥 移除边框
+              border-radius: $radius-sm;
+            }
 
-          // 确保视频容器也居中
-          :deep(.video-container) {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
-          }
-
-          .video-icon {
-            font-size: 20px;
-            margin-bottom: 4px;
-          }
-
-          .video-count {
-            font-size: 11px;
-            font-weight: 500;
-            opacity: 0.9;
+            .video-player {
+              border: none; // 🔥 移除边框
+              border-radius: $radius-sm;
+              
+              video {
+                border: none; // 🔥 移除边框
+                border-radius: $radius-sm;
+              }
+            }
           }
         }
 
         .record-info {
           flex: 1;
-          min-width: 0; // 防止内容溢出
+          min-width: 0;
 
           .record-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 8px; // 🔥 减少间距 从12px改为8px
-            gap: 8px; // 🔥 新增间距
+            margin-bottom: 4px; // 🔥 进一步减少间距，从 8px 改为 4px
+            gap: 6px; // 🔥 减小间距
 
             .record-title {
-              font-size: 15px;
+              font-size: 14px; // 🔥 稍微减小字体，从 15px 改为 14px
               font-weight: 600;
               color: $text-primary;
               margin: 0;
-              line-height: 1.3;
+              line-height: 1.2; // 🔥 减小行高
               flex: 1;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
-              min-width: 0; // 🔥 允许标题收缩
+              min-width: 0;
             }
+          }
+
+          .header-actions {
+            display: flex;
+            align-items: flex-start;
+            gap: 3px; // 🔥 减小间距，从 4px 改为 3px
+            margin-left: auto;
+            flex-shrink: 0;
 
             :deep(.el-tag) {
               border-radius: $radius-sm;
               font-weight: 500;
               border: none;
-            }
-          }
-          .header-actions {
-            display: flex;
-            align-items: flex-start;
-            gap: 4px;
-            margin-left: auto; // 🔥 自动推到最右边
-            flex-shrink: 0; // 🔥 防止收缩
-            :deep(.el-tag) {
-              border-radius: $radius-sm;
-              font-weight: 500;
-              border: none;
-              font-size: 10px; // 🔥 进一步减小字体
-              padding: 1px 4px; // 🔥 减少内边距
-              max-width: 70px; // 🔥 减少最大宽度
+              font-size: 9px; // 🔥 进一步减小字体，从 10px 改为 9px
+              padding: 1px 3px; // 🔥 减少内边距
+              max-width: 60px; // 🔥 减少最大宽度
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
             }
 
-            .action-dropdown {
-              .more-btn {
-                width: 20px;
-                height: 20px;
-                padding: 0;
-                color: $text-muted;
-                transition: all 0.2s ease;
+            .action-dropdown .more-btn {
+              width: 18px; // 🔥 减小尺寸，从 20px 改为 18px
+              height: 18px;
+              padding: 0;
+              color: $text-muted;
 
-                &:hover {
-                  color: $primary;
-                  background: rgba(99, 102, 241, 0.1);
-                }
-
-                .el-icon {
-                  font-size: 14px;
-                }
-              }
-
-              // 🔥 新增：删除按钮样式
-              :deep(.el-dropdown-menu) {
-                .delete-item {
-                  color: #ef4444; // 红色文字
-                  transition: all 0.2s ease;
-
-                  &:hover {
-                    background-color: rgba(239, 68, 68, 0.1); // 红色背景
-                    color: #dc2626; // 更深的红色
-                  }
-
-                  .el-icon {
-                    color: inherit;
-                  }
-                }
+              .el-icon {
+                font-size: 12px; // 🔥 减小图标，从 14px 改为 12px
               }
             }
           }
-          
+
           .record-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 16px; // 🔥 减少间距 从20px改为16px
-            margin-bottom: 8px; // 🔥 减少间距 从12px改为8px
+            gap: 12px; // 🔥 减少间距，从 16px 改为 12px
+            margin-bottom: 4px; // 🔥 减少间距，从 8px 改为 4px
 
-            .meta-item {
-              &.platforms {
-                .platform-logos {
-                  display: flex;
-                  gap: 3px; // 🔥 减少间距 从4px改为3px
-                  align-items: center;
+            .meta-item.platforms .platform-logos {
+              display: flex;
+              gap: 2px; // 🔥 进一步减少间距，从 3px 改为 2px
+              align-items: center;
 
-                  .platform-logo-item {
-                    width: 16px; // 🔥 减少尺寸 从18px改为16px
-                    height: 16px;
-                    border-radius: 50%;
-                    background: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-                    border: 1px solid $border-light;
+              .platform-logo-item {
+                width: 14px; // 🔥 减小尺寸，从 16px 改为 14px
+                height: 14px;
+                border-radius: 50%;
+                background: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                border: 1px solid $border-light;
 
-                    img {
-                      width: 14px; // 🔥 减少尺寸 从16px改为14px
-                      height: 14px;
-                      border-radius: 50%;
-                      object-fit: cover;
-                    }
+                img {
+                  width: 12px; // 🔥 减小尺寸，从 14px 改为 12px
+                  height: 12px;
+                  border-radius: 50%;
+                  object-fit: cover;
+                }
 
-                    .platform-text {
-                      font-size: 9px; // 🔥 减少字体 从10px改为9px
-                      font-weight: 600;
-                      color: $text-primary;
-                      line-height: 1;
-                    }
-
-                    &:hover {
-                      transform: scale(1.1);
-                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-                    }
-                  }
+                .platform-text {
+                  font-size: 8px; // 🔥 减小字体，从 9px 改为 8px
+                  font-weight: 600;
+                  color: $text-primary;
+                  line-height: 1;
                 }
               }
             }
           }
+
           .record-footer {
             .time-info {
               display: flex;
-              flex-direction: column; // 🔥 改为垂直布局
-              gap: 2px; // 🔥 添加间距
-              font-size: 12px; // 🔥 减少字体 从13px改为12px
+              flex-direction: column;
+              gap: 1px; // 🔥 减小间距，从 2px 改为 1px
+              font-size: 11px; // 🔥 减小字体，从 12px 改为 11px
               color: $text-muted;
 
-              .publish-time {
-                display: flex;
-                align-items: center;
-                gap: 4px; // 🔥 减少间距 从6px改为4px
-                .time-label {
-                  font-weight: 500;
-                  color: $text-secondary;
-                }
-                .time-value {
-                  font-weight: 600;
-                  color: $text-primary;
-                }
-              }
-              .scheduled-time { // 🔥 新增定时发布样式
-                display: flex;
-                align-items: center;
-                gap: 4px;
-
-                .time-label {
-                  font-weight: 500;
-                  color: $text-secondary;
-                }
-
-                .time-value {
-                  font-weight: 600;
-                  color: $text-primary;
-                }
-              }
+              .publish-time,
               .scheduled-time {
+                display: flex;
+                align-items: center;
+                gap: 3px; // 🔥 减小间距，从 4px 改为 3px
+
                 .time-label {
-                  color: $primary; // 🔥 定时发布用主色调
+                  font-weight: 500;
+                  color: $text-secondary;
                 }
+
+                .time-value {
+                  font-weight: 600;
+                  color: $text-primary;
+                }
+              }
+
+              .scheduled-time {
+                .time-label,
                 .time-value {
                   color: $primary;
                 }
-              }  
+              }
             }
           }
         }

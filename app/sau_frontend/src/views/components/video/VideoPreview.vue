@@ -376,20 +376,55 @@ $space-md: 16px;
 
 .video-preview {
   &.mode-record {
-    // 发布记录模式：小尺寸，紧凑显示
+    // 🔥 发布记录模式：使用竖屏比例
     .video-container {
-      width: 80px; // 减小宽度
-      height: 100px; // 对应 9:16 比例
-      aspect-ratio: 9 / 16; // 手机竖屏比例
+      width: 100%;           // 填满父容器
+      height: 100%;          // 填满父容器
+      aspect-ratio: 9 / 16;  // 🔥 强制竖屏比例
+      border: none;          // 🔥 移除边框
+      border-radius: 8px;    // 保持圆角
+      overflow: hidden;
     }
 
     .video-player {
-      aspect-ratio: 9 / 16; // 确保视频播放器也使用竖屏比例
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 9 / 16;  // 🔥 强制竖屏比例
+      border-radius: 8px;
+      overflow: hidden;
+      
+      video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;   // 🔥 填满并裁剪，确保不留黑边
+        border-radius: 8px;
+      }
     }
   }
 
+  // 🔥 新增：针对 MaterialSelector 中的小尺寸优化
+  &.mode-record.size-small {
+    .video-container {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 9 / 16;  // 🔥 确保竖屏
+      border: none;
+      border-radius: 6px;    // 稍小的圆角适配小尺寸
+    }
+
+    .video-player {
+      aspect-ratio: 9 / 16;  // 🔥 确保竖屏
+      border-radius: 6px;
+      
+      video {
+        object-fit: cover;   // 🔥 重要：填满容器
+        border-radius: 6px;
+      }
+    }
+  }
+
+  // 其他模式保持不变
   &.mode-preview {
-    // 预览模式：手机模拟器效果，25% 宽度居中
     display: flex;
     justify-content: center;
 
@@ -399,7 +434,19 @@ $space-md: 16px;
       min-width: 150px;
 
       .video-player {
-        aspect-ratio: 9 / 16; // 手机竖屏比例
+        aspect-ratio: 9 / 16;
+      }
+    }
+  }
+
+  &.mode-editor {
+    .video-container {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+
+      .video-player {
+        aspect-ratio: 16 / 9; // 编辑器模式保持横屏
       }
     }
   }
