@@ -203,6 +203,10 @@
                     <span class="time-label">{{ getPublishTimeLabel(record) }}:</span>
                     <span class="time-value">{{ getPublishTimeValue(record) }}</span>
                   </div>
+                  <div v-if="record.scheduled_time" class="scheduled-time">
+                    <span class="time-label">定时发布:</span>
+                    <span class="time-value">{{ formatTime(record.scheduled_time) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -384,7 +388,7 @@ async function formatVideosForPreview(videoFiles) {
     });
   }
 
-  console.log("📹 格式化视频预览数据（本地路径优先）:", result);
+  //console.log("📹 格式化视频预览数据（本地路径优先）:", result);
   return result;
 }
 // 计算属性
@@ -560,6 +564,7 @@ const formatTime = (timeString) => {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Shanghai"
   });
 };
 
@@ -1175,7 +1180,8 @@ $radius-xl: 16px;
           .record-footer {
             .time-info {
               display: flex;
-              align-items: center;
+              flex-direction: column; // 🔥 改为垂直布局
+              gap: 2px; // 🔥 添加间距
               font-size: 12px; // 🔥 减少字体 从13px改为12px
               color: $text-muted;
 
@@ -1183,6 +1189,19 @@ $radius-xl: 16px;
                 display: flex;
                 align-items: center;
                 gap: 4px; // 🔥 减少间距 从6px改为4px
+                .time-label {
+                  font-weight: 500;
+                  color: $text-secondary;
+                }
+                .time-value {
+                  font-weight: 600;
+                  color: $text-primary;
+                }
+              }
+              .scheduled-time { // 🔥 新增定时发布样式
+                display: flex;
+                align-items: center;
+                gap: 4px;
 
                 .time-label {
                   font-weight: 500;
@@ -1194,6 +1213,14 @@ $radius-xl: 16px;
                   color: $text-primary;
                 }
               }
+              .scheduled-time {
+                .time-label {
+                  color: $primary; // 🔥 定时发布用主色调
+                }
+                .time-value {
+                  color: $primary;
+                }
+              }  
             }
           }
         }

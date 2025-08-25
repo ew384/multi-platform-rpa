@@ -124,13 +124,6 @@ const isPlaying = ref(false);
 // 计算属性
 const currentVideo = computed(() => {
   const video = props.videos[currentVideoIndex.value] || null;
-  console.log("🔍 currentVideo 计算:", {
-    hasVideo: !!video,
-    videoName: video?.name,
-    videoUrl: video?.url,
-    index: currentVideoIndex.value,
-    totalVideos: props.videos.length,
-  });
   if (!video) return null;
 
   // 🔥 使用缓存的URL
@@ -385,8 +378,13 @@ $space-md: 16px;
   &.mode-record {
     // 发布记录模式：小尺寸，紧凑显示
     .video-container {
-      width: 90px;
-      height: 120px;
+      width: 80px; // 减小宽度
+      height: 100px; // 对应 9:16 比例
+      aspect-ratio: 9 / 16; // 手机竖屏比例
+    }
+
+    .video-player {
+      aspect-ratio: 9 / 16; // 确保视频播放器也使用竖屏比例
     }
   }
 
@@ -415,6 +413,19 @@ $space-md: 16px;
 
       .video-player {
         aspect-ratio: 16 / 9; // 横屏比例
+      }
+    }
+  }
+  &.size-small {
+    .video-container {
+      aspect-ratio: 9 / 16; // 强制竖屏比例
+    }
+
+    .video-player {
+      aspect-ratio: 9 / 16; // 强制竖屏比例
+      
+      video {
+        object-fit: cover; // 填满容器并裁剪多余部分
       }
     }
   }

@@ -378,16 +378,15 @@ const loadAllVideoSources = async () => {
     await nextTick();
 
     if (recentResponse.code === 200) {
-      recentVideos.value = [...(recentResponse.data || [])];
-      console.log(
-        "✅ MaterialSelector 最近上传的视频:",
-        recentVideos.value.length
-      );
+      // 🔥 限制最近上传的视频只显示最新的4个
+      const recentData = (recentResponse.data || [])
+        .sort((a, b) => new Date(b.upload_time) - new Date(a.upload_time)) // 按时间倒序排列
+        .slice(0, 4); // 只取前4个
+      
+      recentVideos.value = [...recentData];
+      //console.log("✅ MaterialSelector 最近上传的视频:", recentVideos.value.length);
     } else {
-      console.error(
-        "❌ MaterialSelector 获取最近上传视频失败:",
-        recentResponse.msg
-      );
+      //console.error("❌ MaterialSelector 获取最近上传视频失败:", recentResponse.msg);
       recentVideos.value = [];
     }
 
@@ -675,7 +674,7 @@ $space-xl: 32px;
         .videos-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: $space-md;
+          gap: $space-sm;
           max-height: 400px;
           overflow-y: auto;
 
@@ -702,7 +701,7 @@ $space-xl: 32px;
             }
 
             .video-preview {
-              height: 120px;
+              height: 80px;
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               display: flex;
               align-items: center;
@@ -710,7 +709,7 @@ $space-xl: 32px;
               position: relative;
               overflow: hidden; // 确保内容不会溢出
 
-              // 确保 VideoPreview 组件填满容器
+              // 🔥 确保视频使用竖屏比例 9:16
               :deep(.video-preview) {
                 width: 100%;
                 height: 100%;
@@ -723,21 +722,23 @@ $space-xl: 32px;
                   border: none;
                   border-radius: 0;
                   background: transparent;
+                  aspect-ratio: 16 / 9; // 🔥 手机竖屏比例
                 }
 
                 .video-player {
                   width: 100%;
                   height: 100%;
                   border-radius: 0;
+                  aspect-ratio: 16 / 9; // 🔥 手机竖屏比例
 
                   video {
                     width: 100%;
                     height: 100%;
-                    object-fit: cover; // 使用 cover 确保填满容器，保持等比例
+                    object-fit: cover; // 填满容器，保持等比例
                   }
                 }
               }
-              // 新增：播放按钮覆盖层
+
               .play-overlay {
                 position: absolute;
                 top: 50%;
@@ -751,41 +752,47 @@ $space-xl: 32px;
                   background: rgba(0, 0, 0, 0.7);
                   border: none;
                   color: white;
+                  width: 32px; // 🔥 减小按钮尺寸
+                  height: 32px;
                   
                   &:hover {
                     background: rgba(0, 0, 0, 0.8);
                   }
+
+                  .el-icon {
+                    font-size: 14px; // 🔥 减小图标尺寸
+                  }
                 }
               }
-              // 悬浮时显示播放按钮
+
               &:hover .play-overlay {
                 opacity: 1;
               }
 
               .selected-mark {
                 position: absolute;
-                top: 8px;
-                right: 8px;
-                width: 24px;
-                height: 24px;
+                top: 6px; // 🔥 调整位置
+                right: 6px;
+                width: 20px; // 🔥 减小尺寸
+                height: 20px;
                 background-color: $primary;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 color: white;
-                font-size: 14px;
+                font-size: 12px; // 🔥 减小字体
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
                 z-index: 10;
               }
 
               .source-badge {
                 position: absolute;
-                top: 8px;
-                left: 8px;
-                padding: 2px 8px;
+                top: 6px; // 🔥 调整位置
+                left: 6px;
+                padding: 1px 6px; // 🔥 减小内边距
                 border-radius: 4px;
-                font-size: 11px;
+                font-size: 10px; // 🔥 减小字体
                 font-weight: 500;
                 color: white;
                 z-index: 10;
@@ -801,22 +808,22 @@ $space-xl: 32px;
             }
 
             .video-info {
-              padding: $space-md;
+              padding: $space-sm; // 🔥 减小内边距
 
               .video-name {
                 font-weight: 500;
                 color: $text-primary;
-                margin-bottom: $space-xs;
+                margin-bottom: 4px; // 🔥 减小间距
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
-                font-size: 14px;
+                font-size: 13px; // 🔥 减小字体
               }
 
               .video-meta {
                 display: flex;
                 justify-content: space-between;
-                font-size: 12px;
+                font-size: 11px; // 🔥 减小字体
                 color: $text-secondary;
 
                 .video-size {
@@ -826,7 +833,14 @@ $space-xl: 32px;
             }
           }
         }
-
+        // 🔥 针对最近上传标签页的特殊样式
+        .el-tab-pane[aria-labelledby="tab-recent"] {
+          .videos-grid {
+            // 最近上传只显示4个，可以使用更大的网格
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); // 稍大一些，因为只有4个
+            max-height: 200px; // 减小最大高度
+          }
+        }
         .empty-videos {
           padding: $space-xl;
           text-align: center;
