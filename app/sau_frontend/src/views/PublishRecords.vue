@@ -599,9 +599,9 @@ const handleCurrentChange = (newPage) => {
 // 获取发布时间标签
 const getPublishTimeLabel = (record) => {
   // 如果有定时发布时间，显示"定时发布"
-  if (record.scheduled_time) {
-    return "定时发布";
-  }
+  //if (record.scheduled_time) {
+  //  return "定时发布";
+  //}
   // 否则显示"发布时间"
   return "发布时间";
 };
@@ -609,9 +609,9 @@ const getPublishTimeLabel = (record) => {
 // 获取发布时间值
 const getPublishTimeValue = (record) => {
   // 优先显示定时发布时间
-  if (record.scheduled_time) {
-    return formatTime(record.scheduled_time);
-  }
+  //if (record.scheduled_time) {
+  //  return formatTime(record.scheduled_time);
+  //}
   // 否则显示创建时间
   return formatTime(record.created_at);
 };
