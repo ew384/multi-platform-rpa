@@ -233,6 +233,7 @@
       v-model:visible="detailSidebarVisible"
       :record-id="selectedRecordId"
       @close="detailSidebarVisible = false"
+      @switch-to-record="handleSwitchToRecord"
     />
 
     <!-- 新增发布对话框 -->
@@ -529,7 +530,24 @@ const showRecordDetail = (record) => {
 const showNewPublishDialog = () => {
   newPublishDialogVisible.value = true;
 };
-
+// 🔥 新增：处理切换到新记录的方法
+const handleSwitchToRecord = async (newRecordId) => {
+  console.log(`🔄 切换到新发布记录详情: ${newRecordId}`);
+  
+  // 先关闭当前侧边栏
+  detailSidebarVisible.value = false;
+  
+  // 短暂延迟后切换到新记录并重新打开侧边栏
+  setTimeout(() => {
+    selectedRecordId.value = newRecordId;
+    detailSidebarVisible.value = true;
+  }, 300);
+  
+  // 刷新记录列表
+  setTimeout(async () => {
+    await loadRecords();
+  }, 1000);
+};
 const handlePublishSuccess = (publishData) => {
   newPublishDialogVisible.value = false;
   // 延迟加载记录，确保后端任务已创建

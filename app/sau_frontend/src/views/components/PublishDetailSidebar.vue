@@ -334,6 +334,7 @@ const republishStats = ref({
   canRepublishFailed: false
 });
 
+
 // 🔥 新增：重新发布命令处理
 const handleRepublishCommand = async (command) => {
   try {
@@ -364,10 +365,18 @@ const handleRepublishCommand = async (command) => {
     if (response.code === 200) {
       ElMessage.success(`重新发布任务已提交，共${accountCount}个账号`);
       
-      // 刷新当前记录详情
-      setTimeout(() => {
-        loadRecordDetail();
-      }, 1500);
+      // 🔥 立即关闭当前侧边栏
+      emit('close');
+      
+      // 🔥 通知父组件切换到新记录并打开侧边栏
+      if (response.data?.recordId) {
+        console.log(`🔄 切换到新发布记录: ${response.data.recordId}`);
+        
+        // 延迟一下确保界面更新
+        setTimeout(() => {
+          emit('switch-to-record', response.data.recordId);
+        }, 500);
+      }
       
     } else {
       ElMessage.error(response.msg || '重新发布失败');
