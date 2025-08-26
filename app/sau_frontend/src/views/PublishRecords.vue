@@ -205,7 +205,7 @@
                   </div>
                   <div v-if="record.scheduled_time" class="scheduled-time">
                     <span class="time-label">定时发布:</span>
-                    <span class="time-value">{{ formatTime(record.scheduled_time) }}</span>
+                    <span class="time-value">{{ formatTime(record.scheduled_time, true) }}</span>
                   </div>
                 </div>
               </div>
@@ -573,17 +573,32 @@ const getStatusType = (status) => {
   return typeMap[status] || "info";
 };
 
-const formatTime = (timeString) => {
+const formatTime = (timeString, isScheduledTime = false) => {
   if (!timeString) return "-";
+  
   const date = new Date(timeString);
-  return date.toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Shanghai"
-  });
+  
+  if (isScheduledTime) {
+    // 🔥 定时发布时间：用户输入的就是中国时间，直接显示
+    return date.toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit", 
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Shanghai"
+    });
+  } else {
+    // 🔥 系统创建时间：UTC时间需要转换为中国时间显示
+    const chinaTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+    return chinaTime.toLocaleString("zh-CN", {
+      year: "numeric", 
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
 };
 
 const handleSizeChange = (newSize) => {
@@ -613,7 +628,7 @@ const getPublishTimeValue = (record) => {
   //  return formatTime(record.scheduled_time);
   //}
   // 否则显示创建时间
-  return formatTime(record.created_at);
+  return formatTime(record.created_at,false);
 };
 // 获取发布记录涉及的平台列表
 const getRecordPlatforms = (record) => {
