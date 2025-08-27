@@ -545,6 +545,7 @@ const generateAndSetDefaultCover = async (videoUrl) => {
     const defaultCover = await generateDefaultCoverDataURL(videoUrl);
     if (defaultCover) {
       publishForm.cover = defaultCover;
+      await saveCoverToLocal(defaultCover);
       console.log("✅ 默认封面已设置");
     }
   } catch (error) {
@@ -787,7 +788,42 @@ const handleCoverChanged = (coverUrl) => {
     customCoverSet.value = true;
   }
 };
+// 🔥 新增：保存封面到本地的方法
+const saveCoverToLocal = async (frameData) => {
+  // 获取当前选中的第一个视频文件名
+  const videoFileName = getCurrentVideoFileName();
+  
+  if (!videoFileName) {
+    console.warn('⚠️ 无法获取视频文件名，跳过封面保存');
+    return;
+  }
 
+  try {
+    console.log(`📸 保存封面到本地: ${videoFileName}`);
+    
+    const { materialApi } = await import('@/api/material');
+    const result = await materialApi.saveCoverScreenshot(frameData, videoFileName);
+    
+    if (result.code === 200) {
+      console.log(`✅ 封面保存成功: ${result.data.coverPath}`);
+    } else {
+      console.warn(`⚠️ 封面保存失败: ${result.msg}`);
+    }
+  } catch (error) {
+    console.error('❌ 保存封面异常:', error);
+  }
+};
+
+// 🔥 新增：获取当前视频文件名的辅助方法
+const getCurrentVideoFileName = () => {
+  // 从选中的视频列表中获取第一个视频的文件名
+  if (selectedVideos.value.length > 0) {
+    const firstVideo = selectedVideos.value[0];
+    return firstVideo.name || firstVideo.path || null;
+  }
+  
+  return null;
+};
 // 账号相关处理方法
 const handleRemoveAccount = (account) => {
   const index = selectedAccounts.value.indexOf(account.id);

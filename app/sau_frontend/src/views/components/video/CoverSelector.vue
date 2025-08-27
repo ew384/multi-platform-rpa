@@ -206,8 +206,11 @@ const handleFileSelect = (event) => {
 
   // 创建文件URL
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     currentCover.value = e.target.result;
+
+    await saveCoverToLocal(e.target.result);
+    
     ElMessage.success('封面已更新');
   };
   reader.readAsDataURL(file);
@@ -216,9 +219,13 @@ const handleFileSelect = (event) => {
   event.target.value = '';
 };
 const hasCustomCover = ref(false);
-const handleFrameCaptured = (frameData) => {
+// 🔥 修改：添加 async 关键字
+const handleFrameCaptured = async (frameData) => {
   currentCover.value = frameData;
   hasCustomCover.value = true; // 🔥 标记用户已自定义封面
+  
+  // 🔥 立即保存封面到本地
+  await saveCoverToLocal(frameData);
   
   // 🔥 通知父组件用户已设置自定义封面
   emit('cover-changed', frameData);
@@ -229,17 +236,111 @@ const handleFrameCaptured = (frameData) => {
 const hasCustomCoverSet = () => {
   return hasCustomCover.value;
 };
+// 🔥 新增：保存封面到本地的方法
+const saveCoverToLocal = async (frameData) => {
+  const videoFileName = getCurrentVideoFileName();
+  
+  if (!videoFileName) {
+    console.warn('⚠️ 无法获取视频文件名，跳过封面保存');
+    return;
+  }
+
+  try {
+    console.log(`📸 保存封面到本地: ${videoFileName}`);
+    
+    const { materialApi } = await import('@/api/material');
+    const result = await materialApi.saveCoverScreenshot(frameData, videoFileName);
+    
+    if (result.code === 200) {
+      console.log(`✅ 封面保存成功: ${result.data.coverPath}`);
+    } else {
+      console.warn(`⚠️ 封面保存失败: ${result.msg}`);
+    }
+  } catch (error) {
+    console.error('❌ 保存封面异常:', error);
+  }
+};
+
+// 🔥 新增：获取当前视频文件名的辅助方法
+const getCurrentVideoFileName = () => {
+  if (props.videoUrl) {
+    try {
+      const url = new URL(props.videoUrl);
+      const params = new URLSearchParams(url.search);
+      const filename = params.get('filename');
+      
+      if (filename) {
+        return decodeURIComponent(filename);
+      }
+      
+      const pathParts = url.pathname.split('/');
+      const lastPart = pathParts[pathParts.length - 1];
+      if (lastPart && lastPart.includes('.')) {
+        return lastPart;
+      }
+    } catch (error) {
+      console.warn('⚠️ 解析视频URL失败:', error);
+    }
+  }
+  
+  return null;
+};
+
+// 🔥 新增：将图片URL转换为base64的辅助方法
+const convertImageToBase64 = (imageUrl) => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+      
+      try {
+        const base64Data = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(base64Data);
+      } catch (error) {
+        console.error('❌ Canvas转换失败:', error);
+        resolve(null);
+      }
+    };
+    
+    img.onerror = () => {
+      console.error('❌ 图片加载失败');
+      resolve(null);
+    };
+    
+    img.src = imageUrl;
+  });
+};
 // 暴露方法给父组件
 defineExpose({
   hasCustomCoverSet
 });
-const handleCoverCropped = (croppedData) => {
+const handleCoverCropped = async (croppedData) => {
   currentCover.value = croppedData;
+  
+  // 🔥 立即保存裁剪后的封面
+  await saveCoverToLocal(croppedData);
+  
   ElMessage.success('封面裁剪完成');
 };
 
-const handleMaterialSelected = (imageUrl) => {
+const handleMaterialSelected = async (imageUrl) => {
   currentCover.value = imageUrl;
+  // 🔥 对于从素材库选择的图片，也需要保存
+  try {
+    const base64Data = await convertImageToBase64(imageUrl);
+    if (base64Data) {
+      await saveCoverToLocal(base64Data);
+    }
+  } catch (error) {
+    console.warn('⚠️ 转换素材库图片失败:', error);
+  }
+  
   ElMessage.success('封面已选择');
 };
 </script>
