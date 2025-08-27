@@ -996,8 +996,11 @@ const publishContent = async (mode = "background") => {
     };
 
     // 🔥 立即重置表单数据，释放配置流程供下次使用
-    resetFormForNewPublish();
-    handleDialogClose();
+    resetAllFormData();
+    // 🔥 直接发射关闭事件，不调用 handleDialogClose
+    nextTick(() => {
+      emit("update:visible", false);
+    });
 
     // 🔥 使用保存的数据进行 API 调用
     const accountsByPlatform = {};
@@ -1085,25 +1088,35 @@ const publishContent = async (mode = "background") => {
   }
 };
 const accountSelectionKey = ref(0);
-// 🔥 新增：专门用于发布后重置的方法
-const resetFormForNewPublish = () => {
+
+// 🔥 创建统一的默认配置
+const DEFAULT_FORM_STATE = {
+  title: "",
+  description: "",
+  cover: "",
+  scheduleEnabled: false,
+  scheduleTime: "",
+  douyin: {
+    statement: "无需声明",
+    location: "",
+  },
+  wechat: {
+    original: true,  // 🔥 确保原创默认为true
+    location: "",
+  },
+};
+
+// 🔥 创建统一的重置方法
+const resetAllFormData = () => {
   // 重置步骤
   currentStep.value = "video";
   
-  // 清空选中数据
+  // 清空数组
   selectedVideos.value.length = 0;
   selectedAccounts.value.length = 0;
   
-  // 重置表单
-  publishForm.title = "";
-  publishForm.description = "";
-  publishForm.cover = "";
-  publishForm.scheduleEnabled = false;
-  publishForm.scheduleTime = "";
-  publishForm.douyin.statement = "无需声明";
-  publishForm.douyin.location = "";
-  publishForm.wechat.original = true;
-  publishForm.wechat.location = "";
+  // 🔥 使用统一配置重置表单
+  Object.assign(publishForm, JSON.parse(JSON.stringify(DEFAULT_FORM_STATE)));
   
   // 重置封面状态
   customCoverSet.value = false;
@@ -1143,27 +1156,6 @@ const dialogVisible = computed({
   set: (value) => emit("update:visible", value), // 移除不必要的判断
 });
 
-// 2. 修复 resetForm 方法
-const resetForm = () => {
-  currentStep.value = "video";
-  selectedVideos.value.length = 0;
-  selectedAccounts.value.length = 0;
-
-  // 重置表单
-  publishForm.title = "";
-  publishForm.description = "";
-  publishForm.cover = ""; // 🔥 重置封面
-  publishForm.scheduleEnabled = false;
-  publishForm.scheduleTime = "";
-  publishForm.douyin.statement = "无需声明";
-  publishForm.douyin.location = "";
-  publishForm.wechat.original = true;
-  publishForm.wechat.location = "";
-
-  // 🔥 重置封面状态
-  customCoverSet.value = false;
-  publishing.value = false;
-};
 // 3. 修复 handleDialogClose 方法
 const handleDialogClose = () => {
   if (publishing.value) {
@@ -1171,8 +1163,7 @@ const handleDialogClose = () => {
     return;
   }
 
-  // 先重置表单，再关闭对话框
-  resetForm();
+  resetAllFormData();
   nextTick(() => {
     emit("update:visible", false);
   });
