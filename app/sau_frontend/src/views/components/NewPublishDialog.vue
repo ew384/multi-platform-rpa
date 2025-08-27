@@ -476,7 +476,7 @@ const canProceedToNextStep = computed(() => {
     case "accounts":
       return selectedAccounts.value.length > 0;
     case "content":
-      return publishForm.title.trim().length > 0;
+      return true;
     default:
       return true;
   }
@@ -485,8 +485,7 @@ const canProceedToNextStep = computed(() => {
 const canPublish = computed(() => {
   return (
     selectedVideos.value.length > 0 &&
-    selectedAccounts.value.length > 0 &&
-    publishForm.title.trim().length > 0
+    selectedAccounts.value.length > 0
   );
 });
 
@@ -937,6 +936,23 @@ const getLocationForPlatform = (platformType) => {
   }
   return "";
 };
+// 🔥 智能标题逻辑：优先使用标题，其次使用描述，最后使用默认标题（仅用于前端显示）
+const getDisplayTitle = () => {
+    const title = publishForm.title.trim();
+    const description = publishForm.description.trim();
+    
+    if (title) return title;
+    if (description) {
+        // 如果描述太长，截取前20个字符作为标题
+        return description.length > 20 ? description.substring(0, 20) + '...' : description;
+    }
+    return '未命名发布任务';
+};
+
+// 🔥 获取传递给后端的标题（可能为空）
+const getBackendTitle = () => {
+    return publishForm.title.trim() || ''; // 空字符串让后端自己处理
+};
 const publishContent = async (mode = "background") => {
   if (!canPublish.value) {
     ElMessage.warning("请完善发布信息");
@@ -968,6 +984,8 @@ const publishContent = async (mode = "background") => {
   try {
     publishing.value = true;
     emit("published", { showDetail: true });
+    // 🔥 立即重置表单数据，释放配置流程供下次使用
+    resetFormForNewPublish();
     handleDialogClose();
     // 按平台分组账号
     const accountsByPlatform = {};
@@ -989,7 +1007,8 @@ const publishContent = async (mode = "background") => {
       async ([platformType, accounts]) => {
         const publishData = {
           type: parseInt(platformType),
-          title: publishForm.title,
+          title: getBackendTitle(),
+          displayTitle: getDisplayTitle(),
           tags: extractTags(publishForm.description),
           fileList: selectedVideos.value.map(
             (video) => video.path || video.name
@@ -1060,7 +1079,34 @@ const publishContent = async (mode = "background") => {
     publishing.value = false;
   }
 };
-
+// 🔥 新增：专门用于发布后重置的方法
+const resetFormForNewPublish = () => {
+  // 重置步骤
+  currentStep.value = "video";
+  
+  // 清空选中数据
+  selectedVideos.value.length = 0;
+  selectedAccounts.value.length = 0;
+  
+  // 重置表单
+  publishForm.title = "";
+  publishForm.description = "";
+  publishForm.cover = "";
+  publishForm.scheduleEnabled = false;
+  publishForm.scheduleTime = "";
+  publishForm.douyin.statement = "无需声明";
+  publishForm.douyin.location = "";
+  publishForm.wechat.original = true;
+  publishForm.wechat.location = "";
+  
+  // 重置封面状态
+  customCoverSet.value = false;
+  
+  // 🔥 关键：立即重置 publishing 状态
+  publishing.value = false;
+  
+  console.log("📝 发布配置已重置，可进行下次配置");
+};
 const getPlatformType = (platformName) => {
   const typeMap = {
     小红书: 1,
