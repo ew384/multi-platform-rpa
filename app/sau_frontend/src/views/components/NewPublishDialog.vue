@@ -135,6 +135,7 @@
         </div>
         <!-- 复用现有的账号选择组件 -->
         <AccountSelection
+          :key="accountSelectionKey"
           v-model:selected-accounts="selectedAccounts"
           :available-accounts="availableAccounts"
         />
@@ -1083,6 +1084,7 @@ const publishContent = async (mode = "background") => {
     publishing.value = false;
   }
 };
+const accountSelectionKey = ref(0);
 // 🔥 新增：专门用于发布后重置的方法
 const resetFormForNewPublish = () => {
   // 重置步骤
@@ -1108,7 +1110,8 @@ const resetFormForNewPublish = () => {
   
   // 🔥 关键：立即重置 publishing 状态
   publishing.value = false;
-  
+  // 🔥 强制重置 AccountSelection 组件
+  accountSelectionKey.value++;
   console.log("📝 发布配置已重置，可进行下次配置");
 };
 const getPlatformType = (platformName) => {
@@ -1154,7 +1157,7 @@ const resetForm = () => {
   publishForm.scheduleTime = "";
   publishForm.douyin.statement = "无需声明";
   publishForm.douyin.location = "";
-  publishForm.wechat.original = false;
+  publishForm.wechat.original = true;
   publishForm.wechat.location = "";
 
   // 🔥 重置封面状态
