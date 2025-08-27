@@ -152,7 +152,7 @@
             v-for="account in currentGroupAccounts"
             :key="account.id"
             :class="[
-              'account-card',
+              'compact-account-wrapper',
               {
                 selected: localSelectedAccounts.includes(account.id),
                 disabled: account.status !== '正常',
@@ -160,51 +160,13 @@
             ]"
             @click="toggleAccountSelection(account)"
           >
-            <div class="account-avatar">
-              <div class="avatar-container">
-                <el-avatar
-                  :size="40"
-                  :src="getAvatarUrl(account)"
-                  @error="handleAvatarError"
-                >
-                  <span>{{ account.userName ? account.userName.charAt(0) : 'U' }}</span>
-                </el-avatar>
-                <div class="platform-logo">
-                  <img
-                    v-if="getPlatformLogo(account.platform)"
-                    :src="getPlatformLogo(account.platform)"
-                    :alt="account.platform"
-                    @error="handlePlatformLogoError"
-                  />
-                  <div v-else class="platform-text">
-                    {{ account.platform ? account.platform.charAt(0) : 'P' }}
-                  </div>
-                </div>
-                <div
-                  :class="[
-                    'status-dot',
-                    account.status === '正常' ? 'online' : 'offline',
-                  ]"
-                ></div>
-                <div
-                  v-if="localSelectedAccounts.includes(account.id)"
-                  class="selected-mark"
-                >
-                  <el-icon><Check /></el-icon>
-                </div>
-              </div>
-            </div>
-            <div class="account-info">
-              <div class="account-name">{{ account.userName || '未命名账号' }}</div>
-              <div v-if="account.group_name" class="account-group">
-                <el-tag
-                  :color="account.group_color"
-                  size="small"
-                  effect="dark"
-                >
-                  {{ account.group_name }}
-                </el-tag>
-              </div>
+            <CompactAccountCard
+              :account="account"
+              :removable="false"
+            />
+            <!-- 选中标记 -->
+            <div v-if="localSelectedAccounts.includes(account.id)" class="selected-overlay">
+              <el-icon><Check /></el-icon>
             </div>
           </div>
         </div>
@@ -224,7 +186,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { User, Check, Minus } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
-
+import CompactAccountCard from './common/CompactAccountCard.vue'; 
 // Props
 const props = defineProps({
   selectedAccounts: {
@@ -781,29 +743,22 @@ $space-lg: 24px;
         max-height: 350px;
         overflow-y: auto;
         padding-right: $space-xs;
-
-        .account-card {
-          background: $bg-gray;
-          border: 2px solid transparent;
-          border-radius: $radius-lg;
-          padding: $space-sm $space-md;
-          cursor: pointer;
-          transition: all 0.3s ease;
+        .compact-account-wrapper {
           position: relative;
-          display: flex;
-          align-items: center;
-          gap: $space-md;
-          height: 70px;
-          width: 100%;
+          cursor: pointer;
+          border-radius: $radius-md;
+          transition: all 0.3s ease;
 
           &:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: $shadow-md;
           }
 
           &.selected {
-            border-color: $primary;
-            background-color: rgba(91, 115, 222, 0.05);
+            :deep(.compact-account-card) {
+              border-color: $primary;
+              background-color: rgba(91, 115, 222, 0.05);
+            }
           }
 
           &.disabled {
@@ -811,103 +766,21 @@ $space-lg: 24px;
             cursor: not-allowed;
           }
 
-          .account-avatar {
-            flex-shrink: 0;
-            position: relative;
-
-            .avatar-container {
-              position: relative;
-
-              :deep(.el-avatar) {
-                border: 2px solid #f1f5f9;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-              }
-
-              .platform-logo {
-                position: absolute;
-                bottom: -2px;
-                right: -2px;
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                background: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-                border: 1px solid white;
-
-                img {
-                  width: 18px;
-                  height: 18px;
-                  border-radius: 50%;
-                  object-fit: cover;
-                }
-
-                .platform-text {
-                  font-size: 10px;
-                  font-weight: 600;
-                  color: $text-primary;
-                }
-              }
-
-              .status-dot {
-                position: absolute;
-                top: 2px;
-                right: 2px;
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                border: 2px solid white;
-
-                &.online {
-                  background-color: $success;
-                }
-
-                &.offline {  
-                  background-color: $danger;
-                }
-              }
-
-              .selected-mark {
-                position: absolute;
-                top: -5px;
-                right: -5px;
-                width: 20px;
-                height: 20px;
-                background-color: $primary;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                font-size: 12px;
-              }
-            }
-          }
-
-          .account-info {
-            flex: 1;
-            min-width: 0;
-            text-align: left;
-
-            .account-name {
-              font-weight: 500;
-              color: $text-primary;
-              font-size: 14px;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              margin: 0;
-            }
-
-            .account-group {
-              margin-top: 4px;
-
-              :deep(.el-tag) {
-                border: none !important;
-              }
-            }
+          .selected-overlay {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 18px;
+            height: 18px;
+            background: $primary;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
           }
         }
       }

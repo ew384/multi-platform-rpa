@@ -128,17 +128,49 @@
       <!-- 步骤2: 选择账号 -->
       <div v-show="currentStep === 'accounts'" class="step-panel">
         <div class="step-header">
-          <!-- <h4>选择发布账号</h4>-->
-          <!-- <p>选择要发布内容的账号</p> -->
+          <h4>选择发布账号</h4>
+          <div class="accounts-stats">
+            已选择 {{ selectedAccounts.length }} / {{ availableAccounts.length }} 个账号
+          </div>
         </div>
 
-        <!-- 复用现有的账号选择组件 -->
-        <AccountSelection
-          v-model:selected-accounts="selectedAccounts"
-          :available-accounts="availableAccounts"
-        />
-      </div>
+        <!-- 紧凑账号网格选择 -->
+        <div class="compact-accounts-selection">
+          <div class="accounts-grid-compact">
+            <div
+              v-for="account in availableAccounts"
+              :key="account.id"
+              :class="[
+                'compact-account-wrapper',
+                {
+                  selected: selectedAccounts.includes(account.id),
+                  disabled: account.status !== '正常'
+                }
+              ]"
+              @click="toggleCompactAccount(account)"
+            >
+              <CompactAccountCard
+                :account="account"
+                :removable="false"
+              />
+              <!-- 选中标记 -->
+              <div v-if="selectedAccounts.includes(account.id)" class="selected-overlay">
+                <el-icon><Check /></el-icon>
+              </div>
+            </div>
+          </div>
 
+          <!-- 操作按钮 -->
+          <div class="selection-actions">
+            <el-button @click="selectAllAccounts" size="small">
+              全选
+            </el-button>
+            <el-button @click="clearSelection" size="small">
+              清空
+            </el-button>
+          </div>
+        </div>
+      </div>
       <!-- 步骤3: 编辑内容 -->
       <div v-show="currentStep === 'content'" class="step-panel">
         <div class="content-form">
@@ -408,7 +440,31 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
 const authHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 }));
+// 切换紧凑账号选择
+const toggleCompactAccount = (account) => {
+  if (account.status !== '正常') return;
+  
+  const index = selectedAccounts.value.indexOf(account.id);
+  if (index > -1) {
+    selectedAccounts.value.splice(index, 1);
+  } else {
+    selectedAccounts.value.push(account.id);
+  }
+};
 
+// 全选账号
+const selectAllAccounts = () => {
+  const availableIds = availableAccounts.value
+    .filter(acc => acc.status === '正常')
+    .map(acc => acc.id);
+  
+  selectedAccounts.value = [...availableIds];
+};
+
+// 清空选择
+const clearSelection = () => {
+  selectedAccounts.value.length = 0;
+};
 const currentStep = ref("video");
 const publishing = ref(false);
 const materialSelectorVisible = ref(false);
