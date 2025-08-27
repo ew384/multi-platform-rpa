@@ -926,32 +926,33 @@ const calculateDaysFromNow = (scheduleTime) => {
     return 0;
   }
 };
-const getLocationForPlatform = (platformType) => {
-  if (platformType === 3) {
-    // 抖音
-    return publishForm.douyin.location || "";
-  } else if (platformType === 2) {
-    // 视频号
-    return publishForm.wechat.location || "";
+const getDisplayTitleFromSaved = (savedForm) => {
+  const title = savedForm.title.trim();
+  const description = savedForm.description.trim();
+  
+  if (title) return title;
+  if (description) {
+    return description.length > 20 ? description.substring(0, 20) + '...' : description;
   }
-  return "";
-};
-// 🔥 智能标题逻辑：优先使用标题，其次使用描述，最后使用默认标题（仅用于前端显示）
-const getDisplayTitle = () => {
-    const title = publishForm.title.trim();
-    const description = publishForm.description.trim();
-    
-    if (title) return title;
-    if (description) {
-        // 如果描述太长，截取前20个字符作为标题
-        return description.length > 20 ? description.substring(0, 20) + '...' : description;
-    }
-    return '未命名发布任务';
+  return '未命名发布任务';
 };
 
-// 🔥 获取传递给后端的标题（可能为空）
-const getBackendTitle = () => {
-    return publishForm.title.trim() || ''; // 空字符串让后端自己处理
+const getLocationForPlatformFromSaved = (platformType, savedForm) => {
+  if (platformType === 3) return savedForm.douyin.location || "";
+  if (platformType === 2) return savedForm.wechat.location || "";
+  return "";
+};
+
+const getPlatformSpecificSettingsFromSaved = (platformType, savedForm) => {
+  const settings = {};
+  if (platformType === 3) {
+    settings.statement = savedForm.douyin.statement;
+    settings.location = savedForm.douyin.location;
+  } else if (platformType === 2) {
+    settings.original = savedForm.wechat.original;
+    settings.location = savedForm.wechat.location;
+  }
+  return settings;
 };
 const publishContent = async (mode = "background") => {
   if (!canPublish.value) {
@@ -984,15 +985,23 @@ const publishContent = async (mode = "background") => {
   try {
     publishing.value = true;
     emit("published", { showDetail: true });
+
+    // 🔥 关键：在重置之前保存当前表单数据
+    const savedFormData = {
+      selectedVideos: [...selectedVideos.value],
+      selectedAccounts: [...selectedAccounts.value],
+      publishForm: { ...publishForm },
+      availableAccounts: [...availableAccounts.value]
+    };
+
     // 🔥 立即重置表单数据，释放配置流程供下次使用
     resetFormForNewPublish();
     handleDialogClose();
-    // 按平台分组账号
+
+    // 🔥 使用保存的数据进行 API 调用
     const accountsByPlatform = {};
-    selectedAccounts.value.forEach((accountId) => {
-      const account = availableAccounts.value.find(
-        (acc) => acc.id === accountId
-      );
+    savedFormData.selectedAccounts.forEach((accountId) => {
+      const account = savedFormData.availableAccounts.find(acc => acc.id === accountId);
       if (account) {
         const platformType = getPlatformType(account.platform);
         if (!accountsByPlatform[platformType]) {
@@ -1002,17 +1011,15 @@ const publishContent = async (mode = "background") => {
       }
     });
 
-    // 为每个平台发送发布请求
+    // 为每个平台发送发布请求 - 使用保存的数据
     const publishPromises = Object.entries(accountsByPlatform).map(
       async ([platformType, accounts]) => {
         const publishData = {
           type: parseInt(platformType),
-          title: getBackendTitle(),
-          displayTitle: getDisplayTitle(),
-          tags: extractTags(publishForm.description),
-          fileList: selectedVideos.value.map(
-            (video) => video.path || video.name
-          ),
+          title: savedFormData.publishForm.title.trim() || '',
+          displayTitle: getDisplayTitleFromSaved(savedFormData.publishForm),
+          tags: extractTags(savedFormData.publishForm.description),
+          fileList: savedFormData.selectedVideos.map(video => video.path || video.name),
           accountList: accounts.map((account) => ({
             filePath: account.filePath,
             accountName: account.userName,
@@ -1024,22 +1031,20 @@ const publishContent = async (mode = "background") => {
             followersCount: account.followersCount,
             videosCount: account.videosCount,
           })),
-          thumbnail: publishForm.cover,
-          location: getLocationForPlatform(parseInt(platformType)),
-          enableTimer: publishForm.scheduleEnabled ? 1 : 0,
+          thumbnail: savedFormData.publishForm.cover,
+          location: getLocationForPlatformFromSaved(parseInt(platformType), savedFormData.publishForm),
+          enableTimer: savedFormData.publishForm.scheduleEnabled ? 1 : 0,
           videosPerDay: 1,
-          dailyTimes:
-            publishForm.scheduleEnabled && publishForm.scheduleTime
-              ? [extractTimeFromSchedule(publishForm.scheduleTime)]
-              : ["10:00"],
-          startDays:
-            publishForm.scheduleEnabled && publishForm.scheduleTime
-              ? calculateDaysFromNow(publishForm.scheduleTime)
-              : 0,
+          dailyTimes: savedFormData.publishForm.scheduleEnabled && savedFormData.publishForm.scheduleTime
+            ? [extractTimeFromSchedule(savedFormData.publishForm.scheduleTime)]
+            : ["10:00"],
+          startDays: savedFormData.publishForm.scheduleEnabled && savedFormData.publishForm.scheduleTime
+            ? calculateDaysFromNow(savedFormData.publishForm.scheduleTime)
+            : 0,
           category: 0,
           mode: mode,
-          original: publishForm.wechat.original,
-          ...getPlatformSpecificSettings(parseInt(platformType)),
+          original: savedFormData.publishForm.wechat.original,
+          ...getPlatformSpecificSettingsFromSaved(parseInt(platformType), savedFormData.publishForm),
         };
 
         const response = await fetch(`${apiBaseUrl}/postVideo`, {
@@ -1055,23 +1060,22 @@ const publishContent = async (mode = "background") => {
       }
     );
 
-    const results = await Promise.all(publishPromises);
+    // 异步处理结果，不阻塞用户操作
+    Promise.all(publishPromises).then(results => {
+      const allSuccess = results.every((result) => result.code === 200);
+      const successCount = results.filter((result) => result.code === 200).length;
 
-    // 处理结果
-    const allSuccess = results.every((result) => result.code === 200);
-    const successCount = results.filter((result) => result.code === 200).length;
-
-    if (allSuccess) {
-      ElMessage.success(
-        `发布成功！共发布到 ${Object.keys(accountsByPlatform).length} 个平台`
-      );
-    } else if (successCount > 0) {
-      ElMessage.warning(
-        `部分发布成功：${successCount}/${results.length} 个平台成功`
-      );
-    } else {
-      ElMessage.error("发布失败，请检查网络连接和账号状态");
-    }
+      if (allSuccess) {
+        ElMessage.success(`发布成功！共发布到 ${Object.keys(accountsByPlatform).length} 个平台`);
+      } else if (successCount > 0) {
+        ElMessage.warning(`部分发布成功：${successCount}/${results.length} 个平台成功`);
+      } else {
+        ElMessage.error("发布失败，请检查网络连接和账号状态");
+      }
+    }).catch(error => {
+      console.error("发布失败:", error);
+      ElMessage.error("发布失败：" + error.message);
+    });
   } catch (error) {
     console.error("发布失败:", error);
     ElMessage.error("发布失败：" + error.message);
@@ -1116,22 +1120,6 @@ const getPlatformType = (platformName) => {
     快手: 4,
   };
   return typeMap[platformName] || 2;
-};
-
-const getPlatformSpecificSettings = (platformType) => {
-  const settings = {};
-
-  if (platformType === 3) {
-    // 抖音
-    settings.statement = publishForm.douyin.statement;
-    settings.location = publishForm.douyin.location;
-  } else if (platformType === 2) {
-    // 视频号
-    settings.original = publishForm.wechat.original;
-    settings.location = publishForm.wechat.location;
-  }
-
-  return settings;
 };
 
 const extractTags = (description) => {
