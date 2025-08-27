@@ -738,8 +738,8 @@ $space-lg: 24px;
 
       .accounts-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: $space-md;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); // 🔥 减小最小宽度
+        gap: $space-xs; // 🔥 减小间隙从16px到4px
         max-height: 350px;
         overflow-y: auto;
         padding-right: $space-xs;
@@ -748,7 +748,11 @@ $space-lg: 24px;
           cursor: pointer;
           border-radius: $radius-md;
           transition: all 0.3s ease;
-
+          :deep(.compact-account-card) {
+            min-width: unset; // 移除最小宽度限制
+            padding: 6px 8px; // 减小内边距
+            margin: 0; // 确保无外边距
+          }
           &:hover {
             transform: translateY(-1px);
             box-shadow: $shadow-md;
@@ -768,10 +772,10 @@ $space-lg: 24px;
 
           .selected-overlay {
             position: absolute;
-            top: -2px;
-            right: -2px;
-            width: 18px;
-            height: 18px;
+            top: -1px; // 🔥 从-2px改为-1px
+            right: -1px; // 🔥 从-2px改为-1px  
+            width: 16px; // 🔥 从18px改为16px
+            height: 16px; // 🔥 从18px改为16px
             background: $primary;
             border-radius: 50%;
             display: flex;
