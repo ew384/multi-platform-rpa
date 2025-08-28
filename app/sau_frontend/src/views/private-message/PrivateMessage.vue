@@ -151,10 +151,9 @@ const initializeBackgroundServices = async () => {
       }
     } else {
       console.warn("⚠️ 后台服务启动失败:", result.error);
-      // 🔥 只有真正的错误才提示用户
       ElMessage({
-        message: "后台监听服务启动失败，请刷新页面重试",
-        type: "error",
+        message: "账号已失效，请重新登录",
+        type: "warning",
         duration: 5000,
         showClose: true,
       });
