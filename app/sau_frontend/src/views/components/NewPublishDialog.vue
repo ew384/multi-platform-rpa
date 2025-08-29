@@ -1022,7 +1022,7 @@ const publishContent = async (mode = "background") => {
           type: parseInt(platformType),
           title: savedFormData.publishForm.title.trim() || '',
           displayTitle: getDisplayTitleFromSaved(savedFormData.publishForm),
-          tags: extractTags(savedFormData.publishForm.description),
+          tags: savedFormData.publishForm.description,
           fileList: savedFormData.selectedVideos.map(video => video.path || video.name),
           accountList: accounts.map((account) => ({
             filePath: account.filePath,
